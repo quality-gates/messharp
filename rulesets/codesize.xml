@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<ruleset name="Code Size Rules"
+         xmlns="http://pmd.sf.net/ruleset/1.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sf.net/ruleset/1.0.0 http://pmd.sf.net/ruleset_xml_schema.xsd"
+         xsi:noNamespaceSchemaLocation="http://pmd.sf.net/ruleset_xml_schema.xsd">
+
+    <description>
+The Code Size Ruleset contains a collection of rules that find code size related problems.
+    </description>
+
+    <rule name="CyclomaticComplexity"
+          since="0.1"
+          message="The {0} {1}() has a Cyclomatic Complexity of {2}. The configured cyclomatic complexity threshold is {3}."
+          class="PHPMD\Rule\CyclomaticComplexity"
+          externalInfoUrl="https://phpmd.org/rules/codesize.html#cyclomaticcomplexity">
+        <description>
+            <![CDATA[
+Complexity is determined by the number of decision points in a method plus one for the
+method entry. The decision points are 'if', 'while', 'for', 'foreach', 'catch',
+'case labels', '&&', '||', '??', and ternary '?:'. Generally, 1-4 is low complexity,
+5-7 indicates moderate complexity, 8-10 is high complexity, and 11+ is very high complexity.
+            ]]>
+        </description>
+        <priority>3</priority>
+        <properties>
+            <property name="reportLevel" description="The Cyclomatic Complexity reporting threshold" value="10"/>
+            <property name="showClassesComplexity"
+                      description="Indicate if class average violation should be added to the report"
+                      value="true"/>
+            <property name="showMethodsComplexity"
+                      description="Indicate if class average violation should be added to the report"
+                      value="true"/>
+        </properties>
+    </rule>
+
+<!-- AGENT: remaining codesize rules appended here -->
+</ruleset>
