@@ -11,6 +11,11 @@ public static class CleanCodeRules
     public static IReadOnlyDictionary<string, Func<BaseRule>> Factories { get; } =
         new Dictionary<string, Func<BaseRule>>(StringComparer.Ordinal)
         {
+            ["PHPMD\\Rule\\CleanCode\\BooleanArgumentFlag"] = () => new BooleanArgumentFlagRule(),
+            ["PHPMD\\Rule\\CleanCode\\ElseExpression"]      = () => new ElseExpressionRule(),
+            ["PHPMD\\Rule\\CleanCode\\IfStatementAssignment"] = () => new IfStatementAssignmentRule(),
+            ["PHPMD\\Rule\\CleanCode\\DuplicatedArrayKey"]  = () => new DuplicatedArrayKeyRule(),
+            ["PHPMD\\Rule\\CleanCode\\StaticAccess"]        = () => new StaticAccessRule(),
         };
 
     public static IReadOnlyList<IRule> All =>
