@@ -10,14 +10,14 @@ public static class Renderers
         new(StringComparer.OrdinalIgnoreCase)
         {
             ["text"]       = () => new TextRenderer(),
-            ["xml"]        = () => new NotImplementedRenderer("xml"),
-            ["json"]       = () => new NotImplementedRenderer("json"),
-            ["html"]       = () => new NotImplementedRenderer("html"),
-            ["ansi"]       = () => new NotImplementedRenderer("ansi"),
-            ["github"]     = () => new NotImplementedRenderer("github"),
-            ["gitlab"]     = () => new NotImplementedRenderer("gitlab"),
-            ["checkstyle"] = () => new NotImplementedRenderer("checkstyle"),
-            ["sarif"]      = () => new NotImplementedRenderer("sarif"),
+            ["xml"]        = () => new XmlRenderer(),
+            ["json"]       = () => new JsonRenderer(),
+            ["html"]       = () => new HtmlRenderer(),
+            ["ansi"]       = () => new AnsiRenderer(),
+            ["github"]     = () => new GitHubRenderer(),
+            ["gitlab"]     = () => new GitLabRenderer(),
+            ["checkstyle"] = () => new CheckstyleRenderer(),
+            ["sarif"]      = () => new SarifRenderer(),
         };
 
     public static bool TryGet(string format, out IRenderer renderer)
