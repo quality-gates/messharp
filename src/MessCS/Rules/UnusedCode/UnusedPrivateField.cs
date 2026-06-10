@@ -1,5 +1,6 @@
 using MessCS.Model;
 using MessCS.Rule;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessCS.Rules.UnusedCode;
@@ -33,35 +34,43 @@ public sealed class UnusedPrivateFieldRule : BaseRule, IClassRule
     {
         var used = new HashSet<string>(StringComparer.Ordinal);
         foreach (var node in file.Root.DescendantNodes())
-        {
-            switch (node)
-            {
-                case MemberAccessExpressionSyntax mae:
-                    used.Add(mae.Name.Identifier.Text);
-                    break;
-                case AssignmentExpressionSyntax aes when aes.Parent is InitializerExpressionSyntax:
-                    // object initializer: Prop = value — "Prop" counts as used
-                    if (aes.Left is IdentifierNameSyntax lhs)
-                        used.Add(lhs.Identifier.Text);
-                    break;
-                case InvocationExpressionSyntax inv
-                    when inv.Expression is IdentifierNameSyntax id2
-                      && id2.Identifier.Text == "nameof"
-                      && inv.ArgumentList.Arguments.Count == 1:
-                    var arg = inv.ArgumentList.Arguments[0].Expression;
-                    if (arg is IdentifierNameSyntax nameofArg)
-                        used.Add(nameofArg.Identifier.Text);
-                    else if (arg is MemberAccessExpressionSyntax nameofMae)
-                        used.Add(nameofMae.Name.Identifier.Text);
-                    break;
-                case IdentifierNameSyntax id:
-                    // Only count reads — skip declaration nodes
-                    if (!IsDeclarationContext(id))
-                        used.Add(id.Identifier.Text);
-                    break;
-            }
-        }
+            CollectUsedNode(node, used);
         return used;
+    }
+
+    private static void CollectUsedNode(SyntaxNode node, HashSet<string> used)
+    {
+        if (node is MemberAccessExpressionSyntax mae)
+        {
+            used.Add(mae.Name.Identifier.Text);
+            return;
+        }
+
+        if (node is AssignmentExpressionSyntax aes && aes.Parent is InitializerExpressionSyntax)
+        {
+            if (aes.Left is IdentifierNameSyntax lhs) used.Add(lhs.Identifier.Text);
+            return;
+        }
+
+        if (TryCollectNameof(node, used)) return;
+
+        if (node is IdentifierNameSyntax id && !IsDeclarationContext(id))
+            used.Add(id.Identifier.Text);
+    }
+
+    private static bool TryCollectNameof(SyntaxNode node, HashSet<string> used)
+    {
+        if (node is not InvocationExpressionSyntax inv) return false;
+        if (inv.Expression is not IdentifierNameSyntax id2) return false;
+        if (id2.Identifier.Text != "nameof") return false;
+        if (inv.ArgumentList.Arguments.Count != 1) return false;
+
+        var arg = inv.ArgumentList.Arguments[0].Expression;
+        if (arg is IdentifierNameSyntax nameofArg)
+            used.Add(nameofArg.Identifier.Text);
+        else if (arg is MemberAccessExpressionSyntax nameofMae)
+            used.Add(nameofMae.Name.Identifier.Text);
+        return true;
     }
 
     private static bool IsDeclarationContext(IdentifierNameSyntax id)

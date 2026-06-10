@@ -61,57 +61,37 @@ public sealed class GlobalVariableRule : BaseRule, IClassRule
     private static HashSet<string> FindMutatedFieldNames(ClassModel cls)
     {
         var mutated = new HashSet<string>(StringComparer.Ordinal);
-
         foreach (var node in cls.Node.DescendantNodes())
         {
-            switch (node)
-            {
-                // Simple assignment: Field = value  or  ClassName.Field = value
-                case AssignmentExpressionSyntax assign:
-                    {
-                        var name = ExtractStaticFieldName(assign.Left, cls.Name);
-                        if (name != null) mutated.Add(name);
-                        break;
-                    }
-
-                // Prefix/postfix ++/--: Field++, Field--
-                case PostfixUnaryExpressionSyntax postfix
-                    when postfix.IsKind(SyntaxKind.PostIncrementExpression)
-                      || postfix.IsKind(SyntaxKind.PostDecrementExpression):
-                    {
-                        var name = ExtractSimpleOrQualifiedName(postfix.Operand, cls.Name);
-                        if (name != null) mutated.Add(name);
-                        break;
-                    }
-
-                case PrefixUnaryExpressionSyntax prefix
-                    when prefix.IsKind(SyntaxKind.PreIncrementExpression)
-                      || prefix.IsKind(SyntaxKind.PreDecrementExpression):
-                    {
-                        var name = ExtractSimpleOrQualifiedName(prefix.Operand, cls.Name);
-                        if (name != null) mutated.Add(name);
-                        break;
-                    }
-
-                // ref/out argument: ref Field, out Field
-                case ArgumentSyntax arg
-                    when arg.RefKindKeyword.IsKind(SyntaxKind.RefKeyword)
-                      || arg.RefKindKeyword.IsKind(SyntaxKind.OutKeyword):
-                    {
-                        var name = ExtractSimpleOrQualifiedName(arg.Expression, cls.Name);
-                        if (name != null) mutated.Add(name);
-                        break;
-                    }
-            }
+            var name = ExtractMutationTarget(node, cls.Name);
+            if (name != null) mutated.Add(name);
         }
-
         return mutated;
     }
 
-    private static string? ExtractStaticFieldName(ExpressionSyntax expr, string className)
+    private static string? ExtractMutationTarget(SyntaxNode node, string className)
     {
-        return ExtractSimpleOrQualifiedName(expr, className);
+        if (node is AssignmentExpressionSyntax assign)
+            return ExtractSimpleOrQualifiedName(assign.Left, className);
+
+        if (node is PostfixUnaryExpressionSyntax postfix && IsIncrDecr(postfix.Kind()))
+            return ExtractSimpleOrQualifiedName(postfix.Operand, className);
+
+        if (node is PrefixUnaryExpressionSyntax prefix && IsIncrDecr(prefix.Kind()))
+            return ExtractSimpleOrQualifiedName(prefix.Operand, className);
+
+        if (node is ArgumentSyntax arg && IsRefOrOut(arg.RefKindKeyword.Kind()))
+            return ExtractSimpleOrQualifiedName(arg.Expression, className);
+
+        return null;
     }
+
+    private static bool IsIncrDecr(SyntaxKind kind) =>
+        kind is SyntaxKind.PostIncrementExpression or SyntaxKind.PostDecrementExpression
+              or SyntaxKind.PreIncrementExpression  or SyntaxKind.PreDecrementExpression;
+
+    private static bool IsRefOrOut(SyntaxKind kind) =>
+        kind is SyntaxKind.RefKeyword or SyntaxKind.OutKeyword;
 
     /// <summary>
     /// Returns the field name if expr is a bare identifier (FieldName) or

@@ -1,4 +1,3 @@
-using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -28,11 +27,11 @@ public static class ModelBuilder
 
     public static SourceFile ParseFile(string path)
     {
-        var source = File.ReadAllText(path);
+        var source = System.IO.File.ReadAllText(path);
         return Parse(path, source);
     }
 
-    private static string ExtractNamespace(SyntaxNode root)
+    private static string ExtractNamespace(Microsoft.CodeAnalysis.SyntaxNode root)
     {
         var ns = root.DescendantNodesAndSelf()
             .OfType<BaseNamespaceDeclarationSyntax>()
@@ -40,7 +39,7 @@ public static class ModelBuilder
         return ns?.Name.ToString() ?? "";
     }
 
-    private static void BuildArtifacts(SourceFile file, SyntaxNode root)
+    private static void BuildArtifacts(SourceFile file, Microsoft.CodeAnalysis.SyntaxNode root)
     {
         var nsName = file.Namespace;
 
@@ -66,7 +65,7 @@ public static class ModelBuilder
             file.AllMethods.AddRange(cls.Methods);
     }
 
-    private static bool IsNested(SyntaxNode node)
+    private static bool IsNested(Microsoft.CodeAnalysis.SyntaxNode node)
     {
         var parent = node.Parent;
         while (parent != null)
@@ -90,9 +89,8 @@ public static class ModelBuilder
 
         var fields = new List<FieldModel>();
         var constants = new List<FieldModel>();
-        var baseTypes = CollectBaseTypes(node.BaseList);
-
-        CollectFields(node, fields, constants);
+        var baseTypes = ModelBuilderHelpers.CollectBaseTypes(node.BaseList);
+        ModelBuilderHelpers.CollectFields(node, fields, constants);
 
         var cls = new ClassModel
         {
@@ -100,7 +98,7 @@ public static class ModelBuilder
             NodeType = nodeType,
             Line = span.StartLinePosition.Line + 1,
             EndLine = span.EndLinePosition.Line + 1,
-            Exported = IsExported(node.Modifiers),
+            Exported = ModelBuilderHelpers.IsExported(node.Modifiers),
             Namespace = ns,
             Fields = fields,
             Constants = constants,
@@ -117,69 +115,6 @@ public static class ModelBuilder
         }
 
         return cls;
-    }
-
-    private static void CollectFields(TypeDeclarationSyntax node,
-        List<FieldModel> fields, List<FieldModel> constants)
-    {
-        foreach (var member in node.Members)
-        {
-            switch (member)
-            {
-                case FieldDeclarationSyntax field:
-                    CollectFieldDecl(field, fields, constants);
-                    break;
-                case PropertyDeclarationSyntax prop when IsAutoProperty(prop):
-                    fields.Add(BuildAutoPropertyField(prop));
-                    break;
-            }
-        }
-    }
-
-    private static void CollectFieldDecl(FieldDeclarationSyntax field,
-        List<FieldModel> fields, List<FieldModel> constants)
-    {
-        var typeStr = field.Declaration.Type.ToString();
-        var isConst = field.Modifiers.Any(m => m.IsKind(SyntaxKind.ConstKeyword));
-        var target = isConst ? constants : fields;
-
-        foreach (var v in field.Declaration.Variables)
-        {
-            var vSpan = field.SyntaxTree.GetLineSpan(v.Span);
-            target.Add(new FieldModel
-            {
-                Name = v.Identifier.Text,
-                Type = typeStr,
-                Line = vSpan.StartLinePosition.Line + 1,
-                Exported = IsExported(field.Modifiers),
-                IsPrivate = IsPrivate(field.Modifiers),
-                IsStatic = field.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)),
-                IsReadonly = field.Modifiers.Any(m => m.IsKind(SyntaxKind.ReadOnlyKeyword)),
-                Node = v,
-            });
-        }
-    }
-
-    private static bool IsAutoProperty(PropertyDeclarationSyntax prop)
-    {
-        if (prop.AccessorList == null) return false;
-        return prop.AccessorList.Accessors.All(
-            a => a.Body == null && a.ExpressionBody == null);
-    }
-
-    private static FieldModel BuildAutoPropertyField(PropertyDeclarationSyntax prop)
-    {
-        var span = prop.SyntaxTree.GetLineSpan(prop.Span);
-        return new FieldModel
-        {
-            Name = prop.Identifier.Text,
-            Type = prop.Type.ToString(),
-            Line = span.StartLinePosition.Line + 1,
-            Exported = IsExported(prop.Modifiers),
-            IsPrivate = IsPrivate(prop.Modifiers),
-            IsAutoProperty = true,
-            Node = prop,
-        };
     }
 
     private static MethodModel? TryBuildMethod(SourceFile file, ClassModel cls, MemberDeclarationSyntax member)
@@ -201,9 +136,9 @@ public static class ModelBuilder
             IsConstructor = false,
             Line = span.StartLinePosition.Line + 1,
             EndLine = span.EndLinePosition.Line + 1,
-            Exported = IsExported(node.Modifiers),
-            IsPrivate = IsPrivate(node.Modifiers),
-            Parameters = BuildParameters(node.ParameterList),
+            Exported = ModelBuilderHelpers.IsExported(node.Modifiers),
+            IsPrivate = ModelBuilderHelpers.IsPrivate(node.Modifiers),
+            Parameters = ModelBuilderHelpers.BuildParameters(node.ParameterList),
             ReturnType = node.ReturnType.ToString(),
             Class = cls,
             Node = node,
@@ -221,9 +156,9 @@ public static class ModelBuilder
             IsConstructor = true,
             Line = span.StartLinePosition.Line + 1,
             EndLine = span.EndLinePosition.Line + 1,
-            Exported = IsExported(node.Modifiers),
-            IsPrivate = IsPrivate(node.Modifiers),
-            Parameters = BuildParameters(node.ParameterList),
+            Exported = ModelBuilderHelpers.IsExported(node.Modifiers),
+            IsPrivate = ModelBuilderHelpers.IsPrivate(node.Modifiers),
+            Parameters = ModelBuilderHelpers.BuildParameters(node.ParameterList),
             ReturnType = "",
             Class = cls,
             Node = node,
@@ -248,8 +183,8 @@ public static class ModelBuilder
                     IsConstructor = false,
                     Line = mSpan.StartLinePosition.Line + 1,
                     EndLine = mSpan.EndLinePosition.Line + 1,
-                    Exported = IsExported(m.Modifiers),
-                    Parameters = BuildParameters(m.ParameterList),
+                    Exported = ModelBuilderHelpers.IsExported(m.Modifiers),
+                    Parameters = ModelBuilderHelpers.BuildParameters(m.ParameterList),
                     ReturnType = m.ReturnType.ToString(),
                     Node = m,
                     Body = m.Body,
@@ -263,47 +198,12 @@ public static class ModelBuilder
             Name = node.Identifier.Text,
             Line = span.StartLinePosition.Line + 1,
             EndLine = span.EndLinePosition.Line + 1,
-            Exported = IsExported(node.Modifiers),
+            Exported = ModelBuilderHelpers.IsExported(node.Modifiers),
             Namespace = ns,
-            BaseTypes = CollectBaseTypes(node.BaseList),
+            BaseTypes = ModelBuilderHelpers.CollectBaseTypes(node.BaseList),
             Methods = methods,
             Node = node,
             File = file,
         };
     }
-
-    private static List<ParameterModel> BuildParameters(ParameterListSyntax? paramList)
-    {
-        if (paramList == null) return new();
-        var result = new List<ParameterModel>();
-        foreach (var p in paramList.Parameters)
-        {
-            var span = p.SyntaxTree.GetLineSpan(p.Span);
-            result.Add(new ParameterModel
-            {
-                Name = p.Identifier.Text,
-                Type = p.Type?.ToString() ?? "",
-                Line = span.StartLinePosition.Line + 1,
-                Node = p,
-            });
-        }
-        return result;
-    }
-
-    private static List<string> CollectBaseTypes(BaseListSyntax? baseList)
-    {
-        if (baseList == null) return new();
-        return baseList.Types.Select(t => t.Type.ToString()).ToList();
-    }
-
-    private static bool IsExported(SyntaxTokenList modifiers) =>
-        modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword));
-
-    // A class member is private when declared so, or when it carries no
-    // accessibility modifier at all (the C# class-member default).
-    private static bool IsPrivate(SyntaxTokenList modifiers) =>
-        modifiers.Any(m => m.IsKind(SyntaxKind.PrivateKeyword)) ||
-        !modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword) ||
-                            m.IsKind(SyntaxKind.InternalKeyword) ||
-                            m.IsKind(SyntaxKind.ProtectedKeyword));
 }

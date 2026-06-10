@@ -46,13 +46,13 @@ public static class Runner
         IReadOnlyList<string> exclude,
         bool ignoreTests)
     {
-        var out_ = new List<string>();
+        var result = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         void Add(string p)
         {
             var abs = Path.GetFullPath(p);
-            if (seen.Add(abs)) out_.Add(p);
+            if (seen.Add(abs)) result.Add(p);
         }
 
         foreach (var p in paths)
@@ -63,8 +63,8 @@ public static class Runner
                 Add(p);
         }
 
-        out_.Sort(StringComparer.OrdinalIgnoreCase);
-        return out_;
+        result.Sort(StringComparer.OrdinalIgnoreCase);
+        return result;
     }
 
     private static void WalkDir(string root,
@@ -75,21 +75,35 @@ public static class Runner
     {
         foreach (var entry in Directory.EnumerateFileSystemEntries(root))
         {
-            var name = Path.GetFileName(entry);
             if (Directory.Exists(entry))
-            {
-                if (ShouldSkipDir(name)) continue;
-                if (ignoreTests && IsTestDir(name)) continue;
-                WalkDir(entry, suffixes, exclude, ignoreTests, add);
-            }
+                WalkDirEntry(entry, suffixes, exclude, ignoreTests, add);
             else
-            {
-                if (!HasSuffix(entry, suffixes)) continue;
-                if (ignoreTests && IsTestFile(entry)) continue;
-                if (IsExcluded(entry, exclude)) continue;
-                add(entry);
-            }
+                AddFileEntry(entry, suffixes, exclude, ignoreTests, add);
         }
+    }
+
+    private static void WalkDirEntry(string entry,
+        IReadOnlyList<string> suffixes,
+        IReadOnlyList<string> exclude,
+        bool ignoreTests,
+        Action<string> add)
+    {
+        var name = Path.GetFileName(entry);
+        if (ShouldSkipDir(name)) return;
+        if (ignoreTests && IsTestDir(name)) return;
+        WalkDir(entry, suffixes, exclude, ignoreTests, add);
+    }
+
+    private static void AddFileEntry(string entry,
+        IReadOnlyList<string> suffixes,
+        IReadOnlyList<string> exclude,
+        bool ignoreTests,
+        Action<string> add)
+    {
+        if (!HasSuffix(entry, suffixes)) return;
+        if (ignoreTests && IsTestFile(entry)) return;
+        if (IsExcluded(entry, exclude)) return;
+        add(entry);
     }
 
     private static bool ShouldSkipDir(string name) =>

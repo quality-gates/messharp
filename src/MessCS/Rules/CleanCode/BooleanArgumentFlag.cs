@@ -14,25 +14,25 @@ public sealed class BooleanArgumentFlagRule : BaseRule, IMethodRule
     public void Apply(RuleContext ctx, MethodModel method)
     {
         if (!method.Exported) return;
-
-        var exceptions = SplitList(ctx.Props.Str("exceptions", ""));
-        var ignorePattern = RuleContext.CompileRegex(ctx.Props.Str("ignorepattern", ""));
-
-        if (ignorePattern != null && ignorePattern.IsMatch(method.Name)) return;
+        if (IsExcluded(ctx, method)) return;
 
         string image = method.Class != null
             ? method.Class.Name + "::" + method.Name
             : method.Name;
 
-        if (exceptions.Contains(method.Class?.Name ?? "")) return;
-
         foreach (var param in method.Parameters)
         {
             if (IsBoolType(param.Type) && param.Name.Length > 0)
-            {
                 ctx.Report(param.Line, param.Line, image, param.Name);
-            }
         }
+    }
+
+    private static bool IsExcluded(RuleContext ctx, MethodModel method)
+    {
+        var exceptions = SplitList(ctx.Props.Str("exceptions", ""));
+        if (exceptions.Contains(method.Class?.Name ?? "")) return true;
+        var ignorePattern = RuleContext.CompileRegex(ctx.Props.Str("ignorepattern", ""));
+        return ignorePattern != null && ignorePattern.IsMatch(method.Name);
     }
 
     private static bool IsBoolType(string type)

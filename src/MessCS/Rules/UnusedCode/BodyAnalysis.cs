@@ -26,34 +26,37 @@ internal static class BodyAnalysis
         var reads = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var node in body.DescendantNodesAndSelf())
-        {
-            switch (node)
-            {
-                // nameof(x) or nameof(T.x) count as a read
-                case InvocationExpressionSyntax inv
-                    when inv.Expression is IdentifierNameSyntax nameofKw
-                      && nameofKw.Identifier.Text == "nameof"
-                      && inv.ArgumentList.Arguments.Count == 1:
-                    var argExpr = inv.ArgumentList.Arguments[0].Expression;
-                    if (argExpr is IdentifierNameSyntax nameofId)
-                        reads.Add(nameofId.Identifier.Text);
-                    else if (argExpr is MemberAccessExpressionSyntax nameofMae)
-                        reads.Add(nameofMae.Name.Identifier.Text);
-                    break;
+            CollectRead(node, writes, reads);
 
-                // member access: this.field or obj.member
-                case MemberAccessExpressionSyntax mae:
-                    reads.Add(mae.Name.Identifier.Text);
-                    break;
-
-                // bare identifier that is not a pure write
-                case IdentifierNameSyntax id when !writes.Contains(id):
-                    if (id.Identifier.Text != "_")
-                        reads.Add(id.Identifier.Text);
-                    break;
-            }
-        }
         return reads;
+    }
+
+    private static void CollectRead(SyntaxNode node, HashSet<SyntaxNode> writes, HashSet<string> reads)
+    {
+        if (TryCollectNameofRead(node, reads)) return;
+
+        if (node is MemberAccessExpressionSyntax mae)
+        {
+            reads.Add(mae.Name.Identifier.Text);
+            return;
+        }
+
+        if (node is IdentifierNameSyntax id && !writes.Contains(id) && id.Identifier.Text != "_")
+            reads.Add(id.Identifier.Text);
+    }
+
+    private static bool TryCollectNameofRead(SyntaxNode node, HashSet<string> reads)
+    {
+        if (node is not InvocationExpressionSyntax inv) return false;
+        if (inv.Expression is not IdentifierNameSyntax kw || kw.Identifier.Text != "nameof") return false;
+        if (inv.ArgumentList.Arguments.Count != 1) return false;
+
+        var argExpr = inv.ArgumentList.Arguments[0].Expression;
+        if (argExpr is IdentifierNameSyntax nameofId)
+            reads.Add(nameofId.Identifier.Text);
+        else if (argExpr is MemberAccessExpressionSyntax nameofMae)
+            reads.Add(nameofMae.Name.Identifier.Text);
+        return true;
     }
 
     /// <summary>
@@ -105,55 +108,45 @@ internal static class BodyAnalysis
     internal static List<(string Name, int Line)> LocalVariables(SyntaxNode body)
     {
         var result = new List<(string, int)>();
-
         foreach (var node in body.DescendantNodesAndSelf())
-        {
-            switch (node)
-            {
-                // var x = expr; or int x = expr;
-                case LocalDeclarationStatementSyntax ld:
-                    foreach (var v in ld.Declaration.Variables)
-                    {
-                        var name = v.Identifier.Text;
-                        if (name == "_") continue;
-                        var line = v.SyntaxTree.GetLineSpan(v.Span).StartLinePosition.Line + 1;
-                        result.Add((name, line));
-                    }
-                    break;
-
-                // foreach (var item in ...) or foreach (var (k,v) in ...)
-                case ForEachStatementSyntax fe:
-                {
-                    var name = fe.Identifier.Text;
-                    if (name != "_")
-                    {
-                        var line = fe.SyntaxTree.GetLineSpan(fe.Identifier.Span).StartLinePosition.Line + 1;
-                        result.Add((name, line));
-                    }
-                    break;
-                }
-
-                // foreach (var (k, v) in dict) — DeconstructionForeachStatement
-                case ForEachVariableStatementSyntax feVar:
-                    CollectDesignationNames(feVar.Variable, feVar.SyntaxTree, result);
-                    break;
-
-                // out var x in argument lists
-                case DeclarationExpressionSyntax decl
-                    when decl.Designation is SingleVariableDesignationSyntax outVar:
-                {
-                    var name = outVar.Identifier.Text;
-                    if (name != "_")
-                    {
-                        var line = decl.SyntaxTree.GetLineSpan(decl.Span).StartLinePosition.Line + 1;
-                        result.Add((name, line));
-                    }
-                    break;
-                }
-            }
-        }
-
+            CollectLocalNode(node, result);
         return result;
+    }
+
+    private static void CollectLocalNode(SyntaxNode node, List<(string, int)> result)
+    {
+        switch (node)
+        {
+            // var x = expr; or int x = expr;
+            case LocalDeclarationStatementSyntax ld:
+                foreach (var v in ld.Declaration.Variables)
+                {
+                    var name = v.Identifier.Text;
+                    if (name != "_")
+                        result.Add((name, v.SyntaxTree.GetLineSpan(v.Span).StartLinePosition.Line + 1));
+                }
+                break;
+
+            // foreach (var item in ...)
+            case ForEachStatementSyntax fe:
+                if (fe.Identifier.Text != "_")
+                    result.Add((fe.Identifier.Text,
+                        fe.SyntaxTree.GetLineSpan(fe.Identifier.Span).StartLinePosition.Line + 1));
+                break;
+
+            // foreach (var (k, v) in dict)
+            case ForEachVariableStatementSyntax feVar:
+                CollectDesignationNames(feVar.Variable, feVar.SyntaxTree, result);
+                break;
+
+            // out var x in argument lists
+            case DeclarationExpressionSyntax decl
+                when decl.Designation is SingleVariableDesignationSyntax outVar:
+                if (outVar.Identifier.Text != "_")
+                    result.Add((outVar.Identifier.Text,
+                        decl.SyntaxTree.GetLineSpan(decl.Span).StartLinePosition.Line + 1));
+                break;
+        }
     }
 
     private static void CollectDesignationNames(ExpressionSyntax expr, SyntaxTree tree,

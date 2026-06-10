@@ -80,31 +80,20 @@ public sealed class CamelCasePropertyNameRule : BaseRule, IClassRule
     public void Apply(RuleContext ctx, ClassModel cls)
     {
         bool allowPrefix = ctx.Props.Bool("allowUnderscorePrefix", true);
-
         foreach (var field in cls.Fields)
         {
-            if (field.Exported || field.IsAutoProperty)
-            {
-                // Public fields and auto-properties (any visibility) must be
-                // PascalCase
-                if (!NamingConventions.IsPascalCase(field.Name))
-                    ctx.Report(field.Line, field.Line, field.Name);
-            }
-            else if (field.IsStatic && field.IsReadonly)
-            {
-                // static readonly fields are constant-like: both PascalCase
-                // and (_)camelCase are accepted C# style
-                if (!NamingConventions.IsPascalCase(field.Name) &&
-                    !NamingConventions.IsCamelCase(field.Name, allowPrefix))
-                    ctx.Report(field.Line, field.Line, field.Name);
-            }
-            else
-            {
-                // Other non-public fields: camelCase or _camelCase
-                if (!NamingConventions.IsCamelCase(field.Name, allowPrefix))
-                    ctx.Report(field.Line, field.Line, field.Name);
-            }
+            if (!IsValidFieldName(field, allowPrefix))
+                ctx.Report(field.Line, field.Line, field.Name);
         }
+    }
+
+    private static bool IsValidFieldName(MessCS.Model.FieldModel field, bool allowPrefix)
+    {
+        if (field.Exported || field.IsAutoProperty)
+            return NamingConventions.IsPascalCase(field.Name);
+        if (field.IsStatic && field.IsReadonly)
+            return NamingConventions.IsPascalCase(field.Name) || NamingConventions.IsCamelCase(field.Name, allowPrefix);
+        return NamingConventions.IsCamelCase(field.Name, allowPrefix);
     }
 }
 

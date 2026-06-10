@@ -21,35 +21,32 @@ public sealed class StaticAccessRule : BaseRule, IMethodRule
 
         var exceptions = SplitList(ctx.Props.Str("exceptions", ""));
         var ignorePattern = RuleContext.CompileRegex(ctx.Props.Str("ignorepattern", ""));
-        var ownClass = method.Class?.Name ?? "";
-
         if (ignorePattern != null && ignorePattern.IsMatch(method.Name)) return;
 
-        foreach (var invocation in method.Body.DescendantNodesAndSelf()
-                     .OfType<InvocationExpressionSyntax>())
-        {
-            if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess) continue;
-            if (!memberAccess.IsKind(SyntaxKind.SimpleMemberAccessExpression)) continue;
+        var ownClass = method.Class?.Name ?? "";
+        foreach (var invocation in method.Body.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
+            CheckInvocation(ctx, method.Name, invocation, ownClass, exceptions);
+    }
 
-            // The target must be a simple name (ClassName.Method()), not a variable.
-            // Use PascalCase heuristic: type names start with uppercase; variables
-            // do not. This is the only signal available without semantic analysis.
-            if (memberAccess.Expression is not SimpleNameSyntax targetName) continue;
+    private static void CheckInvocation(RuleContext ctx, string methodName,
+        InvocationExpressionSyntax invocation, string ownClass, HashSet<string> exceptions)
+    {
+        if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess) return;
+        if (!memberAccess.IsKind(SyntaxKind.SimpleMemberAccessExpression)) return;
+        if (memberAccess.Expression is not SimpleNameSyntax targetName) return;
 
-            var targetClassName = targetName.Identifier.Text;
+        var targetClassName = targetName.Identifier.Text;
+        if (IsSkipped(targetClassName, ownClass, exceptions)) return;
 
-            // Skip identifiers that look like variables (start with lowercase)
-            if (targetClassName.Length == 0 || char.IsLower(targetClassName[0])) continue;
+        var line = invocation.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
+        ctx.Report(line, line, targetClassName, methodName);
+    }
 
-            // Skip own class
-            if (targetClassName == ownClass) continue;
-
-            // Skip exception classes
-            if (exceptions.Contains(targetClassName)) continue;
-
-            var line = invocation.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
-            ctx.Report(line, line, targetClassName, method.Name);
-        }
+    private static bool IsSkipped(string targetClassName, string ownClass, HashSet<string> exceptions)
+    {
+        if (targetClassName.Length == 0 || char.IsLower(targetClassName[0])) return true;
+        if (targetClassName == ownClass) return true;
+        return exceptions.Contains(targetClassName);
     }
 
     private static HashSet<string> SplitList(string val)
