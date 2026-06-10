@@ -61,6 +61,9 @@ public static class Runner
                 WalkDir(p, suffixes, exclude, ignoreTests, Add);
             else if (File.Exists(p))
                 Add(p);
+            else
+                // phpmd/messgo error out on a path that does not exist
+                throw new FileNotFoundException($"no such file or directory: {p}");
         }
 
         result.Sort(StringComparer.OrdinalIgnoreCase);

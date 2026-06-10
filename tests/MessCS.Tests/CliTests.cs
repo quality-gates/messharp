@@ -81,4 +81,12 @@ public class CliTests
         }
         finally { File.Delete(tmpFile); }
     }
+
+    [Fact]
+    public void MissingPath_ReturnsError()
+    {
+        var (code, _, stderr) = RunCli("./does-not-exist-anywhere", "text", "codesize");
+        Assert.Equal(1, code);
+        Assert.Contains("no such file or directory", stderr);
+    }
 }

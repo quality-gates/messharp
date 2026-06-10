@@ -7,4 +7,4 @@ RUN dotnet publish src/MessCS/MessCS.csproj -c Release -o /app
 FROM mcr.microsoft.com/dotnet/runtime:8.0
 WORKDIR /app
 COPY --from=build /app .
-ENTRYPOINT ["dotnet", "/app/MessCS.dll"]
+ENTRYPOINT ["dotnet", "/app/messcs.dll"]
