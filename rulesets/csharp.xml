@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<ruleset name="CSharp Rules"
+         xmlns="http://pmd.sf.net/ruleset/1.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="http://pmd.sf.net/ruleset_xml_schema.xsd">
+
+    <description>
+PHPMD's default rules tuned for idiomatic C#. It pulls in every built-in
+ruleset, but quiets a few rules whose PHP defaults are a poor fit for C#:
+
+  * Naming/ShortVariable is dropped: short names (x, e, i, kv, ...) are
+    idiomatic in lambdas, event handlers, and tight scopes.
+  * Naming/LongVariable's maximum is raised to 35, since C# favors descriptive
+    PascalCase/camelCase names over PHP's terser style.
+  * CleanCode/ElseExpression is dropped: `else` is unobjectionable C#; no
+    mainstream C# analyzer flags it.
+  * CleanCode/BooleanArgumentFlag is dropped: boolean parameters are common
+    throughout the BCL (StringComparison aside, e.g. Stream, XmlWriter).
+  * CleanCode/StaticAccess is dropped: static access is pervasive and
+    idiomatic in C# (Math, string.Join, Path, File, Convert, ...).
+  * UnusedCode/UnusedFormalParameter is dropped: unused parameters are
+    routinely required by interface implementations, event-handler signatures
+    (object sender, EventArgs e), and delegate shapes.
+  * Design/CountInLoopExpression is dropped: Count/Length properties are O(1)
+    in .NET collections, unlike PHP's count().
+
+These dropped rules are bundled in the opt-in `opinionated` ruleset for anyone
+who wants the stricter, more PHP-flavoured style. See opinionated.xml.
+    </description>
+
+    <rule ref="codesize"/>
+    <rule ref="unusedcode">
+        <exclude name="UnusedFormalParameter"/>
+    </rule>
+    <rule ref="cleancode">
+        <exclude name="ElseExpression"/>
+        <exclude name="BooleanArgumentFlag"/>
+        <exclude name="StaticAccess"/>
+    </rule>
+    <rule ref="controversial"/>
+
+    <rule ref="naming">
+        <exclude name="ShortVariable"/>
+        <exclude name="LongVariable"/>
+    </rule>
+    <rule ref="naming/LongVariable">
+        <properties>
+            <property name="maximum" value="35"/>
+        </properties>
+    </rule>
+
+    <rule ref="design">
+        <exclude name="CountInLoopExpression"/>
+    </rule>
+</ruleset>

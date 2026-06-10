@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<ruleset name="Opinionated Rules"
+         xmlns="http://pmd.sf.net/ruleset/1.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="http://pmd.sf.net/ruleset_xml_schema.xsd">
+
+    <description>
+Opt-in checks that are deliberately NOT part of the default `csharp` ruleset
+because they conflict with idiomatic C#. They come straight from PHPMD's
+PHP-flavoured heritage, and flag patterns that are perfectly normal — often
+unavoidable — in C#:
+
+  * CleanCode/ElseExpression flags every `else` branch. C# uses `else`
+    freely; early returns are encouraged but not required.
+  * CleanCode/BooleanArgumentFlag flags every boolean parameter. The BCL is
+    full of them, so this is an OO Single-Responsibility opinion rather than
+    a C# convention.
+  * CleanCode/StaticAccess flags static method calls on other classes. The
+    BCL is organized around static classes (Math, Path, File, Convert), so
+    in C# this is a testability opinion, not a convention.
+  * UnusedCode/UnusedFormalParameter flags unread parameters. In C#,
+    parameters are routinely kept to satisfy an interface, an event-handler
+    signature (object sender, EventArgs e), or a delegate shape.
+  * Naming/ShortVariable flags names under 3 characters. Short names are
+    idiomatic in C# lambdas (x => x.Id), event handlers (e), and counters.
+  * Design/CountInLoopExpression flags Count/Length in loop conditions. These
+    are O(1) properties in .NET, so the PHP performance rationale does not
+    transfer; flag it only if you want the stylistic discipline.
+
+Run with:  messcs &lt;paths&gt; &lt;format&gt; opinionated
+Or combine: messcs &lt;paths&gt; &lt;format&gt; csharp,opinionated
+    </description>
+
+    <rule ref="cleancode/ElseExpression"/>
+    <rule ref="cleancode/BooleanArgumentFlag"/>
+    <rule ref="cleancode/StaticAccess"/>
+    <rule ref="unusedcode/UnusedFormalParameter"/>
+    <rule ref="naming/ShortVariable"/>
+    <rule ref="design/CountInLoopExpression"/>
+</ruleset>

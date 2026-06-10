@@ -56,6 +56,8 @@ public sealed class MethodModel
     public int Line { get; init; }
     public int EndLine { get; init; }
     public bool Exported { get; init; }
+    /// <summary>Declared private, including the implicit class-member default.</summary>
+    public bool IsPrivate { get; init; }
     public List<ParameterModel> Parameters { get; init; } = new();
     public string ReturnType { get; init; } = "";
     /// <summary>Owning class, or null for interface methods.</summary>
@@ -71,7 +73,11 @@ public sealed class FieldModel
     public string Type { get; init; } = "";
     public int Line { get; init; }
     public bool Exported { get; init; }
+    /// <summary>Declared private, including the implicit class-member default.</summary>
+    public bool IsPrivate { get; init; }
     public bool IsAutoProperty { get; init; }
+    public bool IsStatic { get; init; }
+    public bool IsReadonly { get; init; }
     public SyntaxNode Node { get; init; } = null!;
 }
 

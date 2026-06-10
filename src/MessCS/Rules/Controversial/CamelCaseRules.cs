@@ -83,15 +83,24 @@ public sealed class CamelCasePropertyNameRule : BaseRule, IClassRule
 
         foreach (var field in cls.Fields)
         {
-            if (field.Exported)
+            if (field.Exported || field.IsAutoProperty)
             {
-                // Public fields / auto-properties must be PascalCase
+                // Public fields and auto-properties (any visibility) must be
+                // PascalCase
                 if (!NamingConventions.IsPascalCase(field.Name))
+                    ctx.Report(field.Line, field.Line, field.Name);
+            }
+            else if (field.IsStatic && field.IsReadonly)
+            {
+                // static readonly fields are constant-like: both PascalCase
+                // and (_)camelCase are accepted C# style
+                if (!NamingConventions.IsPascalCase(field.Name) &&
+                    !NamingConventions.IsCamelCase(field.Name, allowPrefix))
                     ctx.Report(field.Line, field.Line, field.Name);
             }
             else
             {
-                // Private fields: camelCase or _camelCase
+                // Other non-public fields: camelCase or _camelCase
                 if (!NamingConventions.IsCamelCase(field.Name, allowPrefix))
                     ctx.Report(field.Line, field.Line, field.Name);
             }

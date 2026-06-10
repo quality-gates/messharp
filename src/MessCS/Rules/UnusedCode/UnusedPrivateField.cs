@@ -16,7 +16,7 @@ public sealed class UnusedPrivateFieldRule : BaseRule, IClassRule
         var used = CollectUsedNames(ctx.File);
         foreach (var field in cls.Fields)
         {
-            if (field.Exported) continue;
+            if (!field.IsPrivate) continue;
             if (field.Name == "_") continue;
             if (used.Contains(field.Name)) continue;
             ctx.ReportClass(cls, field.Name);
