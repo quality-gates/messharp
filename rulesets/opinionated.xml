@@ -28,8 +28,8 @@ unavoidable — in C#:
     are O(1) properties in .NET, so the PHP performance rationale does not
     transfer; flag it only if you want the stylistic discipline.
 
-Run with:  messcs &lt;paths&gt; &lt;format&gt; opinionated
-Or combine: messcs &lt;paths&gt; &lt;format&gt; csharp,opinionated
+Run with:  messharp &lt;paths&gt; &lt;format&gt; opinionated
+Or combine: messharp &lt;paths&gt; &lt;format&gt; csharp,opinionated
     </description>
 
     <rule ref="cleancode/ElseExpression"/>

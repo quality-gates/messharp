@@ -1,12 +1,12 @@
-# messcs
+# messharp
 
-**messcs** is a [PHP Mess Detector](https://phpmd.org) (phpmd) port for C#: it
+**MessSharp** (**messharp**) is a [PHP Mess Detector](https://phpmd.org) (phpmd) port for C#: it
 is written in C# *and* analyzes C# source code, applying phpmd's rule catalog,
 ruleset format, message templates, CLI surface, and report renderers — adapted
 faithfully to C# semantics. It is the sibling of
 [messgo](https://github.com/quality-gates/messgo), the same port for Go.
 
-Where phpmd parses PHP via pdepend, messcs parses C# via
+Where phpmd parses PHP via pdepend, messharp parses C# via
 [Roslyn](https://github.com/dotnet/roslyn) (`Microsoft.CodeAnalysis.CSharp`,
 syntax-only — files are analyzed standalone, no compilation required). By
 default it uses idiomatic C# principles (the bundled `csharp` ruleset), but a
@@ -26,29 +26,29 @@ scripts/dotnet.sh build -c Release
 Or build the runtime image:
 
 ```bash
-docker build -t messcs .
+docker build -t messharp .
 ```
 
 ### 2. Run it on your code
 
-The simplest way to start is the same command messcs uses to check *itself* in
+The simplest way to start is the same command messharp uses to check *itself* in
 CI — point it at a directory using the bundled `csharp` ruleset, with plain
 `text` output, skipping test files:
 
 ```bash
-scripts/dotnet.sh run --project src/MessCS -- ./src text csharp --ignore-tests
+scripts/dotnet.sh run --project src/MessSharp -- ./src text csharp --ignore-tests
 ```
 
 Or with the runtime image, mounting the code to analyze:
 
 ```bash
-docker run --rm -v "$PWD":/code messcs /code text csharp --ignore-tests
+docker run --rm -v "$PWD":/code messharp /code text csharp --ignore-tests
 ```
 
 That's the whole pattern. The command is always:
 
 ```bash
-messcs <paths> <format> <ruleset[,...]> [options]
+messharp <paths> <format> <ruleset[,...]> [options]
 ```
 
 * **paths** — comma-separated files or directories. Directories are walked;
@@ -63,7 +63,7 @@ messcs <paths> <format> <ruleset[,...]> [options]
 `text` format prints one violation per line as `file:line  Rule  message`:
 
 ```
-src/MessCS/Cli/Cli.cs:131  CyclomaticComplexity  The method Parse() has a Cyclomatic Complexity of 12. The configured cyclomatic complexity threshold is 10.
+src/MessSharp/Cli/Cli.cs:131  CyclomaticComplexity  The method Parse() has a Cyclomatic Complexity of 12. The configured cyclomatic complexity threshold is 10.
 ```
 
 ### 4. Check the exit code
@@ -76,17 +76,17 @@ Exit codes match phpmd exactly:
 | **1** | Error (e.g. bad arguments, parse failure) |
 | **2** | Violations found |
 
-This makes messcs drop straight into a build script or CI step: a non-zero
+This makes messharp drop straight into a build script or CI step: a non-zero
 exit fails the job.
 
 ## More usage examples
 
 ```bash
-messcs ./src text codesize                                    # one ruleset
-messcs ./src,./tests json naming,unusedcode                   # multiple paths and rulesets
-messcs Program.cs xml codesize,design,cleancode --minimumpriority 2
-messcs ./src text codesize,design --only CyclomaticComplexity,GlobalVariable
-messcs ./src text csharp --disable LongVariable               # everything in csharp except one rule
+messharp ./src text codesize                                    # one ruleset
+messharp ./src,./tests json naming,unusedcode                   # multiple paths and rulesets
+messharp Program.cs xml codesize,design,cleancode --minimumpriority 2
+messharp ./src text codesize,design --only CyclomaticComplexity,GlobalVariable
+messharp ./src text csharp --disable LongVariable               # everything in csharp except one rule
 ```
 
 `--only` (alias `--enable`) and `--disable` filter by **rule name** within the
@@ -157,8 +157,8 @@ ruleset the same way phpmd does, then pass its path as the ruleset argument.
 
 ## Use it in CI (GitHub Actions)
 
-messcs runs on itself in CI; see `.github/workflows/ci.yml` in this repo for
-the exact job. Because messcs exits `2` when it finds violations, the
+messharp runs on itself in CI; see `.github/workflows/ci.yml` in this repo for
+the exact job. Because messharp exits `2` when it finds violations, the
 self-analysis step fails the job automatically — no extra scripting needed.
 
 ## Running the tests

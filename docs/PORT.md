@@ -1,12 +1,12 @@
-# MessCS porting spec
+# MessSharp porting spec
 
-**messcs** is a port of [PHP Mess Detector](https://phpmd.org) (phpmd) to C#:
+**messharp** is a port of [PHP Mess Detector](https://phpmd.org) (phpmd) to C#:
 written in C# *and* analyzing C# source, applying phpmd's rule catalog,
 ruleset XML format, message templates, CLI surface, exit codes, and report
 renderers. The reference implementation for architecture and behavior is
 **messgo** (https://github.com/quality-gates/messgo), a sibling port for Go —
 a checkout lives at `/tmp/messgo` during development. Where messgo wraps
-`go/ast`, messcs wraps **Roslyn** (`Microsoft.CodeAnalysis.CSharp`,
+`go/ast`, messharp wraps **Roslyn** (`Microsoft.CodeAnalysis.CSharp`,
 syntax-only — no semantic model, no compilation; we analyze files
 standalone exactly like phpmd/messgo do).
 
@@ -16,7 +16,7 @@ standalone exactly like phpmd/messgo do).
   host dotnet). Example: `scripts/dotnet.sh test`.
 - Exit codes match phpmd exactly: **0** clean, **1** error, **2** violations.
 - CLI surface is identical to messgo's:
-  `messcs <paths> <format> <ruleset[,...]> [options]` with the same options
+  `messharp <paths> <format> <ruleset[,...]> [options]` with the same options
   (`--minimumpriority`, `--maximumpriority`, `--reportfile`, `--suffixes`
   (default `cs`), `--exclude`, `--only`/`--enable`, `--disable`,
   `--ignore-tests`, `--strict`, `--color`, `--verbose`,
@@ -31,8 +31,8 @@ standalone exactly like phpmd/messgo do).
 ## Solution layout
 
 ```
-MessCS.sln
-src/MessCS/MessCS.csproj          net8.0 console app; PackageReference Microsoft.CodeAnalysis.CSharp
+MessSharp.sln
+src/MessSharp/MessSharp.csproj    net8.0 console app; PackageReference Microsoft.CodeAnalysis.CSharp
   Program.cs                      thin Main -> Cli.Run(args), returns exit code
   Cli/Cli.cs                      arg parsing/validation/orchestration (mirror internal/cli)
   Model/                          phpmd-style artifacts built from Roslyn syntax
@@ -44,13 +44,13 @@ src/MessCS/MessCS.csproj          net8.0 console app; PackageReference Microsoft
   Report/                         Report + renderers: text, xml, json, html, ansi, github, gitlab, checkstyle, sarif
   Runner/Runner.cs                file discovery + pipeline
   Util/
-tests/MessCS.Tests/MessCS.Tests.csproj   xunit
+tests/MessSharp.Tests/MessSharp.Tests.csproj   xunit
 rulesets/*.xml                    bundled rulesets, copied to output (Content/CopyToOutputDirectory)
 testdata/                         crafted .cs fixture files per ruleset
 docs/PORT.md                      this file
 ```
 
-Namespace = folder, e.g. `MessCS.Rules.CodeSize`.
+Namespace = folder, e.g. `MessSharp.Rules.CodeSize`.
 
 ## Core contracts (mirror messgo's `internal/rule` and `internal/model`)
 
@@ -95,6 +95,7 @@ of `ClassModel`, `InterfaceModel`, methods. Mapping:
 | Parameter | method/ctor parameters |
 | Function | C# has no free functions: top-level statements form an implicit Main; `IFunctionRule` exists for parity but rarely fires |
 
+Brief descriptions:
 Models keep a reference to their Roslyn node so rules can walk syntax.
 `ClassModel` records base types (`Embeds` analog), constants
 (`const` members), Exported = public, Line/EndLine from the tree's
@@ -122,12 +123,11 @@ HTML/sarif/checkstyle layouts match phpmd's).
 
 ### Rule registry (conflict-free parallel work)
 
-`Rules/Registry.cs` (written once, owned by the foundation) maps ruleset
-name → `IReadOnlyList<IRule>` by delegating to one static class per group,
-e.g. `CodeSizeRules.All`. Each group's static class lives in that group's
-folder; agents implementing a group edit **only their own folder** and the
-matching `rulesets/<name>.xml` and their own test file
-`tests/MessCS.Tests/<Group>RulesTests.cs`.
+`Rules/Registry.cs` maps ruleset name → `IReadOnlyList<IRule>` by delegating
+to one static class per group, e.g. `CodeSizeRules.All`. Each group's static
+class lives in that group's folder; agents implementing a group edit **only
+their own folder** and the matching `rulesets/<name>.xml` and their own test
+file `tests/MessSharp.Tests/<Group>RulesTests.cs`.
 
 ## Rule catalog (per group)
 
@@ -191,5 +191,5 @@ Same catalog as messgo, adapted to C# semantics:
 ## Self-analysis
 
 The shipped binary must run clean on its own source:
-`messcs ./src text csharp --ignore-tests` → exit 0 (tune `csharp.xml`
-and/or refactor messcs itself until true, the same way messgo did).
+`messharp ./src text csharp --ignore-tests` → exit 0 (tune `csharp.xml`
+and/or refactor messharp itself until true, the same way messgo did).

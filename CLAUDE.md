@@ -1,8 +1,8 @@
-# messcs
+# messharp
 
-A PHP Mess Detector (phpmd) port for C#. Parses C# source using Roslyn
-(`Microsoft.CodeAnalysis.CSharp`, syntax-only) and applies rules faithful to
-C# semantics. Reference implementation: messgo
+A PHP Mess Detector (phpmd) port for C# (**MessSharp**). Parses C# source
+using Roslyn (`Microsoft.CodeAnalysis.CSharp`, syntax-only) and applies rules
+faithful to C# semantics. Reference implementation: messgo
 (https://github.com/quality-gates/messgo). Porting spec: `docs/PORT.md`.
 
 ## Build & test — Docker only
@@ -13,31 +13,31 @@ dotnet install.**
 ```bash
 scripts/dotnet.sh build
 scripts/dotnet.sh test
-scripts/dotnet.sh run --project src/MessCS -- ./src text csharp --ignore-tests
+scripts/dotnet.sh run --project src/MessSharp -- ./src text csharp --ignore-tests
 ```
 
 ## Key directories
 
 | Path | What it does |
 | :--- | :--- |
-| `src/MessCS/Cli/` | CLI parsing, validation, orchestration |
-| `src/MessCS/Model/` | Roslyn syntax → phpmd-style artifacts (Class, Interface, Method, Field, Parameter) |
-| `src/MessCS/Metrics/` | Cyclomatic complexity, NPath, LOC |
-| `src/MessCS/Rule/` | Rule interfaces, violations, context, engine |
-| `src/MessCS/Rules/` | Rule implementations by ruleset (cleancode, codesize, controversial, design, naming, unusedcode) |
-| `src/MessCS/RuleSet/` | phpmd ruleset XML loader, filters, overrides |
-| `src/MessCS/Report/` | Renderers (text, xml, json, html, ansi, github, gitlab, checkstyle, sarif) |
-| `src/MessCS/Runner/` | File discovery and pipeline |
+| `src/MessSharp/Cli/` | CLI parsing, validation, orchestration |
+| `src/MessSharp/Model/` | Roslyn syntax → phpmd-style artifacts (Class, Interface, Method, Field, Parameter) |
+| `src/MessSharp/Metrics/` | Cyclomatic complexity, NPath, LOC |
+| `src/MessSharp/Rule/` | Rule interfaces, violations, context, engine |
+| `src/MessSharp/Rules/` | Rule implementations by ruleset (cleancode, codesize, controversial, design, naming, unusedcode) |
+| `src/MessSharp/RuleSet/` | phpmd ruleset XML loader, filters, overrides |
+| `src/MessSharp/Report/` | Renderers (text, xml, json, html, ansi, github, gitlab, checkstyle, sarif) |
+| `src/MessSharp/Runner/` | File discovery and pipeline |
 | `rulesets/` | Bundled ruleset XML files |
 | `testdata/` | C# fixture sources for rule tests |
 
 ## Conventions
 
 - Exit codes match phpmd exactly: 0 success, 1 error, 2 violations.
-- CLI surface: `messcs <paths> <format> <ruleset[,...]> [options]`.
+- CLI surface: `messharp <paths> <format> <ruleset[,...]> [options]`.
 - Edit files one at a time using Read then Edit; no bulk replacements.
-- Keep messcs's own functions under its configured complexity limits —
-  self-analysis (`scripts/dotnet.sh run --project src/MessCS -- ./src text
+- Keep messharp's own functions under its configured complexity limits —
+  self-analysis (`scripts/dotnet.sh run --project src/MessSharp -- ./src text
   csharp --ignore-tests`) must exit 0.
 - Git worktrees go in `.worktrees/` (gitignored).
 
