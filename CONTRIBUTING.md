@@ -45,6 +45,18 @@ These files detail:
 
 ---
 
+## 🧱 SOLID Refactoring & Complexity Rules
+
+When modifying or refactoring code to meet quality gate metrics:
+*   **No Cheats:** Do not bypass cyclomatic complexity (CCN) or NPath limits using cheats (e.g. compressing syntax, inline hacks).
+*   **SOLID Design:** Refactor using clean **SOLID** design principles.
+*   **Horizontal Code Sharing:** Use C# equivalents of PHP traits to horizontally share code or decompose classes:
+    - **Extension Methods** (for sharing static logic).
+    - **Default Interface Implementations** (C#'s trait equivalent for horizontal interface behavior).
+    - **Composition** (extracting focused, decoupled helper classes).
+
+---
+
 ## 🚀 Quality Gate Checklist
 
 Before submitting a Pull Request, ensure that:

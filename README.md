@@ -170,3 +170,12 @@ scripts/dotnet.sh test
 The suite includes metric tests pinned to numbers produced by **real phpmd
 2.15.0** (cyclomatic complexity 12, NPath 324 on a reference method), plus
 per-ruleset behavioral tests, renderer tests, and CLI/exit-code tests.
+
+## Contributing & SOLID Refactoring
+
+For setup, workflows, and detailed guidelines, please see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+All modifications and refactorings must follow **SOLID** design principles and avoid 'cheats' to bypass complexity gates. Use C# equivalents of PHP traits to horizontally decompose code and reduce class CCN:
+- **Extension Methods** for shared helper logic.
+- **Default Interface Implementations** for horizontal code sharing.
+- **Composition** for extracting focused helper classes.
