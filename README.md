@@ -31,9 +31,8 @@ docker build -t messharp .
 
 ### 2. Run it on your code
 
-The simplest way to start is the same command messharp uses to check *itself* in
-CI — point it at a directory using the bundled `csharp` ruleset, with plain
-`text` output, skipping test files:
+The simplest way to start is to point messharp at a directory using the bundled
+`csharp` ruleset, with plain `text` output, skipping test files:
 
 ```bash
 scripts/dotnet.sh run --project src/MessSharp -- ./src text csharp --ignore-tests
@@ -158,8 +157,10 @@ ruleset the same way phpmd does, then pass its path as the ruleset argument.
 ## Use it in CI (GitHub Actions)
 
 messharp runs on itself in CI; see `.github/workflows/ci.yml` in this repo for
-the exact job. Because messharp exits `2` when it finds violations, the
-self-analysis step fails the job automatically — no extra scripting needed.
+the exact job. The CI self-analysis currently runs the stricter
+`csharp,codesize,design` ruleset combination. Because messharp exits `2` when it
+finds violations, the self-analysis step fails the job automatically — no extra
+scripting needed.
 
 ## Running the tests
 

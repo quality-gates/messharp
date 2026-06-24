@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-06-24
+
+### Fixed
+
+- Corrected README quick-start wording so it no longer claims the default `csharp` example is the exact CI self-analysis command, and documented the stricter `csharp,codesize,design` CI ruleset combination.
+
 ### Changed
 
 - Refactored `Runner` into an interface-driven pipeline (`IRunner`, `IFileDiscoverer`, `ISourceFileParser`), decoupling CLI orchestration and pipeline discovery from the physical file system.
