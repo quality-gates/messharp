@@ -14,7 +14,7 @@ public static class Cli
 
     private const string Version = "0.1.0";
 
-    public static int Run(string[] args, TextWriter? stdout = null, TextWriter? stderr = null)
+    public static int Run(string[] args, TextWriter? stdout = null, TextWriter? stderr = null, IRunner? runner = null)
     {
         stdout ??= Console.Out;
         stderr ??= Console.Error;
@@ -30,7 +30,7 @@ public static class Cli
         opts.Format = positionals[1];
         opts.Rulesets = positionals[2];
 
-        return Execute(opts, stdout, stderr);
+        return Execute(opts, stdout, stderr, runner);
     }
 
     private static bool HandleInfoFlag(string first, TextWriter stdout)
@@ -40,7 +40,7 @@ public static class Cli
         return false;
     }
 
-    private static int Execute(CliOptions opts, TextWriter stdout, TextWriter stderr)
+    private static int Execute(CliOptions opts, TextWriter stdout, TextWriter stderr, IRunner? runner = null)
     {
         if (!Renderers.TryGet(opts.Format, out var renderer))
         {
@@ -52,7 +52,7 @@ public static class Cli
         try { sets = LoadAndFilterRuleSets(opts, stderr); }
         catch (Exception ex) { stderr.WriteLine($"error: {ex.Message}"); return ExitError; }
 
-        var report = RunAnalysis(opts, sets, stderr);
+        var report = RunAnalysis(opts, sets, stderr, runner);
         if (report == null) return ExitError;
 
         if (!WriteReport(opts, report, renderer, stdout, stderr)) return ExitError;
@@ -71,11 +71,12 @@ public static class Cli
         return sets;
     }
 
-    private static MessSharp.Report.Report? RunAnalysis(CliOptions opts, List<RuleSetType> sets, TextWriter stderr)
+    private static MessSharp.Report.Report? RunAnalysis(CliOptions opts, List<RuleSetType> sets, TextWriter stderr, IRunner? runner = null)
     {
         try
         {
-            return MessSharp.Runner.Runner.Run(new RunOptions
+            runner ??= new MessSharp.Runner.Runner();
+            return runner.Run(new RunOptions
             {
                 Paths = CliArgParser.SplitList(opts.Paths),
                 RuleSets = sets,

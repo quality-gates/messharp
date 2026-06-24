@@ -89,4 +89,94 @@ public class CliTests
         Assert.Equal(1, code);
         Assert.Contains("no such file or directory", stderr);
     }
+
+    private class FakeRunner : MessSharp.Runner.IRunner
+    {
+        public MessSharp.Runner.RunOptions? LastOpts { get; private set; }
+        public MessSharp.Report.Report FakeReport { get; set; } = new();
+
+        public MessSharp.Report.Report Run(MessSharp.Runner.RunOptions opts)
+        {
+            LastOpts = opts;
+            return FakeReport;
+        }
+    }
+
+    [Fact]
+    public void Cli_WithFakeRunner_PassesCorrectOptions()
+    {
+        var runner = new FakeRunner();
+        var outW = new StringWriter();
+        var errW = new StringWriter();
+        var args = new[]
+        {
+            "somepath,otherpath", "text", "codesize",
+            "--exclude", "foo,bar",
+            "--ignore-tests",
+            "--suffixes", "cs,xaml"
+        };
+
+        int code = CliRunner.Run(args, outW, errW, runner);
+
+        Assert.Equal(0, code);
+        Assert.NotNull(runner.LastOpts);
+        Assert.Equal(2, runner.LastOpts.Paths.Count);
+        Assert.Contains("somepath", runner.LastOpts.Paths);
+        Assert.Contains("otherpath", runner.LastOpts.Paths);
+        Assert.Equal(2, runner.LastOpts.Exclude.Count);
+        Assert.Contains("foo", runner.LastOpts.Exclude);
+        Assert.Contains("bar", runner.LastOpts.Exclude);
+        Assert.True(runner.LastOpts.IgnoreTests);
+        Assert.Equal(2, runner.LastOpts.Suffixes.Count);
+        Assert.Contains(".cs", runner.LastOpts.Suffixes);
+        Assert.Contains(".xaml", runner.LastOpts.Suffixes);
+    }
+
+    [Fact]
+    public void Cli_WithFakeRunner_ReturnsExitViolationWhenViolationsExist()
+    {
+        var runner = new FakeRunner();
+        runner.FakeReport.Violations.Add(new MessSharp.Rule.Violation
+        {
+            Rule = new DummyRule("SomeRule"),
+            File = "file.cs",
+            BeginLine = 1,
+            Description = "Violation description"
+        });
+
+        var outW = new StringWriter();
+        var errW = new StringWriter();
+        var args = new[] { "somepath", "text", "codesize" };
+
+        int code = CliRunner.Run(args, outW, errW, runner);
+        Assert.Equal(2, code);
+    }
+
+    [Fact]
+    public void Cli_WithFakeRunner_ReturnsExitErrorWhenErrorsExist()
+    {
+        var runner = new FakeRunner();
+        runner.FakeReport.Errors.Add(new MessSharp.Report.ProcessingError
+        {
+            File = "file.cs",
+            Message = "Parse error"
+        });
+
+        var outW = new StringWriter();
+        var errW = new StringWriter();
+        var args = new[] { "somepath", "text", "codesize" };
+
+        int code = CliRunner.Run(args, outW, errW, runner);
+        Assert.Equal(1, code);
+    }
+
+    private class DummyRule : MessSharp.Rule.BaseRule
+    {
+        public DummyRule(string name)
+        {
+            Name = name;
+            Message = name;
+            Priority = 3;
+        }
+    }
 }
