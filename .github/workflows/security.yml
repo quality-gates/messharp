@@ -26,4 +26,4 @@ jobs:
 
       - name: NuGet Audit Restore
         # Fail the restore if any vulnerability is found (by treating NU1901-NU1904 warnings as errors)
-        run: dotnet restore MessSharp.sln /p:TreatWarningsAsErrors=true /p:WarningsAsErrors="NU1901;NU1902;NU1903;NU1904"
+        run: dotnet restore MessSharp.sln /p:TreatWarningsAsErrors=true /p:WarningsAsErrors="NU1901%3bNU1902%3bNU1903%3bNU1904"
