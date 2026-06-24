@@ -3,6 +3,7 @@ obj/
 *.user
 .vs/
 .idea/
+.serena/
 .worktrees/
 TestResults/
 *.nupkg

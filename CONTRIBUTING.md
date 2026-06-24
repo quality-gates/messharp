@@ -50,10 +50,10 @@ These files detail:
 When modifying or refactoring code to meet quality gate metrics:
 *   **No Cheats:** Do not bypass cyclomatic complexity (CCN) or NPath limits using cheats (e.g. compressing syntax, inline hacks).
 *   **SOLID Design:** Refactor using clean **SOLID** design principles.
-*   **Horizontal Code Sharing:** Use C# equivalents of PHP traits to horizontally share code or decompose classes:
-    - **Extension Methods** (for sharing static logic).
-    - **Default Interface Implementations** (C#'s trait equivalent for horizontal interface behavior).
+*   **Horizontal Code Sharing:** Do not bypass complexity limits by moving logic into extension methods, default interface implementations, or trait-like helper APIs. Prefer clean decomposition instead:
     - **Composition** (extracting focused, decoupled helper classes).
+    - **Extension Methods** only when they keep shared static logic explicit and cohesive.
+    - **Default Interface Implementations** only for genuine interface behavior, not as trait-like dumping grounds.
 
 ---
 
