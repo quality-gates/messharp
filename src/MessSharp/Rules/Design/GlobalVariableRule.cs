@@ -88,7 +88,7 @@ public sealed class GlobalVariableRule : BaseRule, IClassRule
 
     private static bool IsIncrDecr(SyntaxKind kind) =>
         kind is SyntaxKind.PostIncrementExpression or SyntaxKind.PostDecrementExpression
-              or SyntaxKind.PreIncrementExpression  or SyntaxKind.PreDecrementExpression;
+              or SyntaxKind.PreIncrementExpression or SyntaxKind.PreDecrementExpression;
 
     private static bool IsRefOrOut(SyntaxKind kind) =>
         kind is SyntaxKind.RefKeyword or SyntaxKind.OutKeyword;

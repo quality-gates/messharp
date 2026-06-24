@@ -22,14 +22,14 @@ public sealed class Loader
     private static readonly Dictionary<string, string> BuiltinNames =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            ["cleancode"]     = "cleancode.xml",
-            ["codesize"]      = "codesize.xml",
+            ["cleancode"] = "cleancode.xml",
+            ["codesize"] = "codesize.xml",
             ["controversial"] = "controversial.xml",
-            ["design"]        = "design.xml",
-            ["naming"]        = "naming.xml",
-            ["unusedcode"]    = "unusedcode.xml",
-            ["csharp"]        = "csharp.xml",
-            ["opinionated"]   = "opinionated.xml",
+            ["design"] = "design.xml",
+            ["naming"] = "naming.xml",
+            ["unusedcode"] = "unusedcode.xml",
+            ["csharp"] = "csharp.xml",
+            ["opinionated"] = "opinionated.xml",
         };
 
     public static IReadOnlyList<string> BuiltinRulesetNames =>
@@ -73,7 +73,7 @@ public sealed class Loader
 
     private void AddRule(RuleSetType set, string setName, XmlRule xr)
     {
-        if (!string.IsNullOrEmpty(xr.Ref))  { AddRef(set, xr); return; }
+        if (!string.IsNullOrEmpty(xr.Ref)) { AddRef(set, xr); return; }
         if (!string.IsNullOrEmpty(xr.Class)) { AppendIfNotNull(set, BuildRule(setName, xr, xr)); }
     }
 

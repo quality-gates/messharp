@@ -10,12 +10,12 @@ internal sealed class SarifDocument
 {
     [JsonPropertyName("$schema")] public string Schema { get; set; } = "";
     [JsonPropertyName("version")] public string Version { get; set; } = "";
-    [JsonPropertyName("runs")]    public List<SarifRun> Runs { get; set; } = new();
+    [JsonPropertyName("runs")] public List<SarifRun> Runs { get; set; } = new();
 }
 
 internal sealed class SarifRun
 {
-    [JsonPropertyName("tool")]    public SarifTool Tool { get; set; } = new();
+    [JsonPropertyName("tool")] public SarifTool Tool { get; set; } = new();
     [JsonPropertyName("results")] public List<SarifResult> Results { get; set; } = new();
 }
 
@@ -26,24 +26,24 @@ internal sealed class SarifTool
 
 internal sealed class SarifDriver
 {
-    [JsonPropertyName("name")]    public string Name { get; set; } = "";
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
     [JsonPropertyName("version")] public string Version { get; set; } = "";
-    [JsonPropertyName("rules")]   public List<SarifRule> Rules { get; set; } = new();
+    [JsonPropertyName("rules")] public List<SarifRule> Rules { get; set; } = new();
 }
 
 internal sealed class SarifRule
 {
-    [JsonPropertyName("id")]               public string Id { get; set; } = "";
-    [JsonPropertyName("name")]             public string Name { get; set; } = "";
-    [JsonPropertyName("helpUri")]          public string? HelpUri { get; set; }
+    [JsonPropertyName("id")] public string Id { get; set; } = "";
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("helpUri")] public string? HelpUri { get; set; }
     [JsonPropertyName("shortDescription")] public SarifMessage ShortDescription { get; set; } = new();
 }
 
 internal sealed class SarifResult
 {
-    [JsonPropertyName("ruleId")]    public string RuleId { get; set; } = "";
-    [JsonPropertyName("level")]     public string Level { get; set; } = "";
-    [JsonPropertyName("message")]   public SarifMessage Message { get; set; } = new();
+    [JsonPropertyName("ruleId")] public string RuleId { get; set; } = "";
+    [JsonPropertyName("level")] public string Level { get; set; } = "";
+    [JsonPropertyName("message")] public SarifMessage Message { get; set; } = new();
     [JsonPropertyName("locations")] public List<SarifLocation> Locations { get; set; } = new();
 }
 
@@ -60,7 +60,7 @@ internal sealed class SarifLocation
 internal sealed class SarifPhysicalLocation
 {
     [JsonPropertyName("artifactLocation")] public SarifArtifactLocation ArtifactLocation { get; set; } = new();
-    [JsonPropertyName("region")]           public SarifRegion Region { get; set; } = new();
+    [JsonPropertyName("region")] public SarifRegion Region { get; set; } = new();
 }
 
 internal sealed class SarifArtifactLocation
@@ -71,5 +71,5 @@ internal sealed class SarifArtifactLocation
 internal sealed class SarifRegion
 {
     [JsonPropertyName("startLine")] public int StartLine { get; set; }
-    [JsonPropertyName("endLine")]   public int EndLine { get; set; }
+    [JsonPropertyName("endLine")] public int EndLine { get; set; }
 }

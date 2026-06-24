@@ -12,13 +12,13 @@ internal static class CliArgParser
     private static readonly Dictionary<string, Action<CliOptions>> BoolFlags =
         new(StringComparer.Ordinal)
         {
-            ["--verbose"]                   = o => o.Verbose = true,
-            ["-v"]                          = o => o.Verbose = true,
-            ["--strict"]                    = o => o.Strict = true,
-            ["--color"]                     = o => o.Color = true,
-            ["--ignore-errors-on-exit"]     = o => o.IgnoreErrors = true,
+            ["--verbose"] = o => o.Verbose = true,
+            ["-v"] = o => o.Verbose = true,
+            ["--strict"] = o => o.Strict = true,
+            ["--color"] = o => o.Color = true,
+            ["--ignore-errors-on-exit"] = o => o.IgnoreErrors = true,
             ["--ignore-violations-on-exit"] = o => o.IgnoreViolations = true,
-            ["--ignore-tests"]              = o => o.IgnoreTests = true,
+            ["--ignore-tests"] = o => o.IgnoreTests = true,
         };
 
     internal static (CliOptions opts, List<string> positionals, string? error) Parse(string[] args)
@@ -26,7 +26,8 @@ internal static class CliArgParser
         var opts = new CliOptions { MaxPriority = 1 };
         var positionals = new List<string>();
 
-        for (int i = 0; i < args.Length; i++)
+        int len = args.Length;
+        for (int i = 0; i < len; i++)
         {
             var err = ParseOne(args, ref i, opts, positionals);
             if (err != null) return (opts, positionals, err);
@@ -57,13 +58,13 @@ internal static class CliArgParser
     {
         switch (a)
         {
-            case "--reportfile":  i++; opts.ReportFile = NextArg(args, i); return true;
-            case "--suffixes":    i++; opts.Suffixes = NextArg(args, i); return true;
-            case "--exclude":     i++; opts.Filters.Exclude = NextArg(args, i); return true;
+            case "--reportfile": i++; opts.ReportFile = NextArg(args, i); return true;
+            case "--suffixes": i++; opts.Suffixes = NextArg(args, i); return true;
+            case "--exclude": i++; opts.Filters.Exclude = NextArg(args, i); return true;
             case "--enable":
-            case "--only":        i++; opts.Filters.Only = NextArg(args, i); return true;
-            case "--disable":     i++; opts.Filters.Disable = NextArg(args, i); return true;
-            default:              return false;
+            case "--only": i++; opts.Filters.Only = NextArg(args, i); return true;
+            case "--disable": i++; opts.Filters.Disable = NextArg(args, i); return true;
+            default: return false;
         }
     }
 

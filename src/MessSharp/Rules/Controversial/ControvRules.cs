@@ -11,10 +11,10 @@ public static class ControvRules
     public static IReadOnlyDictionary<string, Func<BaseRule>> Factories { get; } =
         new Dictionary<string, Func<BaseRule>>(StringComparer.Ordinal)
         {
-            ["PHPMD\\Rule\\Controversial\\CamelCaseClassName"]    = () => new CamelCaseClassNameRule(),
-            ["PHPMD\\Rule\\Controversial\\CamelCaseMethodName"]   = () => new CamelCaseMethodNameRule(),
+            ["PHPMD\\Rule\\Controversial\\CamelCaseClassName"] = () => new CamelCaseClassNameRule(),
+            ["PHPMD\\Rule\\Controversial\\CamelCaseMethodName"] = () => new CamelCaseMethodNameRule(),
             ["PHPMD\\Rule\\Controversial\\CamelCasePropertyName"] = () => new CamelCasePropertyNameRule(),
-            ["PHPMD\\Rule\\Controversial\\CamelCaseParameterName"]= () => new CamelCaseParameterNameRule(),
+            ["PHPMD\\Rule\\Controversial\\CamelCaseParameterName"] = () => new CamelCaseParameterNameRule(),
             ["PHPMD\\Rule\\Controversial\\CamelCaseVariableName"] = () => new CamelCaseVariableNameRule(),
         };
 

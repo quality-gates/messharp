@@ -5,21 +5,33 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
-    name: Build, test, self-analyze
+    name: Run Unit Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-dotnet@3e891b0cb619f60c9497f5f73dcb8a3be59333e2 # v4.3.0
         with:
           dotnet-version: 8.0.x
 
-      - name: Build
+      - name: Run tests
+        run: dotnet test -c Release
+
+  self-analysis:
+    name: Run messharp on itself
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-dotnet@3e891b0cb619f60c9497f5f73dcb8a3be59333e2 # v4.3.0
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build messharp
         run: dotnet build -c Release
 
-      - name: Test
-        run: dotnet test -c Release --no-build
-
-      - name: Self-analysis
-        run: dotnet run --project src/MessSharp -c Release --no-build -- ./src text csharp --ignore-tests
+      - name: Run self-analysis
+        run: dotnet run --project src/MessSharp -c Release --no-build -- ./src text csharp,codesize,design --ignore-tests

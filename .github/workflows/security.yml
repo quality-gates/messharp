@@ -1,0 +1,29 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Every Monday at 08:00 UTC — catches new advisories between code pushes.
+    - cron: '0 8 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  security-audit:
+    name: NuGet Dependency Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-dotnet@3e891b0cb619f60c9497f5f73dcb8a3be59333e2 # v4.3.0
+        with:
+          dotnet-version: 8.0.x
+
+      - name: NuGet Audit Restore
+        # Fail the restore if any vulnerability is found (by treating NU1901-NU1904 warnings as errors)
+        run: dotnet restore MessSharp.sln /p:TreatWarningsAsErrors=true /p:WarningsAsErrors="NU1901;NU1902;NU1903;NU1904"

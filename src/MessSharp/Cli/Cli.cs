@@ -8,8 +8,8 @@ namespace MessSharp.Cli;
 
 public static class Cli
 {
-    private const int ExitSuccess   = 0;
-    private const int ExitError     = 1;
+    private const int ExitSuccess = 0;
+    private const int ExitError = 1;
     private const int ExitViolation = 2;
 
     private const string Version = "0.1.0";
@@ -26,8 +26,8 @@ public static class Cli
         if (err != null) { stderr.WriteLine($"error: {err}"); return ExitError; }
         if (positionals.Count < 3) { CliArgParser.PrintUsage(stderr, Version); return ExitError; }
 
-        opts.Paths    = positionals[0];
-        opts.Format   = positionals[1];
+        opts.Paths = positionals[0];
+        opts.Format = positionals[1];
         opts.Rulesets = positionals[2];
 
         return Execute(opts, stdout, stderr);
@@ -57,7 +57,7 @@ public static class Cli
 
         if (!WriteReport(opts, report, renderer, stdout, stderr)) return ExitError;
 
-        if (report.Errors.Count > 0 && !opts.IgnoreErrors)         return ExitError;
+        if (report.Errors.Count > 0 && !opts.IgnoreErrors) return ExitError;
         if (report.Violations.Count > 0 && !opts.IgnoreViolations) return ExitViolation;
         return ExitSuccess;
     }
@@ -77,10 +77,10 @@ public static class Cli
         {
             return MessSharp.Runner.Runner.Run(new RunOptions
             {
-                Paths       = CliArgParser.SplitList(opts.Paths),
-                RuleSets    = sets,
-                Suffixes    = CliArgParser.SuffixList(opts.Suffixes),
-                Exclude     = CliArgParser.SplitList(opts.Filters.Exclude),
+                Paths = CliArgParser.SplitList(opts.Paths),
+                RuleSets = sets,
+                Suffixes = CliArgParser.SuffixList(opts.Suffixes),
+                Exclude = CliArgParser.SplitList(opts.Filters.Exclude),
                 IgnoreTests = opts.IgnoreTests,
             });
         }
@@ -125,28 +125,28 @@ public static class Cli
 /// <summary>Filter-related CLI options grouped to reduce field count on CliOptions.</summary>
 internal sealed class FilterOptions
 {
-    public string? Enable    { get; set; }
-    public string? Only      { get; set; }
-    public string  Disable   { get; set; } = "";
-    public string  Exclude   { get; set; } = "";
+    public string? Enable { get; set; }
+    public string? Only { get; set; }
+    public string Disable { get; set; } = "";
+    public string Exclude { get; set; } = "";
 }
 
 internal sealed class CliOptions
 {
-    public string Paths    { get; set; } = "";
-    public string Format   { get; set; } = "text";
+    public string Paths { get; set; } = "";
+    public string Format { get; set; } = "text";
     public string Rulesets { get; set; } = "";
-    public int    MinPriority { get; set; }
-    public int    MaxPriority { get; set; } = 1;
+    public int MinPriority { get; set; }
+    public int MaxPriority { get; set; } = 1;
     public string ReportFile { get; set; } = "";
-    public string Suffixes   { get; set; } = "";
+    public string Suffixes { get; set; } = "";
     public FilterOptions Filters { get; set; } = new();
-    public bool Strict           { get; set; }
-    public bool Color            { get; set; }
-    public bool Verbose          { get; set; }
-    public bool IgnoreErrors     { get; set; }
+    public bool Strict { get; set; }
+    public bool Color { get; set; }
+    public bool Verbose { get; set; }
+    public bool IgnoreErrors { get; set; }
     public bool IgnoreViolations { get; set; }
-    public bool IgnoreTests      { get; set; }
+    public bool IgnoreTests { get; set; }
 }
 
 internal sealed class NoopDisposable : IDisposable

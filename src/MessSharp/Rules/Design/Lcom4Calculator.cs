@@ -19,7 +19,8 @@ internal static class Lcom4Calculator
         var (methodIndex, accessorOf) = IndexMethods(cls, fields);
         var graph = new UnionFind(cls.Methods.Count);
 
-        for (int i = 0; i < cls.Methods.Count; i++)
+        int count = cls.Methods.Count;
+        for (int i = 0; i < count; i++)
         {
             var m = cls.Methods[i];
             if (accessorOf.ContainsKey(m.Name)) continue;
@@ -53,8 +54,9 @@ internal static class Lcom4Calculator
         IndexMethods(ClassModel cls, HashSet<string> fields)
     {
         var methodIndex = new Dictionary<string, int>(StringComparer.Ordinal);
-        var accessorOf  = new Dictionary<string, string>(StringComparer.Ordinal);
-        for (int i = 0; i < cls.Methods.Count; i++)
+        var accessorOf = new Dictionary<string, string>(StringComparer.Ordinal);
+        int count = cls.Methods.Count;
+        for (int i = 0; i < count; i++)
         {
             var m = cls.Methods[i];
             methodIndex[m.Name] = i;

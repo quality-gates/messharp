@@ -7,9 +7,9 @@ public class CliTests
 {
     private static (int code, string stdout, string stderr) RunCli(params string[] args)
     {
-        var outW  = new StringWriter();
-        var errW  = new StringWriter();
-        int code  = CliRunner.Run(args, outW, errW);
+        var outW = new StringWriter();
+        var errW = new StringWriter();
+        int code = CliRunner.Run(args, outW, errW);
         return (code, outW.ToString(), errW.ToString());
     }
 

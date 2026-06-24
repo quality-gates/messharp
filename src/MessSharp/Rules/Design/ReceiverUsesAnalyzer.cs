@@ -14,12 +14,12 @@ internal static class ReceiverUsesAnalyzer
     internal static (List<string> UsedFields, List<string> CalledMethods)
         Collect(MethodModel m, HashSet<string> fields, Dictionary<string, int> methodIndex)
     {
-        var usedFields    = new List<string>();
+        var usedFields = new List<string>();
         var calledMethods = new List<string>();
         if (m.Body == null) return (usedFields, calledMethods);
 
         bool isStatic = IsStaticMethod(m);
-        var seenFields  = new HashSet<string>(StringComparer.Ordinal);
+        var seenFields = new HashSet<string>(StringComparer.Ordinal);
         var seenMethods = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var node in m.Body.DescendantNodes())

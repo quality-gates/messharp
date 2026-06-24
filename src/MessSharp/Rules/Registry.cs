@@ -18,12 +18,12 @@ public static class Registry
     private static readonly Dictionary<string, Func<IReadOnlyList<IRule>>> _groups =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            ["cleancode"]     = () => CleanCodeRules.All,
-            ["codesize"]      = () => CodeSizeRules.All,
+            ["cleancode"] = () => CleanCodeRules.All,
+            ["codesize"] = () => CodeSizeRules.All,
             ["controversial"] = () => ControvRules.All,
-            ["design"]        = () => DesignRules.All,
-            ["naming"]        = () => NamingRules.All,
-            ["unusedcode"]    = () => UnusedCodeRules.All,
+            ["design"] = () => DesignRules.All,
+            ["naming"] = () => NamingRules.All,
+            ["unusedcode"] = () => UnusedCodeRules.All,
         };
 
     public static IReadOnlyList<IRule> GetRules(string rulesetName)

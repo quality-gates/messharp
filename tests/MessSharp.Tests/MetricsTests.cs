@@ -132,4 +132,70 @@ class C {
     {
         Assert.Equal(1, MetricsCalc.NPathComplexity(null));
     }
+
+    private static Microsoft.CodeAnalysis.SyntaxNode GetClassNode(string source)
+    {
+        var tree = CSharpSyntaxTree.ParseText(source);
+        var root = tree.GetRoot();
+        return root.DescendantNodes().OfType<ClassDeclarationSyntax>().First();
+    }
+
+    [Fact]
+    public void LinesOfCode_SingleLineNode_Returns1()
+    {
+        var node = GetClassNode("class C { }");
+        Assert.Equal(1, MetricsCalc.LinesOfCode(node));
+    }
+
+    [Fact]
+    public void LinesOfCode_MultilineNode_ReturnsCorrectCount()
+    {
+        var src = @"class C {
+    void F() {
+    }
+}";
+        var node = GetClassNode(src);
+        Assert.Equal(4, MetricsCalc.LinesOfCode(node));
+    }
+
+    [Fact]
+    public void EffectiveLinesOfCode_SkipsBlankLinesAndComments()
+    {
+        var src = @"class C {
+    // This is a comment
+
+    /*
+     * This is a block comment
+     */
+    void F() {
+        int a = 1; // code here
+    }
+}";
+        var node = GetClassNode(src);
+        Assert.Equal(5, MetricsCalc.EffectiveLinesOfCode(node, src));
+    }
+
+    [Fact]
+    public void EffectiveLinesOfCode_MultipleCommentsOnSameLine_HandledCorrectly()
+    {
+        var src = @"class C {
+    void F() {
+        /* block */ int a = 1; /* block2 */
+        int b = 2; // inline comment
+    }
+}";
+        var node = GetClassNode(src);
+        Assert.Equal(6, MetricsCalc.EffectiveLinesOfCode(node, src));
+    }
+
+    [Fact]
+    public void EffectiveLinesOfCode_PlainSlash_NotComment()
+    {
+        var src = @"class C {
+    int a = 10 / 2;
+}";
+        var node = GetClassNode(src);
+        Assert.Equal(3, MetricsCalc.EffectiveLinesOfCode(node, src));
+    }
 }
+

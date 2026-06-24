@@ -58,7 +58,8 @@ internal sealed class UnionFind
     public int CountComponents()
     {
         var roots = new HashSet<int>();
-        for (int i = 0; i < _active.Length; i++)
+        int len = _active.Length;
+        for (int i = 0; i < len; i++)
             if (_active[i]) roots.Add(Find(i));
         return roots.Count == 0 ? 1 : roots.Count;
     }

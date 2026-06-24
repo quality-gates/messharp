@@ -11,10 +11,10 @@ public static class UnusedCodeRules
     public static IReadOnlyDictionary<string, Func<BaseRule>> Factories { get; } =
         new Dictionary<string, Func<BaseRule>>(StringComparer.Ordinal)
         {
-            ["PHPMD\\Rule\\UnusedPrivateField"]     = () => new UnusedPrivateFieldRule(),
-            ["PHPMD\\Rule\\UnusedLocalVariable"]    = () => new UnusedLocalVariableRule(),
-            ["PHPMD\\Rule\\UnusedPrivateMethod"]    = () => new UnusedPrivateMethodRule(),
-            ["PHPMD\\Rule\\UnusedFormalParameter"]  = () => new UnusedFormalParameterRule(),
+            ["PHPMD\\Rule\\UnusedPrivateField"] = () => new UnusedPrivateFieldRule(),
+            ["PHPMD\\Rule\\UnusedLocalVariable"] = () => new UnusedLocalVariableRule(),
+            ["PHPMD\\Rule\\UnusedPrivateMethod"] = () => new UnusedPrivateMethodRule(),
+            ["PHPMD\\Rule\\UnusedFormalParameter"] = () => new UnusedFormalParameterRule(),
         };
 
     public static IReadOnlyList<IRule> All =>

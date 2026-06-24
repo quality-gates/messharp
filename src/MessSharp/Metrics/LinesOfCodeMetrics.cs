@@ -26,7 +26,8 @@ internal static class LinesOfCodeMetrics
         var lines = source.Split('\n');
         int count = 0;
         bool inBlock = false;
-        for (int i = 0; i < lines.Length; i++)
+        int len = lines.Length;
+        for (int i = 0; i < len; i++)
         {
             bool hasCode;
             (hasCode, inBlock) = LineHasCode(lines[i], inBlock);
@@ -40,7 +41,8 @@ internal static class LinesOfCodeMetrics
     {
         bool hasCode = false;
         int i = 0;
-        while (i < line.Length)
+        int len = line.Length;
+        while (i < len)
         {
             if (inBlock)
             {

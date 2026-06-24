@@ -9,15 +9,15 @@ public static class Renderers
     private static readonly Dictionary<string, Func<IRenderer>> _map =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            ["text"]       = () => new TextRenderer(),
-            ["xml"]        = () => new XmlRenderer(),
-            ["json"]       = () => new JsonRenderer(),
-            ["html"]       = () => new HtmlRenderer(),
-            ["ansi"]       = () => new AnsiRenderer(),
-            ["github"]     = () => new GitHubRenderer(),
-            ["gitlab"]     = () => new GitLabRenderer(),
+            ["text"] = () => new TextRenderer(),
+            ["xml"] = () => new XmlRenderer(),
+            ["json"] = () => new JsonRenderer(),
+            ["html"] = () => new HtmlRenderer(),
+            ["ansi"] = () => new AnsiRenderer(),
+            ["github"] = () => new GitHubRenderer(),
+            ["gitlab"] = () => new GitLabRenderer(),
             ["checkstyle"] = () => new CheckstyleRenderer(),
-            ["sarif"]      = () => new SarifRenderer(),
+            ["sarif"] = () => new SarifRenderer(),
         };
 
     public static bool TryGet(string format, out IRenderer renderer)

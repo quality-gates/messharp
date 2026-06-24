@@ -29,7 +29,7 @@ internal static class LoaderFilters
         IReadOnlyList<string> enable, IReadOnlyList<string> disable)
     {
         if (enable.Count == 0 && disable.Count == 0) return;
-        var enabled  = ToSet(enable);
+        var enabled = ToSet(enable);
         var disabled = ToSet(disable);
         foreach (var set in sets)
         {

@@ -1,0 +1,38 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  code-quality:
+    name: Enforce Code Quality and Formatting
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-dotnet@3e891b0cb619f60c9497f5f73dcb8a3be59333e2 # v4.3.0
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Verify License File Presence
+        # Matches the license file check in messgo's goreportcard.yml
+        run: |
+          if [ ! -f LICENSE ] && [ ! -f LICENSE.md ] && [ ! -f LICENSE.txt ]; then
+            echo "ERROR: License file not found in repository root."
+            exit 1
+          fi
+          echo "License file verified."
+
+      - name: Run dotnet format (Verify Style and Whitespace)
+        # Checks that the code conforms to standard .NET formatting guidelines
+        run: dotnet format --verify-no-changes
+
+      - name: Build with Warnings as Errors
+        # Verifies that there are zero compiler or Roslyn analyzer warning diagnostics
+        run: dotnet build MessSharp.sln -c Release /p:TreatWarningsAsErrors=true

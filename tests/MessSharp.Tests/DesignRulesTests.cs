@@ -267,12 +267,6 @@ public class Foo {
     [Fact]
     public void DevCode_DebugWriteLine_Flagged()
     {
-        var src = @"
-public class Foo {
-    public void Bar(string s) {
-        System.Diagnostics.Debug.WriteLine(s);
-    }
-}";
         // "System.Diagnostics.Debug.WriteLine" won't match our simple check;
         // qualify as just Debug.WriteLine in fixture
         var src2 = @"
@@ -581,11 +575,6 @@ public class Server {
     [Fact]
     public void Lcom4_CohesiveClass_NotFlagged()
     {
-        // report() bridges both clusters → cohesive, LCOM4 = 1
-        var src = DisjointSrc + @"
-public partial class Server {
-    public int Report() { return _conns.Count + Snapshot(); }
-}";
         // Use fresh source without partial — just add Report() to the disjoint src
         var merged = @"
 public class Server {

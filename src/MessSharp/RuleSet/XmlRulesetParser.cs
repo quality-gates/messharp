@@ -67,14 +67,14 @@ internal static class XmlRuleHelpers
 
     internal static void PopulateRule(MessSharp.Rule.BaseRule rule, string setName, XmlRule def, XmlRule ov)
     {
-        rule.Name        = def.Name ?? "";
-        rule.Message     = def.Message?.Trim() ?? "";
-        rule.SetName     = setName;
+        rule.Name = def.Name ?? "";
+        rule.Message = def.Message?.Trim() ?? "";
+        rule.SetName = setName;
         rule.ExternalUrl = def.ExternalInfoUrl ?? "";
-        rule.Since       = def.Since ?? "";
+        rule.Since = def.Since ?? "";
         rule.Description = def.Description?.Trim() ?? "";
-        rule.Priority    = ov.Priority ?? def.Priority ?? 3;
-        rule.RuleProps   = MergeProps(def.Properties, ov.Properties);
+        rule.Priority = ov.Priority ?? def.Priority ?? 3;
+        rule.RuleProps = MergeProps(def.Properties, ov.Properties);
     }
 
     private static void CopyProps(XmlProperties? src, Dictionary<string, string> dest)
@@ -136,12 +136,12 @@ internal static class XmlRulesetParser
     {
         var rule = new XmlRule
         {
-            Name            = r.GetAttribute("name"),
-            Message         = r.GetAttribute("message"),
-            Class           = r.GetAttribute("class"),
-            Ref             = r.GetAttribute("ref"),
+            Name = r.GetAttribute("name"),
+            Message = r.GetAttribute("message"),
+            Class = r.GetAttribute("class"),
+            Ref = r.GetAttribute("ref"),
             ExternalInfoUrl = r.GetAttribute("externalInfoUrl"),
-            Since           = r.GetAttribute("since"),
+            Since = r.GetAttribute("since"),
         };
 
         if (r.IsEmptyElement) return rule;
@@ -194,7 +194,7 @@ internal static class XmlRulesetParser
     {
         var p = new XmlProperty
         {
-            Name  = r.GetAttribute("name"),
+            Name = r.GetAttribute("name"),
             Value = r.GetAttribute("value"),
         };
         if (!r.IsEmptyElement)
