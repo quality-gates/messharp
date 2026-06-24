@@ -11,7 +11,7 @@ namespace MessSharp.Report;
 public sealed class JsonRenderer : IRenderer
 {
     private const string ToolName = "messharp";
-    private const string ToolVersion = "0.1.0";
+    private const string ToolVersion = "0.2.2";
 
     private static readonly JsonSerializerOptions _opts = new()
     {

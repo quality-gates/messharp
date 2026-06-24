@@ -12,7 +12,7 @@ public static class Cli
     private const int ExitError = 1;
     private const int ExitViolation = 2;
 
-    private const string Version = "0.1.0";
+    private const string Version = "0.2.2";
 
     public static int Run(string[] args, TextWriter? stdout = null, TextWriter? stderr = null, IRunner? runner = null)
     {

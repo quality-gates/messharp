@@ -6,7 +6,7 @@ namespace MessSharp.Report;
 /// </summary>
 public sealed class CheckstyleRenderer : IRenderer
 {
-    private const string ToolVersion = "0.1.0";
+    private const string ToolVersion = "0.2.2";
 
     public void Render(TextWriter w, Report report)
     {

@@ -169,7 +169,7 @@ public class RenderersTests
         doc.LoadXml(out_);
         var root = doc.DocumentElement!;
         Assert.Equal("messharp", root.GetAttribute("tool"));
-        Assert.Equal("0.1.0", root.GetAttribute("version"));
+        Assert.Equal("0.2.2", root.GetAttribute("version"));
         Assert.NotEmpty(root.GetAttribute("timestamp"));
     }
 
@@ -252,7 +252,7 @@ public class RenderersTests
         var doc = JsonDocument.Parse(out_);
         var root = doc.RootElement;
         Assert.Equal("messharp", root.GetProperty("package").GetString());
-        Assert.Equal("0.1.0", root.GetProperty("version").GetString());
+        Assert.Equal("0.2.2", root.GetProperty("version").GetString());
         Assert.True(root.TryGetProperty("timestamp", out _));
     }
 
@@ -494,7 +494,7 @@ public class RenderersTests
         var out_ = Render(new CheckstyleRenderer());
         var doc = new XmlDocument();
         doc.LoadXml(out_);
-        Assert.Equal("0.1.0", doc.DocumentElement!.GetAttribute("version"));
+        Assert.Equal("0.2.2", doc.DocumentElement!.GetAttribute("version"));
     }
 
     [Fact]
@@ -590,7 +590,7 @@ public class RenderersTests
             .GetProperty("tool")
             .GetProperty("driver");
         Assert.Equal("messharp", driver.GetProperty("name").GetString());
-        Assert.Equal("0.1.0", driver.GetProperty("version").GetString());
+        Assert.Equal("0.2.2", driver.GetProperty("version").GetString());
     }
 
     [Fact]

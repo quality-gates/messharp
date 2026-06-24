@@ -10,7 +10,7 @@ namespace MessSharp.Report;
 public sealed class XmlRenderer : IRenderer
 {
     private const string ToolName = "messharp";
-    private const string ToolVersion = "0.1.0";
+    private const string ToolVersion = "0.2.2";
 
     public void Render(TextWriter w, Report report)
     {

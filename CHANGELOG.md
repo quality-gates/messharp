@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-06-24
+
+### Added
+
+- Coverage-guided fuzzing harness for discovering crashes and edge cases. Added dedicated fuzz project (`fuzz/MessSharp.Fuzz`), corpus seeds, AFL++ runner script (`scripts/fuzz.sh`), and findings storage. Targets C# source code and ruleset XML parsing independently.
+
 ## [0.2.1] - 2026-06-24
 
 ### Fixed

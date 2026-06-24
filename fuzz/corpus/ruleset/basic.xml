@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ruleset name="FuzzSeed">
+  <description>Seed ruleset</description>
+  <rule ref="codesize/CyclomaticComplexity">
+    <priority>1</priority>
+    <properties>
+      <property name="reportLevel" value="10" />
+    </properties>
+  </rule>
+</ruleset>

@@ -1,4 +1,4 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -6,6 +6,10 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessSharp", "src\MessSharp\MessSharp.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessSharp.Tests", "tests\MessSharp.Tests\MessSharp.Tests.csproj", "{B2C3D4E5-F6A7-8901-BCDE-F12345678901}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "fuzz", "fuzz", "{AD7FFED0-364F-4740-B5EC-44CCF9138B4B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessSharp.Fuzz", "fuzz\MessSharp.Fuzz\MessSharp.Fuzz.csproj", "{DCAD4EBB-A94A-4518-873B-301E5FE25CD7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,5 +25,12 @@ Global
 		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DCAD4EBB-A94A-4518-873B-301E5FE25CD7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCAD4EBB-A94A-4518-873B-301E5FE25CD7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCAD4EBB-A94A-4518-873B-301E5FE25CD7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DCAD4EBB-A94A-4518-873B-301E5FE25CD7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DCAD4EBB-A94A-4518-873B-301E5FE25CD7} = {AD7FFED0-364F-4740-B5EC-44CCF9138B4B}
 	EndGlobalSection
 EndGlobal
