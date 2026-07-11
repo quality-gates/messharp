@@ -21,8 +21,8 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Install Stryker
-        run: dotnet tool install -g dotnet-stryker
+      - name: Restore Stryker (pinned in .config/dotnet-tools.json)
+        run: dotnet tool restore
 
       - name: Run Stryker
         run: |

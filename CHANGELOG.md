@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - `scripts/dotnet.sh` now persists the container's `/root/.dotnet` in a named volume (so restored local tools like Stryker survive between runs) and passes host proxy settings (`HTTPS_PROXY`, `NO_PROXY`, `SSL_CERT_FILE`) into the container when set, so restores work behind egress proxies.
+- The mutation-testing workflow installs Stryker with `dotnet tool restore` (pinned via the tool manifest) instead of a floating global `dotnet tool install -g`, which the new local manifest would otherwise shadow.
 
 - Agent skills configuration: `docs/agents/issue-tracker.md` (GitHub Issues) and `docs/agents/domain.md` (single-context domain doc layout), referenced from a new `## Agent skills` section in `AGENTS.md`.
 - Vendored the 21 engineering/productivity skills from [`mattpocock/skills`](https://github.com/mattpocock/skills) (MIT) into `.claude/skills/`, with provenance and license text in `.claude/skills/THIRD_PARTY_NOTICES.md`.
