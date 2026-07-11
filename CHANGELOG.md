@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Committed git hooks mirroring CI locally: `githooks/pre-commit` (license check, `dotnet format`, warnings-as-errors build, unit tests, self-analysis — whole-tree, hard-failing) and `githooks/pre-push` (Stryker mutation testing scoped to the diff against `origin/main` via `--since`). Plain `sh` scripts, no hook-framework dependency; opt in once with `git config core.hooksPath githooks` (documented as a "Definition of Ready" step in `AGENTS.md`). Stryker is pinned in a new dotnet tool manifest (`.config/dotnet-tools.json`).
+
+### Changed
+
+- `scripts/dotnet.sh` now persists the container's `/root/.dotnet` in a named volume (so restored local tools like Stryker survive between runs) and passes host proxy settings (`HTTPS_PROXY`, `NO_PROXY`, `SSL_CERT_FILE`) into the container when set, so restores work behind egress proxies.
+
 - Agent skills configuration: `docs/agents/issue-tracker.md` (GitHub Issues) and `docs/agents/domain.md` (single-context domain doc layout), referenced from a new `## Agent skills` section in `AGENTS.md`.
 - Vendored the 21 engineering/productivity skills from [`mattpocock/skills`](https://github.com/mattpocock/skills) (MIT) into `.claude/skills/`, with provenance and license text in `.claude/skills/THIRD_PARTY_NOTICES.md`.
 - `docs/agents/triage-labels.md`, mapping the `triage` skill's five canonical roles to this repo's label vocabulary (defaults kept as-is).

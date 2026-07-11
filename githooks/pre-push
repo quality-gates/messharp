@@ -1,0 +1,50 @@
+#!/bin/sh
+# Pre-push hook mirroring .github/workflows/mutation.yml (Stryker mutation
+# testing, --break-at 75), scoped to the outgoing diff instead of the whole
+# tree: Stryker's --since limits mutants to files changed since origin/main.
+#
+# CI only mutates src/MessSharp/Metrics/**, so when the diff against
+# origin/main touches nothing under that path there are no mutants to run
+# and the hook says so explicitly.
+#
+# Not active on clone. One-time opt-in:  git config core.hooksPath githooks
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+
+DOTNET="scripts/dotnet.sh"
+
+fail() {
+  echo "pre-push: FAIL: $*" >&2
+  exit 1
+}
+
+command -v docker >/dev/null 2>&1 \
+  || fail "docker not found; all dotnet commands run through $DOTNET (Docker only)"
+docker info >/dev/null 2>&1 \
+  || fail "docker daemon is not running; start it and retry"
+[ -x "$DOTNET" ] \
+  || fail "$DOTNET not found or not executable"
+
+git rev-parse --verify -q origin/main >/dev/null \
+  || fail "origin/main not found; run 'git fetch origin main' first"
+
+BASE="$(git merge-base origin/main HEAD)" \
+  || fail "cannot compute merge-base between origin/main and HEAD"
+
+if git diff --name-only "$BASE" HEAD -- src/MessSharp/Metrics/ | grep -q .; then
+  echo "pre-push: src/MessSharp/Metrics/ changed since origin/main; running Stryker on the diff"
+  "$DOTNET" tool restore \
+    || fail "dotnet tool restore (see .config/dotnet-tools.json)"
+  "$DOTNET" stryker \
+    --solution MessSharp.sln \
+    --project src/MessSharp/MessSharp.csproj \
+    --mutate "Metrics/**/*.cs" \
+    --break-at 75 \
+    --since:origin/main \
+    || fail "mutation score below threshold or Stryker error"
+else
+  echo "pre-push: no changes under src/MessSharp/Metrics/ since origin/main; nothing to mutate (CI mutates Metrics/** only)"
+fi
+
+echo "pre-push: done"

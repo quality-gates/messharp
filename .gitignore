@@ -6,5 +6,6 @@ obj/
 .serena/
 .worktrees/
 TestResults/
+StrykerOutput/
 *.nupkg
 fuzz/findings/
