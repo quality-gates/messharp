@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - Agent skills configuration: `docs/agents/issue-tracker.md` (GitHub Issues) and `docs/agents/domain.md` (single-context domain doc layout), referenced from a new `## Agent skills` section in `AGENTS.md`.
+- Vendored the 21 engineering/productivity skills from [`mattpocock/skills`](https://github.com/mattpocock/skills) (MIT) into `.claude/skills/`, with provenance and license text in `.claude/skills/THIRD_PARTY_NOTICES.md`.
+- `docs/agents/triage-labels.md`, mapping the `triage` skill's five canonical roles to this repo's label vocabulary (defaults kept as-is).
 
 ## [0.2.2] - 2026-06-24
 
