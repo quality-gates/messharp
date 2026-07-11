@@ -69,3 +69,13 @@ Rules are verified using C# fixtures in the `tests/MessSharp.Tests/` directory.
 **Assert on behavior:**
 - Assert on which rules fire (using `mustHave` and `mustNotHave`).
 - Ensure metrics values correspond to expected outputs of reference tools (like real phpmd).
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues (`quality-gates/messharp`). See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` at the repo root + `docs/adr/` for decisions. See `docs/agents/domain.md`.
