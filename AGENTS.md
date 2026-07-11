@@ -76,6 +76,14 @@ Rules are verified using C# fixtures in the `tests/MessSharp.Tests/` directory.
 
 Issues are tracked in GitHub Issues (`quality-gates/messharp`). See `docs/agents/issue-tracker.md`.
 
+### Triage labels
+
+Default vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
 ### Domain docs
 
 Single-context: `CONTEXT.md` at the repo root + `docs/adr/` for decisions. See `docs/agents/domain.md`.
+
+### Installed skills
+
+21 engineering/productivity skills from [`mattpocock/skills`](https://github.com/mattpocock/skills) (MIT) are vendored under `.claude/skills/`. See `.claude/skills/THIRD_PARTY_NOTICES.md` for provenance and the full list.
