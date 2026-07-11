@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Agent skills configuration: `docs/agents/issue-tracker.md` (GitHub Issues) and `docs/agents/domain.md` (single-context domain doc layout), referenced from a new `## Agent skills` section in `AGENTS.md`.
+
 ## [0.2.2] - 2026-06-24
 
 ### Added
