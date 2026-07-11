@@ -37,6 +37,18 @@ scripts/dotnet.sh run --project src/MessSharp -- ./src text csharp --ignore-test
 
 Exit code matches phpmd: **0** clean · **1** error · **2** violations found.
 
+## Definition of Ready
+
+Before starting work in a fresh clone, activate the committed git hooks (a manual, one-time opt-in — they are **not** active on clone):
+
+```bash
+git config core.hooksPath githooks
+```
+
+- `githooks/pre-commit` mirrors CI's fast checks, whole-tree: license file presence, `dotnet format --verify-no-changes`, Release build with warnings as errors, unit tests, and self-analysis (`csharp,codesize,design`). It hard-fails on any finding and on any missing tool (Docker, `scripts/dotnet.sh`) — no silent skips.
+- `githooks/pre-push` runs Stryker mutation testing (`--break-at 75`, via the tool manifest in `.config/dotnet-tools.json`) scoped to the diff against `origin/main` using `--since:origin/main`, and only when the outgoing diff touches `src/MessSharp/Metrics/` (the only path CI mutates).
+- The NuGet vulnerability audit (`security.yml`) depends on external advisory feeds and stays CI-only.
+
 ## Shipping workflow
 
 Follow these steps in order when landing a change:

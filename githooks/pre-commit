@@ -1,0 +1,58 @@
+#!/bin/sh
+# Pre-commit hook mirroring CI's fast, deterministic checks:
+#   .github/workflows/codequality.yml  license file, dotnet format, warnings-as-errors build
+#   .github/workflows/ci.yml           unit tests, self-analysis
+#
+# Runs whole-tree and hard-fails on any finding or any missing tool.
+# The NuGet vulnerability audit (security.yml) depends on external advisory
+# feeds and stays CI-only. Mutation testing (mutation.yml) is slow and lives
+# in githooks/pre-push, scoped to the diff against origin/main.
+#
+# Not active on clone. One-time opt-in:  git config core.hooksPath githooks
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+
+DOTNET="scripts/dotnet.sh"
+
+fail() {
+  echo "pre-commit: FAIL: $*" >&2
+  exit 1
+}
+
+command -v docker >/dev/null 2>&1 \
+  || fail "docker not found; all dotnet commands run through $DOTNET (Docker only)"
+docker info >/dev/null 2>&1 \
+  || fail "docker daemon is not running; start it and retry"
+[ -x "$DOTNET" ] \
+  || fail "$DOTNET not found or not executable"
+
+step() {
+  desc="$1"
+  shift
+  echo "pre-commit: $desc"
+  "$@" || fail "$desc"
+}
+
+# codequality.yml — license file presence
+[ -f LICENSE ] || [ -f LICENSE.md ] || [ -f LICENSE.txt ] \
+  || fail "license file not found in repository root"
+echo "pre-commit: license file verified"
+
+# codequality.yml — formatting
+step "dotnet format --verify-no-changes" \
+  "$DOTNET" format --verify-no-changes
+
+# codequality.yml — build with zero compiler/analyzer warnings
+step "build with warnings as errors" \
+  "$DOTNET" build MessSharp.sln -c Release /p:TreatWarningsAsErrors=true
+
+# ci.yml — unit tests (reuses the Release build from the previous step)
+step "unit tests" \
+  "$DOTNET" test -c Release --no-build
+
+# ci.yml — self-analysis: messharp's own complexity and rule gates
+step "self-analysis (csharp,codesize,design)" \
+  "$DOTNET" run --project src/MessSharp -c Release --no-build -- ./src text csharp,codesize,design --ignore-tests
+
+echo "pre-commit: all checks passed"
