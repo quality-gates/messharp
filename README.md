@@ -110,6 +110,8 @@ exit code `2`.
 ## Maintainers
 
 Command reference: [docs/usage.md](docs/usage.md). Rulesets: [docs/rules.md](docs/rules.md).
+Homebrew release and recovery steps:
+[docs/homebrew-release.md](docs/homebrew-release.md).
 Contributing and SOLID guidance: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Development checks:

@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - Stable macOS Homebrew releases with self-contained Intel and Apple Silicon archives, checksums, immutable GitHub releases, and protected tap publication.
+- Maintainer instructions for stable releases, tap publication, formula candidates, signing, and recovery.
 - Committed git hooks mirroring CI locally: `githooks/pre-commit` (license check, `dotnet format`, warnings-as-errors build, unit tests, self-analysis — whole-tree, hard-failing) and `githooks/pre-push` (Stryker mutation testing scoped to the diff against `origin/main` via `--since`). Plain `sh` scripts, no hook-framework dependency; opt in once with `git config core.hooksPath githooks` (documented as a "Definition of Ready" step in `AGENTS.md`). Stryker is pinned in a new dotnet tool manifest (`.config/dotnet-tools.json`).
 
 ### Fixed
