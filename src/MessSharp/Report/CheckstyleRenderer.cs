@@ -6,12 +6,10 @@ namespace MessSharp.Report;
 /// </summary>
 public sealed class CheckstyleRenderer : IRenderer
 {
-    private const string ToolVersion = "0.2.2";
-
     public void Render(TextWriter w, Report report)
     {
         w.WriteLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-        w.WriteLine($"<checkstyle version=\"{ToolVersion}\">");
+        w.WriteLine($"<checkstyle version=\"{BuildInfo.Version}\">");
 
         string curFile = "";
         bool open = false;

@@ -10,12 +10,11 @@ namespace MessSharp.Report;
 public sealed class XmlRenderer : IRenderer
 {
     private const string ToolName = "messharp";
-    private const string ToolVersion = "0.2.2";
 
     public void Render(TextWriter w, Report report)
     {
         w.WriteLine("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>");
-        w.WriteLine($"<pmd version=\"{ToolVersion}\" tool=\"{ToolName}\" timestamp=\"{DateTime.Now:o}\">");
+        w.WriteLine($"<pmd version=\"{BuildInfo.Version}\" tool=\"{ToolName}\" timestamp=\"{DateTime.Now:o}\">");
 
         string curFile = "";
         bool open = false;

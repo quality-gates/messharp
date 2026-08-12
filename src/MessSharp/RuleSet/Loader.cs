@@ -47,19 +47,13 @@ public sealed class Loader
 
     private byte[] ReadRuleset(string ident)
     {
-        var path = ResolvePath(ident);
-        if (path == null) throw new FileNotFoundException($"Unknown ruleset or file: {ident}");
-        return File.ReadAllBytes(path);
-    }
-
-    private string? ResolvePath(string ident)
-    {
         if (BuiltinNames.TryGetValue(ident, out var filename))
         {
-            var resolved = LoaderFileResolver.FindBuiltinFile(filename);
-            if (resolved != null) return resolved;
+            var builtIn = LoaderFileResolver.ReadBuiltin(filename);
+            if (builtIn != null) return builtIn;
         }
-        return File.Exists(ident) ? ident : null;
+        if (File.Exists(ident)) return File.ReadAllBytes(ident);
+        throw new FileNotFoundException($"Unknown ruleset or file: {ident}");
     }
 
     private RuleSetType Parse(byte[] data)

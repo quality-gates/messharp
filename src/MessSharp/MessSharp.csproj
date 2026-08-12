@@ -6,6 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>messharp</AssemblyName>
     <RootNamespace>MessSharp</RootNamespace>
+    <Version>0.0.0-dev</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,5 +19,8 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>rulesets/%(Filename)%(Extension)</Link>
     </Content>
+    <EmbeddedResource Include="../../rulesets/*.xml">
+      <LogicalName>MessSharp.rulesets.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 </Project>
