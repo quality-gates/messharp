@@ -26,7 +26,7 @@ public class CliTests
     {
         var (code, stdout, _) = RunCli("--version");
         Assert.Equal(0, code);
-        Assert.Contains("messharp", stdout);
+        Assert.Equal($"messharp {BuildInfo.Version}{Environment.NewLine}", stdout);
     }
 
     [Fact]

@@ -1,0 +1,457 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing stable release tag to retry Homebrew publication for
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  validate:
+    name: Validate release tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      source_sha: ${{ steps.tag.outputs.source_sha }}
+      immutable_release: ${{ steps.tag.outputs.immutable_release }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+
+      - id: tag
+        name: Require a stable semantic-version tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Release tags must match vMAJOR.MINOR.PATCH; got: $TAG" >&2
+            exit 1
+          fi
+          source_sha="$(git rev-list -n 1 "$TAG")"
+          if [[ -z "$source_sha" ]]; then
+            echo "Tag does not resolve to a commit: $TAG" >&2
+            exit 1
+          fi
+          remote_sha="$(git ls-remote origin "refs/tags/$TAG^{}" | cut -f1)"
+          if [[ -z "$remote_sha" ]]; then
+            remote_sha="$(git ls-remote origin "refs/tags/$TAG" | cut -f1)"
+          fi
+          if [[ "$remote_sha" != "$source_sha" ]]; then
+            echo "Remote tag resolves to $remote_sha, expected $source_sha." >&2
+            exit 1
+          fi
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            test "$GITHUB_REF_TYPE" = tag
+            test "$GITHUB_SHA" = "$source_sha"
+          fi
+          immutable_release=false
+          if release="$(gh api "repos/$GH_REPO/releases/tags/$TAG" 2>/dev/null)"; then
+            if [[ "$(jq -r .prerelease <<<"$release")" != false ]]; then
+              echo "A stable tag must not have a prerelease." >&2
+              exit 1
+            fi
+            if [[ "$(jq -r .draft <<<"$release")" == false && \
+                  "$(jq -r .immutable <<<"$release")" == true ]]; then
+              immutable_release=true
+            fi
+          fi
+          {
+            echo "version=${TAG#v}"
+            echo "source_sha=$source_sha"
+            echo "immutable_release=$immutable_release"
+          } >> "$GITHUB_OUTPUT"
+
+  test:
+    name: Test release source
+    needs: validate
+    if: needs.validate.outputs.immutable_release != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ needs.validate.outputs.source_sha }}
+      - uses: actions/setup-dotnet@3951f0dfe7a07e2313ec93c75700083e2005cbab # v4.3.0
+        with:
+          dotnet-version: 8.0.408
+          cache: true
+          cache-dependency-path: "**/packages.lock.json"
+
+      - name: Restore
+        run: dotnet restore MessSharp.sln --locked-mode
+
+      - name: Build release source
+        run: dotnet build MessSharp.sln --configuration Release --no-restore -p:Version=${{ needs.validate.outputs.version }}
+
+      - name: Run tests
+        run: dotnet test MessSharp.sln --configuration Release --no-build --no-restore
+
+      - name: Self-analyze production source
+        run: >-
+          dotnet src/MessSharp/bin/Release/net8.0/messharp.dll
+          ./src text csharp,codesize,design --ignore-tests
+
+      - name: Smoke version and report build metadata
+        shell: bash
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          set -euo pipefail
+          cli="src/MessSharp/bin/Release/net8.0/messharp.dll"
+          test "$(dotnet "$cli" --version)" = "messharp $VERSION"
+          cat > "$RUNNER_TEMP/smoke.cs" <<'EOF'
+          public sealed class Smoke
+          {
+              public int Meaning() => 42;
+          }
+          EOF
+          dotnet "$cli" "$RUNNER_TEMP/smoke.cs" json csharp --reportfile "$RUNNER_TEMP/report.json"
+          jq -e --arg expected "$VERSION" '.package == "messharp" and .version == $expected and (.errors | length == 0)' "$RUNNER_TEMP/report.json" >/dev/null
+
+  build:
+    name: Build darwin/${{ matrix.arch }}
+    needs: [validate, test]
+    if: needs.validate.outputs.immutable_release != 'true'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            rid: osx-x64
+            runner: macos-15-intel
+          - arch: arm64
+            rid: osx-arm64
+            runner: macos-15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ needs.validate.outputs.source_sha }}
+      - uses: actions/setup-dotnet@3951f0dfe7a07e2313ec93c75700083e2005cbab # v4.3.0
+        with:
+          dotnet-version: 8.0.408
+          cache: true
+          cache-dependency-path: "**/packages.lock.json"
+
+      - name: Build self-contained single-file archive
+        shell: bash
+        env:
+          ARCH: ${{ matrix.arch }}
+          RID: ${{ matrix.rid }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          set -euo pipefail
+          archive="messharp_${VERSION}_darwin_${ARCH}.tar.gz"
+          dotnet restore src/MessSharp/MessSharp.csproj \
+            --locked-mode --runtime "$RID" \
+            -p:NuGetLockFilePath="packages.$RID.lock.json"
+          dotnet publish src/MessSharp/MessSharp.csproj \
+            --configuration Release \
+            --no-restore \
+            --runtime "$RID" \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:DebugType=None \
+            -p:DebugSymbols=false \
+            -p:Version="$VERSION" \
+            --output dist/publish
+          test -x dist/publish/messharp
+          codesign --force --sign - --timestamp=none dist/publish/messharp
+          codesign --verify --strict dist/publish/messharp
+          mkdir -p dist/package
+          cp LICENSE dist/package/LICENSE
+          cp dist/publish/messharp dist/package/messharp
+          chmod 0755 dist/package/messharp
+          source_date_epoch="$(git show -s --format=%ct "${{ needs.validate.outputs.source_sha }}")"
+          archive_time="$(date -u -r "$source_date_epoch" +%Y%m%d%H%M.%S)"
+          touch -t "$archive_time" dist/package/LICENSE dist/package/messharp
+          COPYFILE_DISABLE=1 tar --uid 0 --gid 0 --uname root --gname wheel \
+            -C dist/package -cf - LICENSE messharp | gzip -n > "dist/$archive"
+          printf 'LICENSE\nmessharp\n' > "$RUNNER_TEMP/expected-archive-files"
+          tar -tzf "dist/$archive" | LC_ALL=C sort > "$RUNNER_TEMP/actual-archive-files"
+          diff -u "$RUNNER_TEMP/expected-archive-files" "$RUNNER_TEMP/actual-archive-files"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: messharp-darwin-${{ matrix.arch }}
+          path: dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  package:
+    name: Package release assets
+    needs: [validate, build]
+    if: needs.validate.outputs.immutable_release != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          pattern: messharp-darwin-*
+          path: dist
+          merge-multiple: true
+      - name: Create checksum manifest
+        working-directory: dist
+        run: sha256sum messharp_*.tar.gz | LC_ALL=C sort > checksums.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-assets
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  smoke:
+    name: Smoke test ${{ matrix.runner }}
+    needs: [validate, package]
+    if: needs.validate.outputs.immutable_release != 'true'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            machine: x86_64
+            runner: macos-15-intel
+          - arch: arm64
+            machine: arm64
+            runner: macos-15
+    steps:
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: release-assets
+          path: dist
+
+      - name: Run exact packaged executable
+        shell: bash
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = "${{ matrix.machine }}"
+          (cd dist && shasum -a 256 -c checksums.txt)
+          archive="dist/messharp_${VERSION}_darwin_${{ matrix.arch }}.tar.gz"
+          printf 'LICENSE\nmessharp\n' > "$RUNNER_TEMP/expected-archive-files"
+          tar -tzf "$archive" | LC_ALL=C sort > "$RUNNER_TEMP/actual-archive-files"
+          diff -u "$RUNNER_TEMP/expected-archive-files" "$RUNNER_TEMP/actual-archive-files"
+          mkdir "$RUNNER_TEMP/messharp-smoke"
+          tar -xzf "$archive" -C "$RUNNER_TEMP/messharp-smoke"
+          executable="$RUNNER_TEMP/messharp-smoke/messharp"
+          test "$("$executable" --version)" = "messharp $VERSION"
+          cat > "$RUNNER_TEMP/smoke.cs" <<'EOF'
+          public sealed class Smoke
+          {
+              public int Meaning() => 42;
+          }
+          EOF
+          "$executable" "$RUNNER_TEMP/smoke.cs" json csharp --reportfile "$RUNNER_TEMP/report.json"
+          jq -e --arg expected "$VERSION" '.package == "messharp" and .version == $expected and (.errors | length == 0)' "$RUNNER_TEMP/report.json" >/dev/null
+
+  release:
+    name: Publish immutable GitHub release
+    needs: [validate, smoke]
+    if: >-
+      always() &&
+      needs.validate.result == 'success' &&
+      (needs.smoke.result == 'success' || needs.validate.outputs.immutable_release == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    outputs:
+      release_id: ${{ steps.release.outputs.release_id }}
+      arm64_sha: ${{ steps.release.outputs.arm64_sha }}
+      amd64_sha: ${{ steps.release.outputs.amd64_sha }}
+    steps:
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        if: needs.validate.outputs.immutable_release != 'true'
+        with:
+          name: release-assets
+          path: dist
+
+      - id: release
+        name: Create or verify release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ needs.validate.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          remote_tag_sha() {
+            remote_sha="$(git ls-remote "https://github.com/$GH_REPO.git" "refs/tags/$TAG^{}" | cut -f1)"
+            if [[ -z "$remote_sha" ]]; then
+              remote_sha="$(git ls-remote "https://github.com/$GH_REPO.git" "refs/tags/$TAG" | cut -f1)"
+            fi
+            printf '%s\n' "$remote_sha"
+          }
+          test "$(remote_tag_sha)" = "$SOURCE_SHA"
+          if release="$(gh release view "$TAG" --json databaseId,isDraft 2>/dev/null)"; then
+            release_id="$(jq -r .databaseId <<<"$release")"
+            is_draft="$(jq -r .isDraft <<<"$release")"
+            if [[ "$is_draft" != true ]]; then
+              echo "A published release already exists; verifying immutable assets."
+              if [[ "$(gh api "repos/$GH_REPO/releases/$release_id" --jq .immutable)" != true ]]; then
+                echo "The existing published release is not immutable." >&2
+                exit 1
+              fi
+              rm -rf dist
+              mkdir dist
+              gh release download "$TAG" --dir dist
+            fi
+          else
+            gh release create "$TAG" \
+              --draft --verify-tag --title "messharp ${TAG#v}" --generate-notes
+            release="$(gh release view "$TAG" --json databaseId,isDraft)"
+            release_id="$(jq -r .databaseId <<<"$release")"
+            is_draft="$(jq -r .isDraft <<<"$release")"
+          fi
+          release_api="repos/$GH_REPO/releases/$release_id"
+          version="${TAG#v}"
+          expected_assets="$(printf '%s\n' \
+            "messharp_${version}_darwin_amd64.tar.gz" \
+            "messharp_${version}_darwin_arm64.tar.gz" \
+            checksums.txt | LC_ALL=C sort)"
+          local_assets="$(find dist -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort)"
+          test "$local_assets" = "$expected_assets"
+          expected_archives="$(printf '%s\n' \
+            "messharp_${version}_darwin_amd64.tar.gz" \
+            "messharp_${version}_darwin_arm64.tar.gz" | LC_ALL=C sort)"
+          test "$(awk '{ print $2 }' dist/checksums.txt | LC_ALL=C sort)" = "$expected_archives"
+          (cd dist && sha256sum -c checksums.txt)
+
+          if [[ "$is_draft" == true ]]; then
+            mkdir -p existing
+            for asset in dist/*; do
+              name="$(basename "$asset")"
+              if gh api "$release_api" --jq '.assets[].name' | grep -Fxq "$name"; then
+                gh release download "$TAG" --pattern "$name" --dir existing
+                if ! cmp -s "$asset" "existing/$name"; then
+                  echo "Draft asset differs from the verified build: $name" >&2
+                  exit 1
+                fi
+              else
+                gh release upload "$TAG" "$asset"
+              fi
+            done
+          fi
+
+          actual_assets="$(gh api "$release_api" --jq '[.assets[].name] | sort | .[]')"
+          if [[ "$actual_assets" != "$expected_assets" ]]; then
+            echo "Release assets do not match the verified build." >&2
+            diff -u <(printf '%s\n' "$expected_assets") <(printf '%s\n' "$actual_assets") || true
+            exit 1
+          fi
+
+          if [[ "$is_draft" == true ]]; then
+            test "$(remote_tag_sha)" = "$SOURCE_SHA"
+            gh release edit "$TAG" --draft=false --latest
+          fi
+
+          immutable=false
+          for _ in {1..6}; do
+            immutable="$(gh api "$release_api" --jq .immutable)"
+            [[ "$immutable" == true ]] && break
+            sleep 5
+          done
+          if [[ "$immutable" != true ]]; then
+            echo "Release was published but is not immutable; Homebrew dispatch is blocked." >&2
+            exit 1
+          fi
+          test "$(remote_tag_sha)" = "$SOURCE_SHA"
+          gh release verify "$TAG"
+          for asset in dist/*; do
+            gh release verify-asset "$TAG" "$asset"
+          done
+          arm64_sha="$(awk -v asset="messharp_${version}_darwin_arm64.tar.gz" '$2 == asset { print $1 }' dist/checksums.txt)"
+          amd64_sha="$(awk -v asset="messharp_${version}_darwin_amd64.tar.gz" '$2 == asset { print $1 }' dist/checksums.txt)"
+          [[ "$arm64_sha" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$amd64_sha" =~ ^[0-9a-f]{64}$ ]]
+          {
+            echo "release_id=$release_id"
+            echo "arm64_sha=$arm64_sha"
+            echo "amd64_sha=$amd64_sha"
+          } >> "$GITHUB_OUTPUT"
+
+  homebrew:
+    name: Update Homebrew tap
+    needs: [validate, release]
+    if: >-
+      always() &&
+      needs.validate.result == 'success' &&
+      needs.release.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment: homebrew
+    steps:
+      - id: app-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
+        with:
+          app-id: ${{ secrets.HOMEBREW_TAP_APP_ID }}
+          private-key: ${{ secrets.HOMEBREW_TAP_APP_PRIVATE_KEY }}
+          owner: quality-gates
+          repositories: homebrew-tap
+          permission-actions: write
+
+      - id: dispatch
+        name: Dispatch tap-owned publication workflow
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_ID: ${{ needs.release.outputs.release_id }}
+          SOURCE_SHA: ${{ needs.validate.outputs.source_sha }}
+          VERSION: ${{ needs.validate.outputs.version }}
+          ARM64_SHA: ${{ needs.release.outputs.arm64_sha }}
+          AMD64_SHA: ${{ needs.release.outputs.amd64_sha }}
+        run: |
+          set -euo pipefail
+          response="$(gh api --method POST \
+            repos/quality-gates/homebrew-tap/actions/workflows/publish-formula.yml/dispatches \
+            -F return_run_details=true \
+            -f ref=main \
+            -f "inputs[tool]=messharp" \
+            -f "inputs[tag]=$TAG" \
+            -f "inputs[version]=$VERSION" \
+            -f "inputs[release_id]=$RELEASE_ID" \
+            -f "inputs[source_sha]=$SOURCE_SHA" \
+            -f "inputs[arm64_asset]=messharp_${VERSION}_darwin_arm64.tar.gz" \
+            -f "inputs[amd64_asset]=messharp_${VERSION}_darwin_amd64.tar.gz" \
+            -f "inputs[arm64_sha]=$ARM64_SHA" \
+            -f "inputs[amd64_sha]=$AMD64_SHA")"
+          run_id="$(jq -r .workflow_run_id <<<"$response")"
+          run_url="$(jq -r .html_url <<<"$response")"
+          test "$run_id" != null
+          test "$run_url" != null
+          {
+            echo "run_id=$run_id"
+            echo "run_url=$run_url"
+          } >> "$GITHUB_OUTPUT"
+          echo "Tap publication: $run_url" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Wait for tap publication
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RUN_ID: ${{ steps.dispatch.outputs.run_id }}
+        run: gh run watch "$RUN_ID" --repo quality-gates/homebrew-tap --exit-status

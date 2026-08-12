@@ -11,7 +11,6 @@ namespace MessSharp.Report;
 public sealed class SarifRenderer : IRenderer
 {
     private const string ToolName = "messharp";
-    private const string ToolVersion = "0.2.2";
     private const string SarifSchemaUri =
         "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json";
 
@@ -61,7 +60,7 @@ public sealed class SarifRenderer : IRenderer
                         Driver = new SarifDriver
                         {
                             Name = ToolName,
-                            Version = ToolVersion,
+                            Version = BuildInfo.Version,
                             Rules = rules,
                         },
                     },

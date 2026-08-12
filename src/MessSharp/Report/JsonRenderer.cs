@@ -11,7 +11,6 @@ namespace MessSharp.Report;
 public sealed class JsonRenderer : IRenderer
 {
     private const string ToolName = "messharp";
-    private const string ToolVersion = "0.2.2";
 
     private static readonly JsonSerializerOptions _opts = new()
     {
@@ -24,7 +23,7 @@ public sealed class JsonRenderer : IRenderer
     {
         var rep = new JsonReport
         {
-            Version = ToolVersion,
+            Version = BuildInfo.Version,
             Package = ToolName,
             Timestamp = DateTime.Now.ToString("o"),
             Files = new List<JsonFile>(),

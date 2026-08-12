@@ -12,19 +12,17 @@ public static class Cli
     private const int ExitError = 1;
     private const int ExitViolation = 2;
 
-    private const string Version = "0.2.2";
-
     public static int Run(string[] args, TextWriter? stdout = null, TextWriter? stderr = null, IRunner? runner = null)
     {
         stdout ??= Console.Out;
         stderr ??= Console.Error;
 
-        if (args.Length == 0) { CliArgParser.PrintUsage(stderr, Version); return ExitError; }
+        if (args.Length == 0) { CliArgParser.PrintUsage(stderr, BuildInfo.Version); return ExitError; }
         if (HandleInfoFlag(args[0], stdout)) return ExitSuccess;
 
         var (opts, positionals, err) = CliArgParser.Parse(args);
         if (err != null) { stderr.WriteLine($"error: {err}"); return ExitError; }
-        if (positionals.Count < 3) { CliArgParser.PrintUsage(stderr, Version); return ExitError; }
+        if (positionals.Count < 3) { CliArgParser.PrintUsage(stderr, BuildInfo.Version); return ExitError; }
 
         opts.Paths = positionals[0];
         opts.Format = positionals[1];
@@ -35,8 +33,8 @@ public static class Cli
 
     private static bool HandleInfoFlag(string first, TextWriter stdout)
     {
-        if (first == "--version") { stdout.WriteLine($"messharp {Version}"); return true; }
-        if (first is "--help" or "-h" or "help") { CliArgParser.PrintUsage(stdout, Version); return true; }
+        if (first == "--version") { stdout.WriteLine($"messharp {BuildInfo.Version}"); return true; }
+        if (first is "--help" or "-h" or "help") { CliArgParser.PrintUsage(stdout, BuildInfo.Version); return true; }
         return false;
     }
 

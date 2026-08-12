@@ -6,8 +6,22 @@ namespace MessSharp.RuleSet;
 /// </summary>
 internal static class LoaderFileResolver
 {
+    internal static byte[]? ReadBuiltin(string filename)
+    {
+        var path = FindBuiltinFile(filename);
+        if (path != null) return File.ReadAllBytes(path);
+
+        using var stream = typeof(LoaderFileResolver).Assembly
+            .GetManifestResourceStream($"MessSharp.rulesets.{filename}");
+        if (stream == null) return null;
+
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        return buffer.ToArray();
+    }
+
     /// <summary>Searches for a built-in ruleset file next to the exe and up the repo tree.</summary>
-    internal static string? FindBuiltinFile(string filename)
+    private static string? FindBuiltinFile(string filename)
     {
         // 1. Next to the executable (output dir)
         var candidate = Path.Combine(AppContext.BaseDirectory, "rulesets", filename);

@@ -32,6 +32,10 @@ What each ruleset and rule checks: [docs/rules.md](docs/rules.md).
 
 ## Install
 
+```console
+brew install quality-gates/tap/messharp
+```
+
 Repo tooling runs through Docker wrappers so a host .NET SDK is optional:
 
 ```console
