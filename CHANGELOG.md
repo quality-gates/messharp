@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Release validation and immutable publication now use the SHA-pinned shared Homebrew tap actions.
+- Built-in ruleset loading now uses the `BuiltInRuleSetReader` seam.
 - `scripts/dotnet.sh` now persists the container's `/root/.dotnet` in a named volume (so restored local tools like Stryker survive between runs) and passes host proxy settings (`HTTPS_PROXY`, `NO_PROXY`, `SSL_CERT_FILE`) into the container when set, so restores work behind egress proxies.
 - The mutation-testing workflow installs Stryker with `dotnet tool restore` (pinned via the tool manifest) instead of a floating global `dotnet tool install -g`, which the new local manifest would otherwise shadow.
 
