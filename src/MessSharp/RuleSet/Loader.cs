@@ -49,7 +49,7 @@ public sealed class Loader
     {
         if (BuiltinNames.TryGetValue(ident, out var filename))
         {
-            var builtIn = LoaderFileResolver.ReadBuiltin(filename);
+            var builtIn = BuiltInRuleSetReader.Read(filename);
             if (builtIn != null) return builtIn;
         }
         if (File.Exists(ident)) return File.ReadAllBytes(ident);
