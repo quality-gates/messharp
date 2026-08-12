@@ -9,8 +9,9 @@ public class ReadmeTests
     [Fact]
     public void RulesetsSection_ListsEveryBuiltInRuleset()
     {
-        string readme = File.ReadAllText(FindRepositoryFile("README.md"));
-        string rulesetTable = ExtractRulesetTable(readme);
+        // Catalog lives in docs/ so the landing README stays messpy-short.
+        string rulesDoc = File.ReadAllText(FindRepositoryFile(Path.Combine("docs", "rules.md")));
+        string rulesetTable = ExtractRulesetTable(rulesDoc);
 
         using var stdout = new StringWriter();
         using var stderr = new StringWriter();
@@ -37,7 +38,7 @@ public class ReadmeTests
         const string header = "| Ruleset | What it checks |";
         string[] lines = readme.Split(Environment.NewLine);
         int start = Array.FindIndex(lines, line => line == header);
-        Assert.True(start >= 0, "README should contain the ruleset table.");
+        Assert.True(start >= 0, "docs/rules.md should contain the ruleset table.");
 
         var tableLines = lines
             .Skip(start)
