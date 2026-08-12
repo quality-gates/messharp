@@ -1,8 +1,24 @@
 # MessSharp Domain Model Context
 
-This document captures the core vocabulary and seams used during the execution of C# mess detection.
+This document captures the core vocabulary and seams used during C# mess detection and tap publication.
 
 ## Terminology
+
+### Stable release
+A MessSharp release identified by an exact `vMAJOR.MINOR.PATCH` tag, with no
+prerelease or build suffix.
+
+### Release commit point
+The moment a draft becomes an immutable GitHub release. A failure after this
+point cannot invalidate or replace that release.
+
+### Tap publication
+The process that makes an existing stable release available through
+`quality-gates/tap`.
+
+### Formula candidate
+The complete generated `messharp` formula proposed from one immutable stable
+release and waiting for the tap merge policy.
 
 ### Runner (`IRunner`)
 The orchestration module that drives file discovery, Roslyn syntax parsing, rule analysis, and report accumulation.
