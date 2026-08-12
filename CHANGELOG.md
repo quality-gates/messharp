@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Stable macOS Homebrew releases with self-contained Intel and Apple Silicon archives, checksums, immutable GitHub releases, and protected tap publication.
 - Committed git hooks mirroring CI locally: `githooks/pre-commit` (license check, `dotnet format`, warnings-as-errors build, unit tests, self-analysis — whole-tree, hard-failing) and `githooks/pre-push` (Stryker mutation testing scoped to the diff against `origin/main` via `--since`). Plain `sh` scripts, no hook-framework dependency; opt in once with `git config core.hooksPath githooks` (documented as a "Definition of Ready" step in `AGENTS.md`). Stryker is pinned in a new dotnet tool manifest (`.config/dotnet-tools.json`).
 
+### Fixed
+
+- macOS release archives now retain a native ad hoc code signature, so current macOS security policy permits Homebrew-installed executables to start.
+
 ### Changed
 
 - Release validation and immutable publication now use the SHA-pinned shared Homebrew tap actions.
