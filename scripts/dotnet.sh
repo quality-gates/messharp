@@ -21,6 +21,8 @@ if [[ -n "${HTTPS_PROXY:-}" ]]; then
   fi
 fi
 
+DOTNET_SDK_IMAGE="${DOTNET_SDK_IMAGE:-mcr.microsoft.com/dotnet/sdk:8.0}"
+
 exec docker run --rm \
   ${PROXY_ARGS[@]+"${PROXY_ARGS[@]}"} \
   -v "$REPO_ROOT":/src \
@@ -29,5 +31,5 @@ exec docker run --rm \
   -w /src \
   -e DOTNET_CLI_TELEMETRY_OPTOUT=1 \
   -e DOTNET_NOLOGO=1 \
-  mcr.microsoft.com/dotnet/sdk:8.0 \
+  "$DOTNET_SDK_IMAGE" \
   dotnet "$@"
