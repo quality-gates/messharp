@@ -19,11 +19,20 @@ public sealed class UnusedFormalParameterRule : BaseRule, IMethodRule
         if (body == null) return;   // abstract / extern / interface declaration
 
         var reads = BodyAnalysis.IdentReads(body);
+        HashSet<string>? writes = null;
+
         foreach (var p in method.Parameters)
         {
             if (string.IsNullOrEmpty(p.Name) || p.Name == "_") continue;
-            if (!reads.Contains(p.Name))
-                ctx.Report(p.Line, p.Line, p.Name);
+            if (reads.Contains(p.Name)) continue;
+
+            if (p.IsOut)
+            {
+                writes ??= BodyAnalysis.IdentWrites(body);
+                if (writes.Contains(p.Name)) continue;
+            }
+
+            ctx.Report(p.Line, p.Line, p.Name);
         }
     }
 }

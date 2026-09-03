@@ -17,7 +17,7 @@ public sealed class ExcessiveClassComplexityRule : BaseRule, IClassRule
 
         int wmc = 0;
         foreach (var m in cls.Methods)
-            wmc += MetricsCalc.CyclomaticComplexity(m.Body);
+            wmc += MetricsCalc.CyclomaticComplexity(m.EffectiveBody);
 
         if (wmc < threshold) return;
 

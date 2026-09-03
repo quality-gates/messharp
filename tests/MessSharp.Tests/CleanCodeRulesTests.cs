@@ -363,6 +363,23 @@ public class Foo {
     }
 
     [Fact]
+    public void DuplicatedArrayKey_DifferentLiteralTypes_DoesNotFire()
+    {
+        var src = @"
+using System.Collections.Generic;
+public class Foo {
+    public void Bar() {
+        var d = new Dictionary<object, int> {
+            [0] = 1,
+            [""0""] = 2,
+        };
+    }
+}";
+        var v = Analyze(src, MakeRule<DuplicatedArrayKeyRule>("DuplicatedArrayKey"));
+        MustNotHave(v, "DuplicatedArrayKey");
+    }
+
+    [Fact]
     public void DuplicatedArrayKey_DuplicateMessage_ContainsKey()
     {
         var src = @"

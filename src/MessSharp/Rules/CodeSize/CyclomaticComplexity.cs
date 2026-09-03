@@ -13,7 +13,7 @@ public sealed class CyclomaticComplexityRule : BaseRule, IMethodRule
     public void Apply(RuleContext ctx, MethodModel method)
     {
         int threshold = ctx.Props.Int("reportLevel", 10);
-        int ccn = MetricsCalc.CyclomaticComplexity(method.Body);
+        int ccn = MetricsCalc.CyclomaticComplexity(method.EffectiveBody);
         if (ccn < threshold) return;
 
         string kind = "method";

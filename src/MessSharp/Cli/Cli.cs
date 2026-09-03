@@ -40,7 +40,7 @@ public static class Cli
 
     private static int Execute(CliOptions opts, TextWriter stdout, TextWriter stderr, IRunner? runner = null)
     {
-        if (!Renderers.TryGet(opts.Format, out var renderer))
+        if (!Renderers.TryGet(opts.Format, opts.Color, out var renderer))
         {
             stderr.WriteLine($"error: unknown report format \"{opts.Format}\". Available: {string.Join(", ", Renderers.Formats)}");
             return ExitError;

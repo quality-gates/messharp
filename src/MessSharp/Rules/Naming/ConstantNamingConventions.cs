@@ -62,12 +62,12 @@ public sealed class ConstantNamingConventionsRule : BaseRule, IClassRule, IInter
         return !name.Contains('_');
     }
 
-    /// <summary>UPPER_CASE: all uppercase letters and underscores.</summary>
+    /// <summary>UPPER_CASE: all uppercase letters, digits, and underscores.</summary>
     private static bool IsUpperCase(string name)
     {
         foreach (char c in name)
         {
-            if (c == '_') continue;
+            if (c == '_' || char.IsDigit(c)) continue;
             if (!char.IsUpper(c)) return false;
         }
         return true;

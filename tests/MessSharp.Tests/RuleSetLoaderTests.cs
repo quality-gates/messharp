@@ -92,4 +92,24 @@ public class RuleSetLoaderTests
         var after = sets.SelectMany(s => s.Rules).Count();
         Assert.Equal(before - 1, after);
     }
+
+    [Fact]
+    public void Load_ReferencingCSharpRuleset_LoadsSameRulesAsCSharpDirectly()
+    {
+        var xmlContent = @"<?xml version=""1.0"" encoding=""UTF-8"" ?>
+<ruleset name=""Custom"">
+  <description>Custom ruleset referencing csharp</description>
+  <rule ref=""csharp""/>
+</ruleset>";
+        var tmpFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(tmpFile, xmlContent);
+        try
+        {
+            var direct = new Loader { MaxPriority = 1 }.Load("csharp");
+            var indirect = new Loader { MaxPriority = 1 }.Load(tmpFile);
+            Assert.NotEmpty(indirect[0].Rules);
+            Assert.Equal(direct[0].Rules.Count, indirect[0].Rules.Count);
+        }
+        finally { File.Delete(tmpFile); }
+    }
 }

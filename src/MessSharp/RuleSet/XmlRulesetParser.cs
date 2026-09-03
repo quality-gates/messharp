@@ -90,6 +90,41 @@ internal static class XmlRuleHelpers
             return p.InnerValue.Trim();
         return p.Value ?? "";
     }
+
+    internal static XmlRule MergeChildRef(XmlRule child, XmlRule parent) =>
+        new()
+        {
+            Name = Fallback(child.Name, parent.Name),
+            Message = Fallback(parent.Message, child.Message),
+            Class = Fallback(child.Class, parent.Class),
+            Ref = child.Ref,
+            ExternalInfoUrl = Fallback(parent.ExternalInfoUrl, child.ExternalInfoUrl),
+            Since = Fallback(parent.Since, child.Since),
+            Description = Fallback(parent.Description, child.Description),
+            Priority = parent.Priority ?? child.Priority,
+            Properties = MergeXmlProperties(child.Properties, parent.Properties),
+            Exclude = CombineExcludes(child.Exclude, parent.Exclude),
+        };
+
+    private static string? Fallback(string? primary, string? secondary) =>
+        primary ?? secondary;
+
+    private static List<XmlExclude> CombineExcludes(List<XmlExclude>? first, List<XmlExclude>? second)
+    {
+        var result = new List<XmlExclude>();
+        if (first != null) result.AddRange(first);
+        if (second != null) result.AddRange(second);
+        return result;
+    }
+
+    internal static XmlProperties? MergeXmlProperties(XmlProperties? baseProps, XmlProperties? overProps)
+    {
+        if (baseProps == null && overProps == null) return null;
+        var result = new XmlProperties();
+        if (baseProps?.Property != null) result.Property.AddRange(baseProps.Property);
+        if (overProps?.Property != null) result.Property.AddRange(overProps.Property);
+        return result;
+    }
 }
 
 // ---------------------------------------------------------------------------

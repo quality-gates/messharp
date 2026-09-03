@@ -14,6 +14,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Recursively resolve nested ruleset references in `RuleSet.Loader` (e.g. `<rule ref="csharp"/>` in custom rulesets) with circular reference protection (#15).
+- Prevent `UnusedFormalParameter` false positives for C# `out` parameters assigned in method bodies (#16).
+- Allow digits in constant names when `ConstantNamingConventions` is configured with `convention="upper"` (e.g. `HTTP_200_OK`, `SHA256`) (#17).
+- Prevent 32-bit signed integer overflow in `NPathMetrics` via saturating arithmetic (#18).
+- Fix `LinesOfCodeMetrics.EffectiveLinesOfCode` scanner to skip comment delimiters inside string and character literals (#19).
+- Enable code rules and metrics (`CyclomaticComplexity`, `NPathComplexity`, `ExcessiveClassComplexity`, `ExitExpression`, `DevelopmentCodeFragment`, `DuplicatedArrayKey`, `IfStatementAssignment`, `ShortVariable`, `LongVariable`, `Lcom4Calculator`) to analyze expression-bodied methods and constructors via `MethodModel.EffectiveBody` (#20).
+- Match namespace-qualified calls (`System.Environment.Exit`, `System.Console.WriteLine`, etc.) in `ExitExpressionRule` and `DevelopmentCodeFragmentRule` (#21).
+- Prevent duplicate key false positives in `DuplicatedArrayKeyRule` when literal keys have different types (e.g. `0` vs `"0"`, `null` vs `""`) by including the literal syntax kind in the lookup key (#22).
+- Wire up the CLI `--color` option to select `AnsiRenderer` when text report format is requested (#23).
 - macOS release archives now retain a native ad hoc code signature, so current macOS security policy permits Homebrew-installed executables to start.
 
 ### Changed

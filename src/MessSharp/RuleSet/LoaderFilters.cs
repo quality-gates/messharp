@@ -47,4 +47,18 @@ internal static class LoaderFilters
 
     private static HashSet<string> ToSet(IReadOnlyList<string> names) =>
         new(names, StringComparer.Ordinal);
+
+    internal static (string baseName, string ruleName) SplitRef(
+        string refStr, IReadOnlyDictionary<string, string> builtins)
+    {
+        if (IsResolvable(refStr, builtins)) return (refStr, "");
+        int idx = refStr.LastIndexOf('/');
+        if (idx >= 0 && IsResolvable(refStr[..idx], builtins))
+            return (refStr[..idx], refStr[(idx + 1)..]);
+        return (refStr, "");
+    }
+
+    internal static bool IsResolvable(
+        string ident, IReadOnlyDictionary<string, string> builtins) =>
+        builtins.ContainsKey(ident) || File.Exists(ident);
 }

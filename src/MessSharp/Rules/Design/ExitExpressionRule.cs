@@ -13,12 +13,13 @@ public sealed class ExitExpressionRule : BaseRule, IMethodRule
 {
     public void Apply(RuleContext ctx, MethodModel method)
     {
-        if (method.Body == null) return;
+        var body = method.EffectiveBody;
+        if (body == null) return;
 
-        foreach (var invocation in method.Body.DescendantNodes().OfType<InvocationExpressionSyntax>())
+        foreach (var invocation in body.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
         {
             var name = GetFullName(invocation.Expression);
-            if (name == "Environment.Exit" || name == "Environment.FailFast")
+            if (IsExitCall(name))
             {
                 var line = invocation.SyntaxTree.GetLineSpan(invocation.Span).StartLinePosition.Line + 1;
                 var kind = method.IsConstructor ? "constructor" : "method";
@@ -27,6 +28,10 @@ public sealed class ExitExpressionRule : BaseRule, IMethodRule
             }
         }
     }
+
+    private static bool IsExitCall(string name) =>
+        name == "Environment.Exit" || name.EndsWith(".Environment.Exit", StringComparison.Ordinal) ||
+        name == "Environment.FailFast" || name.EndsWith(".Environment.FailFast", StringComparison.Ordinal);
 
     private static string GetFullName(Microsoft.CodeAnalysis.SyntaxNode expr)
     {

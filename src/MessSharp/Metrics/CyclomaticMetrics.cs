@@ -23,7 +23,7 @@ internal static class CyclomaticMetrics
         typeof(ConditionalExpressionSyntax),
     };
 
-    internal static int Compute(BlockSyntax? body)
+    internal static int Compute(SyntaxNode? body)
     {
         if (body == null) return 1;
         int ccn = 1;

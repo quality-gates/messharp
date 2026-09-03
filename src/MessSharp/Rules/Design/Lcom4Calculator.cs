@@ -66,10 +66,18 @@ internal static class Lcom4Calculator
         return (methodIndex, accessorOf);
     }
 
-    private static string? TrivialAccessorField(MethodModel m, HashSet<string> fields)
+    private static string? TrivialAccessorField(MethodModel m, HashSet<string> fields) =>
+        m.Body != null
+            ? ExtractBlockAccessor(m.Body, fields)
+            : ExtractExpressionAccessor(m.EffectiveBody, fields);
+
+    private static string? ExtractExpressionAccessor(SyntaxNode? effectiveBody, HashSet<string> fields) =>
+        effectiveBody is ExpressionSyntax expr ? ExtractFieldAccess(expr, fields) : null;
+
+    private static string? ExtractBlockAccessor(BlockSyntax body, HashSet<string> fields)
     {
-        if (m.Body == null || m.Body.Statements.Count != 1) return null;
-        var stmt = m.Body.Statements[0];
+        if (body.Statements.Count != 1) return null;
+        var stmt = body.Statements[0];
 
         if (stmt is ReturnStatementSyntax ret && ret.Expression != null)
             return ExtractFieldAccess(ret.Expression, fields);

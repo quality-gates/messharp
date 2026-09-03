@@ -122,6 +122,34 @@ class C {
     }
 
     [Fact]
+    public void NPathComplexity_ThirtyTwoSequentialIfs_DoesNotOverflow()
+    {
+        var ifs = string.Join(" ", Enumerable.Range(0, 32).Select(i => $"if (a > {i}) {{}}"));
+        var body = GetMethodBody($"class C {{ void F(int a) {{ {ifs} }} }}");
+        var npath = MetricsCalc.NPathComplexity(body);
+        Assert.Equal(int.MaxValue, npath);
+    }
+
+    [Fact]
+    public void NPathComplexity_AdditionOverflow_SaturatesAtIntMaxValue()
+    {
+        var ifs = string.Join(" ", Enumerable.Range(0, 32).Select(i => $"if (a > {i}) {{}}"));
+        var body = GetMethodBody($"class C {{ void F(int a) {{ if (a > 0) {{ {ifs} }} }} }}");
+        var npath = MetricsCalc.NPathComplexity(body);
+        Assert.Equal(int.MaxValue, npath);
+    }
+
+    [Fact]
+    public void NPathComplexity_ExpressionBodiedMethod_CalculatesComplexity()
+    {
+        var src = "class C { bool Foo(bool a, bool b, bool c) => a && (b || c); }";
+        var tree = CSharpSyntaxTree.ParseText(src);
+        var method = tree.GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>().First();
+        var npath = MetricsCalc.NPathComplexity(method.ExpressionBody?.Expression);
+        Assert.Equal(3, npath);
+    }
+
+    [Fact]
     public void CyclomaticComplexity_NullBody_Returns1()
     {
         Assert.Equal(1, MetricsCalc.CyclomaticComplexity(null));
@@ -131,6 +159,29 @@ class C {
     public void NPathComplexity_NullBody_Returns1()
     {
         Assert.Equal(1, MetricsCalc.NPathComplexity(null));
+    }
+
+    [Fact]
+    public void EffectiveLinesOfCode_StringWithCommentDelimiters_NotTreatedAsComments()
+    {
+        var src = @"class C {
+    string x = ""/*"";
+    int a = 1;
+    int b = 2;
+    string y = ""*/"";
+}";
+        var node = GetClassNode(src);
+        Assert.Equal(6, MetricsCalc.EffectiveLinesOfCode(node, src));
+    }
+
+    [Fact]
+    public void CyclomaticComplexity_ExpressionBodiedMethodWithTernary_CalculatesComplexity()
+    {
+        var src = "class C { int Foo(int a, int b) => a > 0 ? (b > 0 ? 1 : 2) : 3; }";
+        var tree = CSharpSyntaxTree.ParseText(src);
+        var method = tree.GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>().First();
+        var ccn = MetricsCalc.CyclomaticComplexity(method.ExpressionBody?.Expression);
+        Assert.Equal(3, ccn);
     }
 
     private static Microsoft.CodeAnalysis.SyntaxNode GetClassNode(string source)
@@ -193,6 +244,51 @@ class C {
     {
         var src = @"class C {
     int a = 10 / 2;
+}";
+        var node = GetClassNode(src);
+        Assert.Equal(3, MetricsCalc.EffectiveLinesOfCode(node, src));
+    }
+
+    [Fact]
+    public void EffectiveLinesOfCode_VerbatimStringWithEscapedQuotes_HandledCorrectly()
+    {
+        var src = @"class C {
+    string x = @""one """" two /* comment */"";
+    int a = 1;
+}";
+        var node = GetClassNode(src);
+        Assert.Equal(4, MetricsCalc.EffectiveLinesOfCode(node, src));
+    }
+
+    [Fact]
+    public void EffectiveLinesOfCode_RegularStringWithEscapedQuotes_HandledCorrectly()
+    {
+        var src = @"class C {
+    string x = ""one \"" two /* comment */"";
+    int a = 1;
+}";
+        var node = GetClassNode(src);
+        Assert.Equal(4, MetricsCalc.EffectiveLinesOfCode(node, src));
+    }
+
+    [Fact]
+    public void EffectiveLinesOfCode_CharLiterals_HandledCorrectly()
+    {
+        var src = @"class C {
+    char a = '\""';
+    char b = '/';
+    char c = '\'';
+    int x = 1;
+}";
+        var node = GetClassNode(src);
+        Assert.Equal(6, MetricsCalc.EffectiveLinesOfCode(node, src));
+    }
+
+    [Fact]
+    public void EffectiveLinesOfCode_BlockCommentEndingWithCode_CountsLine()
+    {
+        var src = @"class C {
+    /* block comment */ int x = 1;
 }";
         var node = GetClassNode(src);
         Assert.Equal(3, MetricsCalc.EffectiveLinesOfCode(node, src));

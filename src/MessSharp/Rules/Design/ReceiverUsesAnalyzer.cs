@@ -16,13 +16,14 @@ internal static class ReceiverUsesAnalyzer
     {
         var usedFields = new List<string>();
         var calledMethods = new List<string>();
-        if (m.Body == null) return (usedFields, calledMethods);
+        var body = m.EffectiveBody;
+        if (body == null) return (usedFields, calledMethods);
 
         bool isStatic = IsStaticMethod(m);
         var seenFields = new HashSet<string>(StringComparer.Ordinal);
         var seenMethods = new HashSet<string>(StringComparer.Ordinal);
 
-        foreach (var node in m.Body.DescendantNodes())
+        foreach (var node in body.DescendantNodesAndSelf())
             ProcessNode(node, isStatic, fields, methodIndex, seenFields, seenMethods, usedFields, calledMethods);
 
         return (usedFields, calledMethods);
