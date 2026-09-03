@@ -23,115 +23,19 @@ internal static class LinesOfCodeMetrics
         var span = node.SyntaxTree.GetLineSpan(node.Span);
         int first = span.StartLinePosition.Line;
         int last = span.EndLinePosition.Line;
-        var lines = source.Split('\n');
-        int count = 0;
-        bool inBlock = false;
-        int len = lines.Length;
-        for (int i = 0; i < len; i++)
-        {
-            bool hasCode;
-            (hasCode, inBlock) = LineHasCode(lines[i], inBlock);
-            if (i >= first && i <= last && hasCode)
-                count++;
-        }
-        return count;
-    }
 
-    private static (bool hasCode, bool blockAfter) LineHasCode(string line, bool inBlock)
-    {
-        bool hasCode = false;
-        int i = 0;
-        int len = line.Length;
-        while (i < len)
+        var lines = new HashSet<int>();
+        foreach (var token in node.DescendantTokens())
         {
-            if (inBlock)
+            var tokenSpan = token.GetLocation().GetLineSpan();
+            int start = tokenSpan.StartLinePosition.Line;
+            int end = tokenSpan.EndLinePosition.Line;
+            for (int l = start; l <= end; l++)
             {
-                i = AdvanceBlockComment(line, i, ref inBlock);
-                continue;
+                if (l >= first && l <= last)
+                    lines.Add(l);
             }
-            if (IsQuote(line[i]))
-            {
-                hasCode = true;
-                i = AdvanceStringOrChar(line, i);
-                continue;
-            }
-            var (stop, consumed, newBlock) = ScanChar(line, i, hasCode);
-            if (stop) return (hasCode, false);
-            inBlock = newBlock;
-            if (consumed > 0) { i += consumed; continue; }
-            if (IsCodeChar(line[i]))
-                hasCode = true;
-            i++;
         }
-        return (hasCode, inBlock);
-    }
-
-    private static bool IsQuote(char c) => c == '"' || c == '\'';
-
-    private static bool IsCodeChar(char c) => c != ' ' && c != '\t' && c != '\r';
-
-    private static int AdvanceStringOrChar(string line, int i)
-    {
-        char quote = line[i];
-        if (quote == '"' && i > 0 && line[i - 1] == '@')
-            return AdvanceVerbatimString(line, i + 1);
-        return AdvanceRegularString(line, i + 1, quote);
-    }
-
-    private static int AdvanceVerbatimString(string line, int i)
-    {
-        int len = line.Length;
-        while (i < len)
-        {
-            if (line[i] == '"')
-            {
-                if (i + 1 < len && line[i + 1] == '"')
-                {
-                    i += 2;
-                    continue;
-                }
-                return i + 1;
-            }
-            i++;
-        }
-        return i;
-    }
-
-    private static int AdvanceRegularString(string line, int i, char quote)
-    {
-        int len = line.Length;
-        while (i < len)
-        {
-            if (line[i] == '\\' && i + 1 < len)
-            {
-                i += 2;
-                continue;
-            }
-            if (line[i] == quote)
-                return i + 1;
-            i++;
-        }
-        return i;
-    }
-
-    private static int AdvanceBlockComment(string line, int i, ref bool inBlock)
-    {
-        if (line[i] == '*' && i + 1 < line.Length && line[i + 1] == '/')
-        {
-            inBlock = false;
-            return i + 2;
-        }
-        return i + 1;
-    }
-
-    // Returns (stop, extraConsumed, newInBlock).
-    // stop=true means return (hasCode, false) immediately (line comment found).
-    private static (bool stop, int consumed, bool newInBlock) ScanChar(string line, int i, bool hasCode)
-    {
-        if (line[i] != '/' || i + 1 >= line.Length)
-            return (false, 0, false);
-        if (line[i + 1] == '/') return (true, 0, false);
-        if (line[i + 1] == '*') return (false, 2, true);
-        return (false, 0, false);
+        return lines.Count;
     }
 }

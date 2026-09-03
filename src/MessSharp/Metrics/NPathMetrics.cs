@@ -26,7 +26,6 @@ internal static class NPathMetrics
 
     private static int Mul(int a, int b)
     {
-        if (a <= 0 || b <= 0) return 0;
         long prod = (long)a * b;
         return prod > int.MaxValue ? int.MaxValue : (int)prod;
     }
