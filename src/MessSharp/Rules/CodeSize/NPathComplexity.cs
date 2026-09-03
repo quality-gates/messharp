@@ -13,7 +13,7 @@ public sealed class NPathComplexityRule : BaseRule, IMethodRule
     public void Apply(RuleContext ctx, MethodModel method)
     {
         int threshold = ctx.Props.Int("minimum", 200);
-        int npath = MetricsCalc.NPathComplexity(method.Body);
+        int npath = MetricsCalc.NPathComplexity(method.EffectiveBody);
         if (npath < threshold) return;
 
         string kind = method.IsConstructor ? "constructor" : "method";

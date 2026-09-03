@@ -17,9 +17,10 @@ public sealed class IfStatementAssignmentRule : BaseRule, IMethodRule
 {
     public void Apply(RuleContext ctx, MethodModel method)
     {
-        if (method.Body == null) return;
+        var body = method.EffectiveBody;
+        if (body == null) return;
 
-        foreach (var node in method.Body.DescendantNodesAndSelf())
+        foreach (var node in body.DescendantNodesAndSelf())
         {
             switch (node)
             {

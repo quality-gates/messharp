@@ -49,15 +49,69 @@ internal static class LinesOfCodeMetrics
                 i = AdvanceBlockComment(line, i, ref inBlock);
                 continue;
             }
+            if (IsQuote(line[i]))
+            {
+                hasCode = true;
+                i = AdvanceStringOrChar(line, i);
+                continue;
+            }
             var (stop, consumed, newBlock) = ScanChar(line, i, hasCode);
             if (stop) return (hasCode, false);
             inBlock = newBlock;
             if (consumed > 0) { i += consumed; continue; }
-            if (line[i] != ' ' && line[i] != '\t' && line[i] != '\r')
+            if (IsCodeChar(line[i]))
                 hasCode = true;
             i++;
         }
         return (hasCode, inBlock);
+    }
+
+    private static bool IsQuote(char c) => c == '"' || c == '\'';
+
+    private static bool IsCodeChar(char c) => c != ' ' && c != '\t' && c != '\r';
+
+    private static int AdvanceStringOrChar(string line, int i)
+    {
+        char quote = line[i];
+        if (quote == '"' && i > 0 && line[i - 1] == '@')
+            return AdvanceVerbatimString(line, i + 1);
+        return AdvanceRegularString(line, i + 1, quote);
+    }
+
+    private static int AdvanceVerbatimString(string line, int i)
+    {
+        int len = line.Length;
+        while (i < len)
+        {
+            if (line[i] == '"')
+            {
+                if (i + 1 < len && line[i + 1] == '"')
+                {
+                    i += 2;
+                    continue;
+                }
+                return i + 1;
+            }
+            i++;
+        }
+        return i;
+    }
+
+    private static int AdvanceRegularString(string line, int i, char quote)
+    {
+        int len = line.Length;
+        while (i < len)
+        {
+            if (line[i] == '\\' && i + 1 < len)
+            {
+                i += 2;
+                continue;
+            }
+            if (line[i] == quote)
+                return i + 1;
+            i++;
+        }
+        return i;
     }
 
     private static int AdvanceBlockComment(string line, int i, ref bool inBlock)

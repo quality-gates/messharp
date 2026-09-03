@@ -423,6 +423,37 @@ public abstract class Foo
         MustNotHave(vs, "UnusedFormalParameter");
     }
 
+    [Fact]
+    public void UnusedFormalParameter_OutParameterAssigned_NoFire()
+    {
+        var src = @"
+public class Foo
+{
+    public bool TryParse(string s, out int val)
+    {
+        val = 1;
+        return s.Length > 0;
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedFormalParameter");
+    }
+
+    [Fact]
+    public void UnusedFormalParameter_OutParameterUnassigned_Fires()
+    {
+        var src = @"
+public class Foo
+{
+    public bool TryParse(string s, out int val)
+    {
+        return s.Length > 0;
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "UnusedFormalParameter");
+    }
+
     // ─── combined fixture ────────────────────────────────────────────────────
 
     [Fact]

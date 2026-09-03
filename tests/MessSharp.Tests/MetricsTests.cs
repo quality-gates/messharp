@@ -122,6 +122,15 @@ class C {
     }
 
     [Fact]
+    public void NPathComplexity_ThirtyTwoSequentialIfs_DoesNotOverflow()
+    {
+        var ifs = string.Join(" ", Enumerable.Range(0, 32).Select(i => $"if (a > {i}) {{}}"));
+        var body = GetMethodBody($"class C {{ void F(int a) {{ {ifs} }} }}");
+        var npath = MetricsCalc.NPathComplexity(body);
+        Assert.True(npath > 200, $"Expected NPath > 200, got {npath}");
+    }
+
+    [Fact]
     public void CyclomaticComplexity_NullBody_Returns1()
     {
         Assert.Equal(1, MetricsCalc.CyclomaticComplexity(null));
@@ -131,6 +140,29 @@ class C {
     public void NPathComplexity_NullBody_Returns1()
     {
         Assert.Equal(1, MetricsCalc.NPathComplexity(null));
+    }
+
+    [Fact]
+    public void EffectiveLinesOfCode_StringWithCommentDelimiters_NotTreatedAsComments()
+    {
+        var src = @"class C {
+    string x = ""/*"";
+    int a = 1;
+    int b = 2;
+    string y = ""*/"";
+}";
+        var node = GetClassNode(src);
+        Assert.Equal(6, MetricsCalc.EffectiveLinesOfCode(node, src));
+    }
+
+    [Fact]
+    public void CyclomaticComplexity_ExpressionBodiedMethodWithTernary_CalculatesComplexity()
+    {
+        var src = "class C { int Foo(int a, int b) => a > 0 ? (b > 0 ? 1 : 2) : 3; }";
+        var tree = CSharpSyntaxTree.ParseText(src);
+        var method = tree.GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>().First();
+        var ccn = MetricsCalc.CyclomaticComplexity(method.ExpressionBody?.Expression);
+        Assert.Equal(3, ccn);
     }
 
     private static Microsoft.CodeAnalysis.SyntaxNode GetClassNode(string source)

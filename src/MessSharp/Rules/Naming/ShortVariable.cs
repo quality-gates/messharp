@@ -28,9 +28,9 @@ public sealed class ShortVariableRule : BaseRule, IClassRule, IMethodRule
         foreach (var p in method.Parameters)
             CheckName(ctx, p.Name, p.Line, min, exceptions);
 
-        if (method.Body != null)
+        if (method.EffectiveBody != null)
         {
-            foreach (var (name, line, isLoop) in CollectLocals(method.Body))
+            foreach (var (name, line, isLoop) in CollectLocals(method.EffectiveBody))
             {
                 if (isLoop) continue;
                 CheckName(ctx, name, line, min, exceptions);
@@ -57,7 +57,7 @@ public sealed class ShortVariableRule : BaseRule, IClassRule, IMethodRule
     /// initializer of a for-statement (phpmd skips those).
     /// </summary>
     internal static IEnumerable<(string Name, int Line, bool IsLoop)> CollectLocals(
-        Microsoft.CodeAnalysis.CSharp.Syntax.BlockSyntax body)
+        Microsoft.CodeAnalysis.SyntaxNode body)
     {
         foreach (var node in body.DescendantNodes())
         {

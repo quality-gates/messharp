@@ -10,17 +10,32 @@ namespace MessSharp.Metrics;
 /// </summary>
 internal static class NPathMetrics
 {
-    internal static int Compute(BlockSyntax? body)
+    internal static int Compute(SyntaxNode? body)
     {
         if (body == null) return 1;
-        return Stmts(body.Statements);
+        if (body is BlockSyntax blk) return Stmts(blk.Statements);
+        if (body is ExpressionSyntax expr) return Add(1, ExprComplexity(expr));
+        return 1;
+    }
+
+    private static int Add(int a, int b)
+    {
+        long sum = (long)a + b;
+        return sum > int.MaxValue ? int.MaxValue : (int)sum;
+    }
+
+    private static int Mul(int a, int b)
+    {
+        if (a <= 0 || b <= 0) return 0;
+        long prod = (long)a * b;
+        return prod > int.MaxValue ? int.MaxValue : (int)prod;
     }
 
     private static int Stmts(SyntaxList<StatementSyntax> stmts)
     {
         int product = 1;
         foreach (var s in stmts)
-            product *= Stmt(s);
+            product = Mul(product, Stmt(s));
         return product;
     }
 
@@ -28,9 +43,9 @@ internal static class NPathMetrics
     {
         IfStatementSyntax ifStmt => NPathIf(ifStmt),
         ForStatementSyntax forStmt => NPathFor(forStmt),
-        ForEachStatementSyntax fe => ExprComplexity(fe.Expression) + 1 + Block(fe.Statement),
-        WhileStatementSyntax ws => ExprComplexity(ws.Condition) + 1 + Block(ws.Statement),
-        DoStatementSyntax ds => ExprComplexity(ds.Condition) + 1 + Block(ds.Statement),
+        ForEachStatementSyntax fe => Add(Add(ExprComplexity(fe.Expression), 1), Block(fe.Statement)),
+        WhileStatementSyntax ws => Add(Add(ExprComplexity(ws.Condition), 1), Block(ws.Statement)),
+        DoStatementSyntax ds => Add(Add(ExprComplexity(ds.Condition), 1), Block(ds.Statement)),
         SwitchStatementSyntax sw => NPathSwitch(sw),
         BlockSyntax blk => Stmts(blk.Statements),
         ReturnStatementSyntax ret => ReturnComplexity(ret),
@@ -50,25 +65,24 @@ internal static class NPathMetrics
             { Statement: BlockSyntax blk } => Stmts(blk.Statements),
             { Statement: var other } => Stmt(other),
         };
-        return elsePart + body + expr;
+        return Add(Add(elsePart, body), expr);
     }
 
     private static int NPathFor(ForStatementSyntax n)
     {
-        int npath = 1 + ExprComplexity(n.Condition);
+        int npath = Add(1, ExprComplexity(n.Condition));
         foreach (var init in n.Initializers)
-            npath += ExprComplexity(init);
+            npath = Add(npath, ExprComplexity(init));
         foreach (var incr in n.Incrementors)
-            npath += ExprComplexity(incr);
-        npath += Block(n.Statement);
-        return npath;
+            npath = Add(npath, ExprComplexity(incr));
+        return Add(npath, Block(n.Statement));
     }
 
     private static int NPathSwitch(SwitchStatementSyntax sw)
     {
         int npath = ExprComplexity(sw.Expression);
         foreach (var section in sw.Sections)
-            npath += Stmts(section.Statements);
+            npath = Add(npath, Stmts(section.Statements));
         return npath == 0 ? 1 : npath;
     }
 

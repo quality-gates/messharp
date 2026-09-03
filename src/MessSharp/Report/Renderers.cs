@@ -20,8 +20,16 @@ public static class Renderers
             ["sarif"] = () => new SarifRenderer(),
         };
 
-    public static bool TryGet(string format, out IRenderer renderer)
+    public static bool TryGet(string format, out IRenderer renderer) =>
+        TryGet(format, color: false, out renderer);
+
+    public static bool TryGet(string format, bool color, out IRenderer renderer)
     {
+        if (color && format.Equals("text", StringComparison.OrdinalIgnoreCase))
+        {
+            renderer = new AnsiRenderer();
+            return true;
+        }
         if (_map.TryGetValue(format, out var factory))
         {
             renderer = factory();

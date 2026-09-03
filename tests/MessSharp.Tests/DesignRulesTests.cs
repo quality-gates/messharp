@@ -103,6 +103,30 @@ public class Foo {
         MustNotHave(vs, "ExitExpression");
     }
 
+    [Fact]
+    public void ExitExpression_SystemEnvironmentExit_Flagged()
+    {
+        var src = @"
+public class Foo {
+    public void Bar(int x) {
+        if (x == 0) System.Environment.Exit(1);
+    }
+}";
+        var vs = Analyze(src, MakeExitRule());
+        MustHave(vs, "ExitExpression");
+    }
+
+    [Fact]
+    public void ExitExpression_ExpressionBodied_Flagged()
+    {
+        var src = @"
+public class Foo {
+    public void Quit() => Environment.Exit(1);
+}";
+        var vs = Analyze(src, MakeExitRule());
+        MustHave(vs, "ExitExpression");
+    }
+
     // -------------------------------------------------------------------------
     // GotoStatement
     // -------------------------------------------------------------------------
@@ -308,6 +332,30 @@ public class Foo {
 }";
         var vs = Analyze(src, MakeDevCodeRule());
         MustNotHave(vs, "DevelopmentCodeFragment");
+    }
+
+    [Fact]
+    public void DevCode_SystemConsoleWriteLine_Flagged()
+    {
+        var src = @"
+public class Foo {
+    public void Bar(string s) {
+        System.Console.WriteLine(s);
+    }
+}";
+        var vs = Analyze(src, MakeDevCodeRule());
+        MustHave(vs, "DevelopmentCodeFragment");
+    }
+
+    [Fact]
+    public void DevCode_ExpressionBodied_Flagged()
+    {
+        var src = @"
+public class Foo {
+    public void Log(string s) => Console.WriteLine(s);
+}";
+        var vs = Analyze(src, MakeDevCodeRule());
+        MustHave(vs, "DevelopmentCodeFragment");
     }
 
     // -------------------------------------------------------------------------

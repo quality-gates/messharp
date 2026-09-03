@@ -100,6 +100,23 @@ internal static class BodyAnalysis
     }
 
     /// <summary>
+    /// Collects the set of identifier names that are written to as assignment targets
+    /// or passed as `out` arguments in a syntax node.
+    /// </summary>
+    internal static HashSet<string> IdentWrites(SyntaxNode body)
+    {
+        var writes = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var node in body.DescendantNodesAndSelf())
+        {
+            if (node is AssignmentExpressionSyntax aes && aes.Left is IdentifierNameSyntax lhsId)
+                writes.Add(lhsId.Identifier.Text);
+            else if (node is ArgumentSyntax arg && arg.RefOrOutKeyword.IsKind(SyntaxKind.OutKeyword) && arg.Expression is IdentifierNameSyntax outId)
+                writes.Add(outId.Identifier.Text);
+        }
+        return writes;
+    }
+
+    /// <summary>
     /// Collects declared local variable names from a body node.
     /// Returns (name, line) pairs. Excludes `_` discards.
     /// Covers: LocalDeclarationStatement, foreach variables, pattern variables,
@@ -182,18 +199,6 @@ internal static class BodyAnalysis
     /// Returns the effective body syntax node for a method. Handles both
     /// block bodies `{ ... }` and expression bodies `=> expr`.
     /// </summary>
-    internal static SyntaxNode? EffectiveBody(MessSharp.Model.MethodModel method)
-    {
-        if (method.Body != null) return method.Body;
-
-        // expression-bodied member: int Foo() => expr;
-        var node = method.Node;
-        var exprBody = node switch
-        {
-            MethodDeclarationSyntax m => m.ExpressionBody?.Expression,
-            ConstructorDeclarationSyntax c => c.ExpressionBody?.Expression,
-            _ => null,
-        };
-        return exprBody;
-    }
+    internal static SyntaxNode? EffectiveBody(MessSharp.Model.MethodModel method) =>
+        method.EffectiveBody;
 }

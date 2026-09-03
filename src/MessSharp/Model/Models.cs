@@ -62,8 +62,19 @@ public sealed class MethodModel
     public string ReturnType { get; init; } = "";
     /// <summary>Owning class, or null for interface methods.</summary>
     public ClassModel? Class { get; init; }
-    public SyntaxNode Node { get; init; } = null!;
     public BlockSyntax? Body { get; init; }
+    /// <summary>Executable block body or expression from expression-bodied member.</summary>
+    public SyntaxNode? EffectiveBody => (SyntaxNode?)Body ?? Node switch
+    {
+        MethodDeclarationSyntax m => m.ExpressionBody?.Expression,
+        ConstructorDeclarationSyntax c => c.ExpressionBody?.Expression,
+        OperatorDeclarationSyntax o => o.ExpressionBody?.Expression,
+        ConversionOperatorDeclarationSyntax co => co.ExpressionBody?.Expression,
+        LocalFunctionStatementSyntax lf => lf.ExpressionBody?.Expression,
+        AccessorDeclarationSyntax acc => acc.ExpressionBody?.Expression,
+        _ => null,
+    };
+    public SyntaxNode Node { get; init; } = null!;
     public SourceFile File { get; init; } = null!;
 }
 
@@ -86,5 +97,6 @@ public sealed class ParameterModel
     public string Name { get; init; } = "";
     public string Type { get; init; } = "";
     public int Line { get; init; }
+    public bool IsOut { get; init; }
     public ParameterSyntax Node { get; init; } = null!;
 }

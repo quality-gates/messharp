@@ -170,6 +170,27 @@ public class CliTests
         Assert.Equal(1, code);
     }
 
+    [Fact]
+    public void Cli_WithColorFlagAndTextFormat_RendersAnsiColors()
+    {
+        var runner = new FakeRunner();
+        runner.FakeReport.Violations.Add(new MessSharp.Rule.Violation
+        {
+            File = "file.cs",
+            BeginLine = 10,
+            Rule = new DummyRule("SomeRule"),
+            Description = "A violation"
+        });
+
+        var outW = new StringWriter();
+        var errW = new StringWriter();
+        var args = new[] { "somepath", "text", "codesize", "--color" };
+
+        int code = CliRunner.Run(args, outW, errW, runner);
+        Assert.Equal(2, code);
+        Assert.Contains("\x1b[33m", outW.ToString());
+    }
+
     private class DummyRule : MessSharp.Rule.BaseRule
     {
         public DummyRule(string name)

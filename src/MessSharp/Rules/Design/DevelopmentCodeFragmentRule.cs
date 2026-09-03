@@ -11,19 +11,29 @@ namespace MessSharp.Rules.Design;
 /// </summary>
 public sealed class DevelopmentCodeFragmentRule : BaseRule, IMethodRule
 {
+    private static readonly string[] DefaultUnwanted =
+    {
+        "console.write",
+        "console.writeline",
+        "debug.writeline",
+        "debugger.break",
+        "debugger.launch",
+    };
+
     public void Apply(RuleContext ctx, MethodModel method)
     {
-        if (method.Body == null) return;
+        var body = method.EffectiveBody;
+        if (body == null) return;
 
         var unwanted = BuildUnwantedSet(ctx.Props.Str("unwanted-functions", ""));
 
-        foreach (var invocation in method.Body.DescendantNodes().OfType<InvocationExpressionSyntax>())
+        foreach (var invocation in body.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
         {
             var name = GetCallName(invocation.Expression);
             if (name == null) continue;
 
             var lower = name.ToLowerInvariant();
-            if (IsDefaultUnwanted(lower) || unwanted.Contains(lower))
+            if (MatchesUnwanted(lower, unwanted))
             {
                 var line = invocation.SyntaxTree.GetLineSpan(invocation.Span).StartLinePosition.Line + 1;
                 var kind = method.IsConstructor ? "constructor" : "method";
@@ -32,12 +42,21 @@ public sealed class DevelopmentCodeFragmentRule : BaseRule, IMethodRule
         }
     }
 
-    private static bool IsDefaultUnwanted(string lower) =>
-        lower == "console.write" ||
-        lower == "console.writeline" ||
-        lower == "debug.writeline" ||
-        lower == "debugger.break" ||
-        lower == "debugger.launch";
+    private static bool MatchesUnwanted(string lower, HashSet<string> unwanted)
+    {
+        if (unwanted.Contains(lower)) return true;
+        foreach (var def in DefaultUnwanted)
+        {
+            if (lower == def || lower.EndsWith("." + def, StringComparison.Ordinal))
+                return true;
+        }
+        foreach (var u in unwanted)
+        {
+            if (lower.EndsWith("." + u, StringComparison.Ordinal))
+                return true;
+        }
+        return false;
+    }
 
     private static HashSet<string> BuildUnwantedSet(string prop)
     {

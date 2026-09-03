@@ -17,9 +17,10 @@ public sealed class DuplicatedArrayKeyRule : BaseRule, IMethodRule
 {
     public void Apply(RuleContext ctx, MethodModel method)
     {
-        if (method.Body == null) return;
+        var body = method.EffectiveBody;
+        if (body == null) return;
 
-        foreach (var init in method.Body.DescendantNodesAndSelf()
+        foreach (var init in body.DescendantNodesAndSelf()
                      .OfType<InitializerExpressionSyntax>())
         {
             CheckInitializer(ctx, init);
@@ -32,38 +33,19 @@ public sealed class DuplicatedArrayKeyRule : BaseRule, IMethodRule
 
         foreach (var expr in init.Expressions)
         {
-            // `{ ["key"] = value }` — AssignmentExpression with ImplicitElementAccess on left
-            // (used in object/collection initializer context)
-            if (expr is AssignmentExpressionSyntax assign2
-                && assign2.Kind() == SyntaxKind.SimpleAssignmentExpression)
-            {
-                if (assign2.Left is ImplicitElementAccessSyntax implicitElem
-                    && implicitElem.ArgumentList.Arguments.Count == 1)
-                {
-                    var keyExpr = implicitElem.ArgumentList.Arguments[0].Expression;
-                    RecordKey(ctx, keyExpr, seen);
-                    continue;
-                }
-            }
-
-            // `{ { "key", value } }` — nested InitializerExpression (complex element)
-            if (expr is InitializerExpressionSyntax nested
-                && nested.Expressions.Count >= 2)
-            {
-                var keyExpr = nested.Expressions[0];
-                RecordKey(ctx, keyExpr, seen);
-                continue;
-            }
+            CheckEntry(ctx, expr, seen);
         }
     }
 
-    private static void RecordKey(RuleContext ctx, Microsoft.CodeAnalysis.SyntaxNode keyExpr,
+    private static void CheckEntry(RuleContext ctx, ExpressionSyntax expr,
         Dictionary<string, int> seen)
     {
+        var (keyExpr, line) = ExtractKeyAndLine(expr);
+        if (keyExpr == null) return;
+
         var (key, display) = NormalizeKey(keyExpr);
         if (key == null) return;
 
-        var line = keyExpr.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
         if (seen.TryGetValue(key, out int firstLine))
         {
             ctx.Report(line, line, display, firstLine);
@@ -74,12 +56,32 @@ public sealed class DuplicatedArrayKeyRule : BaseRule, IMethodRule
         }
     }
 
+    private static (SyntaxNode? keyExpr, int line) ExtractKeyAndLine(ExpressionSyntax expr)
+    {
+        if (expr is AssignmentExpressionSyntax assign && assign.Kind() == SyntaxKind.SimpleAssignmentExpression)
+        {
+            if (assign.Left is ImplicitElementAccessSyntax implicitElem && implicitElem.ArgumentList.Arguments.Count == 1)
+            {
+                var keyExpr = implicitElem.ArgumentList.Arguments[0].Expression;
+                return (keyExpr, keyExpr.GetLocation().GetLineSpan().StartLinePosition.Line + 1);
+            }
+        }
+
+        if (expr is InitializerExpressionSyntax nested && nested.Expressions.Count >= 2)
+        {
+            var keyExpr = nested.Expressions[0];
+            return (keyExpr, keyExpr.GetLocation().GetLineSpan().StartLinePosition.Line + 1);
+        }
+
+        return (null, 0);
+    }
+
     private static (string? key, string display) NormalizeKey(Microsoft.CodeAnalysis.SyntaxNode expr)
     {
         switch (expr)
         {
             case LiteralExpressionSyntax lit:
-                return ("lit:" + lit.Token.Value?.ToString(), lit.Token.Text);
+                return ($"lit:{lit.Kind()}:{lit.Token.Value}", lit.Token.Text);
             case IdentifierNameSyntax id:
                 return ("ident:" + id.Identifier.Text, id.Identifier.Text);
             default:

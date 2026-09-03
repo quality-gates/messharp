@@ -408,6 +408,22 @@ class Foo
     }
 
     [Fact]
+    public void ConstantNaming_DigitsInUpper_NoViolation()
+    {
+        var src = @"
+class Foo
+{
+    const int HTTP_200_OK = 200;
+    const string SHA256 = ""sha"";
+}";
+        var rule = MakeRule<ConstantNamingConventionsRule>("ConstantNamingConventions",
+            "Constant {0} should be defined in uppercase",
+            new() { ["convention"] = "upper" });
+        var violations = Run(src, rule);
+        MustNotHave(violations, "ConstantNamingConventions");
+    }
+
+    [Fact]
     public void ConstantNaming_PascalCaseConst_Upper_ReportsViolation()
     {
         var src = @"

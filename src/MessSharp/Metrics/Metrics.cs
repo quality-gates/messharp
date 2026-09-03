@@ -11,13 +11,13 @@ public static class Metrics
     /// <summary>
     /// Cyclomatic complexity: base 1 + 1 per decision point.
     /// </summary>
-    public static int CyclomaticComplexity(BlockSyntax? body) =>
+    public static int CyclomaticComplexity(Microsoft.CodeAnalysis.SyntaxNode? body) =>
         CyclomaticMetrics.Compute(body);
 
     /// <summary>
     /// NPath complexity using Nejmeh's algorithm.
     /// </summary>
-    public static int NPathComplexity(BlockSyntax? body) =>
+    public static int NPathComplexity(Microsoft.CodeAnalysis.SyntaxNode? body) =>
         NPathMetrics.Compute(body);
 
     /// <summary>
