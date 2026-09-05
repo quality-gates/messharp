@@ -7,4 +7,7 @@ RUN dotnet publish src/MessSharp/MessSharp.csproj -c Release -o /app
 FROM mcr.microsoft.com/dotnet/runtime:8.0
 WORKDIR /app
 COPY --from=build /app .
+WORKDIR /code
 ENTRYPOINT ["dotnet", "/app/messharp.dll"]
+CMD ["--help"]
+
