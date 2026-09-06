@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-09-06
+
+### Added
+
+- Development Dockerfile (`dev.Dockerfile`) for local containerized development (#27).
+
+### Fixed
+
+- Set runtime container `WORKDIR` to `/code` and default `CMD ["--help"]` in `Dockerfile` so relative scan paths resolve against mounted code and invoking the container without arguments displays usage help (#28).
+
 ## [0.2.5] - 2026-09-03
 
 ### Added
