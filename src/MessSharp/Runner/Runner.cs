@@ -12,6 +12,7 @@ public sealed class RunOptions
     public IReadOnlyList<string> Suffixes { get; init; } = new[] { ".cs" };
     public IReadOnlyList<string> Exclude { get; init; } = Array.Empty<string>();
     public bool IgnoreTests { get; init; }
+    public bool Strict { get; init; }
 }
 
 public sealed class Runner : IRunner
@@ -48,7 +49,7 @@ public sealed class Runner : IRunner
                 continue;
             }
 
-            var violations = Engine.Analyze(sf, opts.RuleSets);
+            var violations = Engine.Analyze(sf, opts.RuleSets, opts.Strict);
             report.Violations.AddRange(violations);
         }
 
