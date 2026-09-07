@@ -191,6 +191,21 @@ public class CliTests
         Assert.Contains("\x1b[33m", outW.ToString());
     }
 
+    [Fact]
+    public void Cli_WithStrictFlag_PassesStrictToRunner()
+    {
+        var runner = new FakeRunner();
+        var outW = new StringWriter();
+        var errW = new StringWriter();
+        var args = new[] { "somepath", "text", "codesize", "--strict" };
+
+        int code = CliRunner.Run(args, outW, errW, runner);
+
+        Assert.Equal(0, code);
+        Assert.NotNull(runner.LastOpts);
+        Assert.True(runner.LastOpts.Strict);
+    }
+
     private class DummyRule : MessSharp.Rule.BaseRule
     {
         public DummyRule(string name)

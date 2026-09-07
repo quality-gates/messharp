@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Plumb `--strict` CLI flag through `RunOptions` to `Engine.Analyze`, enabling suppression filtering for BCL `[SuppressMessage]` attributes and phpmd `@SuppressWarnings` annotations, and reporting suppressed violations when `--strict` is passed (#24).
+
 ## [0.2.6] - 2026-09-06
 
 ### Added

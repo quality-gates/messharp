@@ -8,7 +8,7 @@ namespace MessSharp.Rule;
 /// </summary>
 public static class Engine
 {
-    public static List<Violation> Analyze(SourceFile file, IEnumerable<RuleSet> sets)
+    public static List<Violation> Analyze(SourceFile file, IEnumerable<RuleSet> sets, bool strict = false)
     {
         var violations = new List<Violation>();
         foreach (var set in sets)
@@ -20,7 +20,7 @@ public static class Engine
                 ApplyRule(ctx, rule, file);
             }
         }
-        return violations;
+        return strict ? violations : SuppressionFilter.Filter(violations, file);
     }
 
     private static void ApplyRule(RuleContext ctx, IRule rule, SourceFile file)

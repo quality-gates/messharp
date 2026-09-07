@@ -81,6 +81,7 @@ public static class Cli
                 Suffixes = CliArgParser.SuffixList(opts.Suffixes),
                 Exclude = CliArgParser.SplitList(opts.Filters.Exclude),
                 IgnoreTests = opts.IgnoreTests,
+                Strict = opts.Strict,
             });
         }
         catch (Exception ex)
