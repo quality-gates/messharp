@@ -18,7 +18,7 @@ public static class Cli
         stderr ??= Console.Error;
 
         if (args.Length == 0) { CliArgParser.PrintUsage(stderr, BuildInfo.Version); return ExitError; }
-        if (HandleInfoFlag(args[0], stdout)) return ExitSuccess;
+        if (HandleInfoFlag(args, stdout)) return ExitSuccess;
 
         var (opts, positionals, err) = CliArgParser.Parse(args);
         if (err != null) { stderr.WriteLine($"error: {err}"); return ExitError; }
@@ -31,12 +31,22 @@ public static class Cli
         return Execute(opts, stdout, stderr, runner);
     }
 
-    private static bool HandleInfoFlag(string first, TextWriter stdout)
+    private static bool HandleInfoFlag(string[] args, TextWriter stdout)
     {
-        if (first == "--version") { stdout.WriteLine($"messharp {BuildInfo.Version}"); return true; }
-        if (first is "--help" or "-h" or "help") { CliArgParser.PrintUsage(stdout, BuildInfo.Version); return true; }
+        if (args.Any(IsHelpFlag))
+        {
+            CliArgParser.PrintUsage(stdout, BuildInfo.Version);
+            return true;
+        }
+        if (args.Contains("--version"))
+        {
+            stdout.WriteLine($"messharp {BuildInfo.Version}");
+            return true;
+        }
         return false;
     }
+
+    private static bool IsHelpFlag(string a) => a is "--help" or "-h" or "help";
 
     private static int Execute(CliOptions opts, TextWriter stdout, TextWriter stderr, IRunner? runner = null)
     {
