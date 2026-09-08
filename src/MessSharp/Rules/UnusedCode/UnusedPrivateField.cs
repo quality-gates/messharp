@@ -20,7 +20,7 @@ public sealed class UnusedPrivateFieldRule : BaseRule, IClassRule
             if (!field.IsPrivate) continue;
             if (field.Name == "_") continue;
             if (used.Contains(field.Name)) continue;
-            ctx.ReportClass(cls, field.Name);
+            ctx.ReportField(cls, field, field.Name);
         }
     }
 

@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Report `UnusedPrivateField` violations at the field declaration line instead of the class declaration line via `RuleContext.ReportField`, enabling field-level suppression and accurate report locations (#38).
 - Respect suppression attributes and comments on class constants and fields by searching constants in `SuppressionFilter.FindField` and associating `FieldModel.Node` with the field declaration syntax (#39).
 - Count object creations in expression-bodied methods and constructors toward Coupling Between Objects (CBO) metrics in `CouplingBetweenObjectsRule` (#40).
 

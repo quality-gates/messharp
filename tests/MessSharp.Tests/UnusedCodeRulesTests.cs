@@ -163,6 +163,19 @@ public class Foo
         Assert.Equal("Avoid unused private fields such as '_dead'.", v.Description);
     }
 
+    [Fact]
+    public void UnusedPrivateField_ReportsFieldLine_NotClassLine()
+    {
+        var src = @"
+public class Foo
+{
+    private int _dead;
+}";
+        var vs = Analyze(src);
+        var v = Assert.Single(vs.Where(v => v.Rule.Name == "UnusedPrivateField"));
+        Assert.Equal(4, v.BeginLine);
+    }
+
     // ─── UnusedLocalVariable ────────────────────────────────────────────────
 
     [Fact]
