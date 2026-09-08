@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.8] - 2026-09-08
+
 ### Fixed
 
 - Detect static method invocations in expression-bodied methods and namespace-qualified receivers in `StaticAccessRule` (#32).
