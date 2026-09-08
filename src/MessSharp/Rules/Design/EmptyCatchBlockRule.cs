@@ -24,7 +24,6 @@ public sealed class EmptyCatchBlockRule : BaseRule, IMethodRule
                     var line = catchClause.SyntaxTree
                         .GetLineSpan(catchClause.Span).StartLinePosition.Line + 1;
                     ctx.Report(line, line, method.Name);
-                    return;
                 }
             }
         }

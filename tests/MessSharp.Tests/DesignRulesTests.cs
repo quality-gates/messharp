@@ -420,6 +420,42 @@ public class Foo {
         MustNotHave(vs, "EmptyCatchBlock");
     }
 
+    [Fact]
+    public void EmptyCatch_MultipleEmptyCatchesInSameTry_AllFlagged()
+    {
+        var src = @"
+public class Foo {
+    public void Bar() {
+        try {
+            DoSomething();
+        } catch (System.IO.IOException) {}
+        catch (System.Exception) {}
+    }
+    private void DoSomething() {}
+}";
+        var vs = Analyze(src, MakeEmptyCatchRule());
+        Assert.Equal(2, vs.Count(v => v.Rule.Name == "EmptyCatchBlock"));
+    }
+
+    [Fact]
+    public void EmptyCatch_EmptyCatchesAcrossTryStatements_AllFlagged()
+    {
+        var src = @"
+public class Foo {
+    public void Bar() {
+        try {
+            DoSomething();
+        } catch (System.IO.IOException) {}
+        try {
+            DoSomething();
+        } catch (System.Exception) {}
+    }
+    private void DoSomething() {}
+}";
+        var vs = Analyze(src, MakeEmptyCatchRule());
+        Assert.Equal(2, vs.Count(v => v.Rule.Name == "EmptyCatchBlock"));
+    }
+
     // -------------------------------------------------------------------------
     // CouplingBetweenObjects
     // -------------------------------------------------------------------------
