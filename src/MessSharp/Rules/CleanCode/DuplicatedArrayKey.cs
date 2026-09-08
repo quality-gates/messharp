@@ -82,6 +82,8 @@ public sealed class DuplicatedArrayKeyRule : BaseRule, IMethodRule
         {
             case LiteralExpressionSyntax lit:
                 return ($"lit:{lit.Kind()}:{lit.Token.Value}", lit.Token.Text);
+            case PrefixUnaryExpressionSyntax { RawKind: (int)SyntaxKind.UnaryMinusExpression, Operand: LiteralExpressionSyntax lit }:
+                return ($"lit:{lit.Kind()}:-{lit.Token.Value}", "-" + lit.Token.Text);
             case IdentifierNameSyntax id:
                 return ("ident:" + id.Identifier.Text, id.Identifier.Text);
             default:
