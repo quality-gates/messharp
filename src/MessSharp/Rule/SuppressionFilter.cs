@@ -50,6 +50,7 @@ internal static class SuppressionFilter
     private static FieldModel? FindField(ClassModel? cls, Violation v)
     {
         if (cls == null) return null;
-        return cls.Fields.FirstOrDefault(f => f.Line == v.BeginLine);
+        return cls.Fields.FirstOrDefault(f => f.Line == v.BeginLine)
+            ?? cls.Constants.FirstOrDefault(c => c.Line == v.BeginLine);
     }
 }

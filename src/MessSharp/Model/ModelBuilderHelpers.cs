@@ -46,7 +46,7 @@ internal static class ModelBuilderHelpers
                 IsPrivate = IsPrivate(field.Modifiers),
                 IsStatic = field.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)),
                 IsReadonly = field.Modifiers.Any(m => m.IsKind(SyntaxKind.ReadOnlyKeyword)),
-                Node = v,
+                Node = field,
             });
         }
     }
