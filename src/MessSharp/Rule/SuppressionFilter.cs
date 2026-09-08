@@ -41,10 +41,10 @@ internal static class SuppressionFilter
     private static MethodModel? FindMethod(SourceFile file, ClassModel? cls, Violation v)
     {
         var methods = cls != null ? cls.Methods : file.AllMethods;
-        if (!string.IsNullOrEmpty(v.Method))
-            return methods.FirstOrDefault(m => m.Name == v.Method);
-
-        return methods.FirstOrDefault(m => v.BeginLine >= m.Line && v.BeginLine <= m.EndLine);
+        return methods.FirstOrDefault(m =>
+            (string.IsNullOrEmpty(v.Method) || m.Name == v.Method)
+            && v.BeginLine >= m.Line
+            && v.BeginLine <= m.EndLine);
     }
 
     private static FieldModel? FindField(ClassModel? cls, Violation v)
