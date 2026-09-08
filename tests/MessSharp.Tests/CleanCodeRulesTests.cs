@@ -64,6 +64,69 @@ public class Foo {
     }
 
     [Fact]
+    public void BooleanArgumentFlag_InterfaceMethodWithBoolParam_Fires()
+    {
+        var src = @"
+public interface IFoo {
+    void Bar(bool flag);
+}";
+        var v = Analyze(src, MakeRule<BooleanArgumentFlagRule>("BooleanArgumentFlag"));
+        MustHave(v, "BooleanArgumentFlag");
+        Assert.Contains(v, x => x.Description.Contains("Bar") && x.Description.Contains("flag"));
+    }
+
+    [Fact]
+    public void BooleanArgumentFlag_InterfaceMethod_ExactMessage()
+    {
+        var src = @"
+public interface IFoo {
+    void Process(bool enabled);
+}";
+        var rule = MakeRule<BooleanArgumentFlagRule>("BooleanArgumentFlag");
+        rule.Message = "The method {0} has a boolean flag argument {1}, which is a certain sign of a Single Responsibility Principle violation.";
+        var v = Analyze(src, rule);
+        Assert.Single(v);
+        Assert.Equal(
+            "The method IFoo::Process has a boolean flag argument enabled, which is a certain sign of a Single Responsibility Principle violation.",
+            v[0].Description);
+    }
+
+    [Fact]
+    public void BooleanArgumentFlag_InterfaceMethod_ExceptionClassSkipped()
+    {
+        var src = @"
+public interface IFoo {
+    void Bar(bool flag);
+}";
+        var v = Analyze(src, MakeRule<BooleanArgumentFlagRule>("BooleanArgumentFlag"),
+            new Dictionary<string, string> { ["exceptions"] = "IFoo" });
+        MustNotHave(v, "BooleanArgumentFlag");
+    }
+
+    [Fact]
+    public void BooleanArgumentFlag_InternalInterfaceMethod_DoesNotFire()
+    {
+        var src = @"
+interface IFoo {
+    void Bar(bool flag);
+}";
+        var v = Analyze(src, MakeRule<BooleanArgumentFlagRule>("BooleanArgumentFlag"));
+        MustNotHave(v, "BooleanArgumentFlag");
+    }
+
+    [Fact]
+    public void BooleanArgumentFlag_PrivateInterfaceMethod_DoesNotFire()
+    {
+        var src = @"
+public interface IFoo {
+    private void Bar(bool flag) { }
+}";
+        var v = Analyze(src, MakeRule<BooleanArgumentFlagRule>("BooleanArgumentFlag"));
+        MustNotHave(v, "BooleanArgumentFlag");
+    }
+
+
+    [Fact]
     public void BooleanArgumentFlag_PrivateMethodWithBoolParam_DoesNotFire()
     {
         var src = @"

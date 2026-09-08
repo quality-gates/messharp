@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Resolve suppressions on overloaded methods by matching violations to the method's declared line range (#31).
 - Honor `[SuppressMessage]` attributes and `@SuppressWarnings` comments placed on interface declarations and interface methods by resolving the declaring interface in `SuppressionFilter` (#53).
+- Flag boolean parameters in public interface methods in `BooleanArgumentFlagRule` by treating interface methods as exported when declared without non-public accessibility in an exported interface (#54).
+
 
 ## [0.2.8] - 2026-09-08
 

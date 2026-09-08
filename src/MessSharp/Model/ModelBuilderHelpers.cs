@@ -110,4 +110,15 @@ internal static class ModelBuilderHelpers
         !modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword) ||
                             m.IsKind(SyntaxKind.InternalKeyword) ||
                             m.IsKind(SyntaxKind.ProtectedKeyword));
+
+    internal static bool IsInterfaceMethodExported(SyntaxTokenList modifiers, bool interfaceExported) =>
+        IsExported(modifiers) ||
+        (interfaceExported && !modifiers.Any(m =>
+            m.IsKind(SyntaxKind.PrivateKeyword) ||
+            m.IsKind(SyntaxKind.InternalKeyword) ||
+            m.IsKind(SyntaxKind.ProtectedKeyword)));
+
+    internal static bool IsInterfaceMethodPrivate(SyntaxTokenList modifiers) =>
+        modifiers.Any(m => m.IsKind(SyntaxKind.PrivateKeyword));
 }
+
