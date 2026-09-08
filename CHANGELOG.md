@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-09-08
+
 ### Fixed
 
 - Accept `--help`, `-h`, and `--version` anywhere on the command line, not only as the first argument (#56).
