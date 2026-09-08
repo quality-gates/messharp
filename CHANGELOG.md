@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Detect static method invocations in expression-bodied methods and namespace-qualified receivers in `StaticAccessRule` (#32).
 - Count C# 8+ switch expression arms in cyclomatic, NPath, and class complexity metrics (#33).
 - Prevent `UnusedFormalParameter` false positives when parameters are read via compound assignments such as `count += 1` (#34).
 - Do not flag constructors in `ShortMethodNameRule` when the containing class name is shorter than the configured minimum length (#35).
