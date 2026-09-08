@@ -6,6 +6,7 @@ using MessSharp.Rule;
 using MessSharp.Rules.CodeSize;
 using MessSharp.Rules.Controversial;
 using MessSharp.Rules.Naming;
+using MessSharp.Rules.UnusedCode;
 using Xunit;
 using RuleSetType = MessSharp.Rule.RuleSet;
 
@@ -305,5 +306,98 @@ public class Sample
         var sets = new[] { MakeControversialSet() };
         var violations = Engine.Analyze(sf, sets, strict: true);
         Assert.Single(violations);
+    }
+
+    private static RuleSetType MakeUnusedCodeSet()
+    {
+        var rule = new UnusedPrivateFieldRule
+        {
+            Name = "UnusedPrivateField",
+            Message = "Avoid unused private fields such as '{0}'.",
+            Priority = 3,
+            SetName = "unusedcode",
+        };
+        return new RuleSetType { Name = "unusedcode", Rules = { rule } };
+    }
+
+    private const string AttributeSuppressedUnusedFieldSource = @"
+using System.Diagnostics.CodeAnalysis;
+
+public class Sample
+{
+    private int _used = 1;
+
+    [SuppressMessage(""MessSharp"", ""UnusedPrivateField"")]
+    private int _ignored;
+
+    public int Get() => _used;
+}";
+
+    private const string CommentSuppressedUnusedFieldSource = @"
+public class Sample
+{
+    private int _used = 1;
+
+    // @SuppressWarnings(PHPMD.UnusedPrivateField)
+    private int _ignored;
+
+    public int Get() => _used;
+}";
+
+    [Fact]
+    public void Engine_SuppressedUnusedPrivateFieldByAttribute_SuppressedWhenNotStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", AttributeSuppressedUnusedFieldSource);
+        var sets = new[] { MakeUnusedCodeSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedUnusedPrivateFieldByAttribute_ReportedWhenStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", AttributeSuppressedUnusedFieldSource);
+        var sets = new[] { MakeUnusedCodeSet() };
+        var violations = Engine.Analyze(sf, sets, strict: true);
+        Assert.Single(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedUnusedPrivateFieldByComment_SuppressedWhenNotStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", CommentSuppressedUnusedFieldSource);
+        var sets = new[] { MakeUnusedCodeSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedUnusedPrivateFieldByComment_ReportedWhenStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", CommentSuppressedUnusedFieldSource);
+        var sets = new[] { MakeUnusedCodeSet() };
+        var violations = Engine.Analyze(sf, sets, strict: true);
+        Assert.Single(violations);
+    }
+
+    private const string ClassLevelSuppressedUnusedFieldSource = @"
+using System.Diagnostics.CodeAnalysis;
+
+[SuppressMessage(""MessSharp"", ""UnusedPrivateField"")]
+public class Sample
+{
+    private int _used = 1;
+    private int _ignored;
+
+    public int Get() => _used;
+}";
+
+    [Fact]
+    public void Engine_SuppressedUnusedPrivateFieldAtClassLevel_SuppressedWhenNotStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", ClassLevelSuppressedUnusedFieldSource);
+        var sets = new[] { MakeUnusedCodeSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+        Assert.Empty(violations);
     }
 }

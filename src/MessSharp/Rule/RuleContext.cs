@@ -32,6 +32,14 @@ public sealed class RuleContext
     public void ReportClass(ClassModel cls, params object[] args) =>
         AppendViolation(cls.Line, cls.EndLine, cls.Name, "", "", args);
 
+    public void ReportField(ClassModel cls, FieldModel field, params object[] args) =>
+        AppendViolation(field.Line, field.EndLine > 0 ? field.EndLine : field.Line,
+            cls.Name, "", "", args);
+
+    public void ReportField(FieldModel field, params object[] args) =>
+        AppendViolation(field.Line, field.EndLine > 0 ? field.EndLine : field.Line,
+            "", "", "", args);
+
     public void ReportInterface(InterfaceModel iface, params object[] args) =>
         AppendViolation(iface.Line, iface.EndLine, iface.Name, "", "", args);
 

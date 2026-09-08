@@ -83,6 +83,7 @@ public sealed class FieldModel
     public string Name { get; init; } = "";
     public string Type { get; init; } = "";
     public int Line { get; init; }
+    public int EndLine { get; init; }
     public bool Exported { get; init; }
     /// <summary>Declared private, including the implicit class-member default.</summary>
     public bool IsPrivate { get; init; }
