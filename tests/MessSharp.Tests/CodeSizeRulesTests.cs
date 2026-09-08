@@ -24,6 +24,15 @@ public class CodeSizeRulesTests
         return Engine.Analyze(sf, new[] { set });
     }
 
+    private static string SwitchExpressionSource()
+    {
+        var arms = string.Join(", ", Enumerable.Range(1, 11).Select(i => $"{i} => \"value{i}\""));
+        return $@"
+public class Evaluator {{
+    public string Classify(int x) => x switch {{ {arms}, _ => ""other"" }};
+}}";
+    }
+
     private static bool Has(List<Violation> vs, string ruleName) =>
         vs.Any(v => v.Rule.Name == ruleName);
 
@@ -200,6 +209,42 @@ public class Foo {
             new Dictionary<string, string> { ["minimum"] = "200" });
         var vs = Engine.Analyze(sf, new[] { set });
         MustNotHave(vs, "NPathComplexity");
+    }
+
+    [Fact]
+    public void CyclomaticComplexity_FiresOnSwitchExpressionArms()
+    {
+        var sf = ModelBuilder.Parse("fixture.cs", SwitchExpressionSource());
+        var set = BuildSingleRule<CyclomaticComplexityRule>(
+            new Dictionary<string, string> { ["reportLevel"] = "10" });
+
+        var vs = Engine.Analyze(sf, new[] { set });
+
+        Assert.Contains(vs, v => v.Rule.Name == "CyclomaticComplexity" && v.Description.Contains("of 12."));
+    }
+
+    [Fact]
+    public void NPathComplexity_FiresOnSwitchExpressionArms()
+    {
+        var sf = ModelBuilder.Parse("fixture.cs", SwitchExpressionSource());
+        var set = BuildSingleRule<NPathComplexityRule>(
+            new Dictionary<string, string> { ["minimum"] = "10" });
+
+        var vs = Engine.Analyze(sf, new[] { set });
+
+        Assert.Contains(vs, v => v.Rule.Name == "NPathComplexity" && v.Description.Contains("of 12."));
+    }
+
+    [Fact]
+    public void ExcessiveClassComplexity_FiresOnSwitchExpressionMethod()
+    {
+        var sf = ModelBuilder.Parse("fixture.cs", SwitchExpressionSource());
+        var set = BuildSingleRule<ExcessiveClassComplexityRule>(
+            new Dictionary<string, string> { ["maximum"] = "10" });
+
+        var vs = Engine.Analyze(sf, new[] { set });
+
+        Assert.Contains(vs, v => v.Rule.Name == "ExcessiveClassComplexity" && v.Description.Contains("of 12"));
     }
 
     // -----------------------------------------------------------------------

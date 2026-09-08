@@ -45,6 +45,11 @@ internal static class NPathMetrics
         ForEachStatementSyntax fe => Add(Add(ExprComplexity(fe.Expression), 1), Block(fe.Statement)),
         WhileStatementSyntax ws => Add(Add(ExprComplexity(ws.Condition), 1), Block(ws.Statement)),
         DoStatementSyntax ds => Add(Add(ExprComplexity(ds.Condition), 1), Block(ds.Statement)),
+        _ => StmtStructural(s),
+    };
+
+    private static int StmtStructural(StatementSyntax s) => s switch
+    {
         SwitchStatementSyntax sw => NPathSwitch(sw),
         BlockSyntax blk => Stmts(blk.Statements),
         ReturnStatementSyntax ret => ReturnComplexity(ret),
@@ -99,8 +104,8 @@ internal static class NPathMetrics
     }
 
     /// <summary>
-    /// Counts boolean operators (&amp;&amp;, ||) and null-coalescing (??) in an
-    /// expression, matching pdepend's expressionComplexity.
+    /// Counts boolean operators (&amp;&amp;, ||), null-coalescing (??), and the
+    /// additional arms of switch expressions in an expression.
     /// </summary>
     private static int ExprComplexity(ExpressionSyntax? expr)
     {
@@ -108,8 +113,10 @@ internal static class NPathMetrics
         int count = 0;
         foreach (var node in expr.DescendantNodesAndSelf())
         {
-            if (node is BinaryExpressionSyntax bin && IsBooleanOp(bin))
-                count++;
+            if (node is SwitchExpressionSyntax switchExpression)
+                count = Add(count, Math.Max(0, switchExpression.Arms.Count - 1));
+            else if (node is BinaryExpressionSyntax bin && IsBooleanOp(bin))
+                count = Add(count, 1);
         }
         return count;
     }

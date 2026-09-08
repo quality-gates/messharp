@@ -7,7 +7,7 @@ namespace MessSharp.Metrics;
 /// <summary>
 /// Cyclomatic complexity metric. Base 1 + 1 per decision point.
 /// Decision points: if, case label (not default), for, foreach, while,
-/// do, catch, &amp;&amp;, ||, ??, ternary ?:.
+/// do, catch, switch expression arm (not discard), &amp;&amp;, ||, ??, ternary ?:.
 /// Mirrors messgo's metrics package, values pinned to phpmd 2.15.0 output.
 /// </summary>
 internal static class CyclomaticMetrics
@@ -39,6 +39,9 @@ internal static class CyclomaticMetrics
 
         if (node is SwitchSectionSyntax section)
             return section.Labels.Count(l => l is CaseSwitchLabelSyntax or CasePatternSwitchLabelSyntax);
+
+        if (node is SwitchExpressionArmSyntax arm)
+            return arm.Pattern is DiscardPatternSyntax ? 0 : 1;
 
         if (node is BinaryExpressionSyntax bin)
             return IsBooleanOp(bin) ? 1 : 0;
