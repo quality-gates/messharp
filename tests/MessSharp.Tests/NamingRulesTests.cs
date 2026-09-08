@@ -356,9 +356,26 @@ class MyClass
             "Avoid using short method names like {0}::{1}(). The configured minimum method name length is {2}.");
         var violations = Run(src, rule);
         Assert.Single(violations);
+        Assert.Equal("MyClass", violations[0].Class);
         Assert.Contains("MyClass", violations[0].Description);
         Assert.Contains("A", violations[0].Description);
         Assert.Contains("3", violations[0].Description);
+    }
+
+    [Fact]
+    public void ShortMethodName_InterfaceMethod_ContainsInterfaceAndMethod()
+    {
+        var src = @"
+public interface IFoo
+{
+    void A();
+}";
+        var rule = MakeRule<ShortMethodNameRule>("ShortMethodName",
+            "Avoid using short method names like {0}::{1}(). The configured minimum method name length is {2}.");
+        var violations = Run(src, rule);
+        Assert.Single(violations);
+        Assert.Equal("IFoo", violations[0].Class);
+        Assert.Contains("IFoo::A()", violations[0].Description);
     }
 
     // ------------------------------------------------------------------ ConstantNamingConventions

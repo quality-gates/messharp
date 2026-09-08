@@ -20,6 +20,10 @@ public class MyClass {
         Assert.Equal("class", cls.NodeType);
         Assert.True(cls.Exported);
         Assert.Equal("Foo", sf.Namespace);
+        Assert.Single(cls.Methods);
+        Assert.Equal("MyClass", cls.Methods[0].DeclaringTypeName);
+        Assert.Same(cls, cls.Methods[0].Class);
+        Assert.Null(cls.Methods[0].Interface);
     }
 
     [Fact]
@@ -36,7 +40,13 @@ public interface IMyInterface {
         Assert.Equal("IMyInterface", iface.Name);
         Assert.Equal(2, iface.Methods.Count);
         Assert.Equal("Method1", iface.Methods[0].Name);
+        Assert.Same(iface, iface.Methods[0].Interface);
+        Assert.Null(iface.Methods[0].Class);
+        Assert.Equal("IMyInterface", iface.Methods[0].DeclaringTypeName);
         Assert.Equal("Method2", iface.Methods[1].Name);
+        Assert.Same(iface, iface.Methods[1].Interface);
+        Assert.Null(iface.Methods[1].Class);
+        Assert.Equal("IMyInterface", iface.Methods[1].DeclaringTypeName);
     }
 
     [Fact]
