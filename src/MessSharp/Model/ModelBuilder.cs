@@ -170,14 +170,24 @@ public static class ModelBuilder
     private static InterfaceModel BuildInterface(SourceFile file, InterfaceDeclarationSyntax node, string ns)
     {
         var span = node.SyntaxTree.GetLineSpan(node.Span);
-        var methods = new List<MethodModel>();
+        var iface = new InterfaceModel
+        {
+            Name = node.Identifier.Text,
+            Line = span.StartLinePosition.Line + 1,
+            EndLine = span.EndLinePosition.Line + 1,
+            Exported = ModelBuilderHelpers.IsExported(node.Modifiers),
+            Namespace = ns,
+            BaseTypes = ModelBuilderHelpers.CollectBaseTypes(node.BaseList),
+            Node = node,
+            File = file,
+        };
 
         foreach (var member in node.Members)
         {
             if (member is MethodDeclarationSyntax m)
             {
                 var mSpan = m.SyntaxTree.GetLineSpan(m.Span);
-                methods.Add(new MethodModel
+                iface.Methods.Add(new MethodModel
                 {
                     Name = m.Identifier.Text,
                     IsConstructor = false,
@@ -186,6 +196,7 @@ public static class ModelBuilder
                     Exported = ModelBuilderHelpers.IsExported(m.Modifiers),
                     Parameters = ModelBuilderHelpers.BuildParameters(m.ParameterList),
                     ReturnType = m.ReturnType.ToString(),
+                    Interface = iface,
                     Node = m,
                     Body = m.Body,
                     File = file,
@@ -193,17 +204,6 @@ public static class ModelBuilder
             }
         }
 
-        return new InterfaceModel
-        {
-            Name = node.Identifier.Text,
-            Line = span.StartLinePosition.Line + 1,
-            EndLine = span.EndLinePosition.Line + 1,
-            Exported = ModelBuilderHelpers.IsExported(node.Modifiers),
-            Namespace = ns,
-            BaseTypes = ModelBuilderHelpers.CollectBaseTypes(node.BaseList),
-            Methods = methods,
-            Node = node,
-            File = file,
-        };
+        return iface;
     }
 }

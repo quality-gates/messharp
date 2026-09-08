@@ -23,7 +23,7 @@ public sealed class ShortMethodNameRule : BaseRule, IMethodRule
         if (exceptions.Contains(method.Name))
             return;
 
-        string className = method.Class?.Name ?? "";
+        string className = method.DeclaringTypeName;
         ctx.ReportMethod(method, className, method.Name, min);
     }
 }

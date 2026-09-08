@@ -27,7 +27,7 @@ public sealed class RuleContext
 
     public void ReportMethod(MethodModel method, params object[] args) =>
         AppendViolation(method.Line, method.EndLine,
-            method.Class?.Name ?? "", method.Name, "", args);
+            method.DeclaringTypeName, method.Name, "", args);
 
     public void ReportClass(ClassModel cls, params object[] args) =>
         AppendViolation(cls.Line, cls.EndLine, cls.Name, "", "", args);

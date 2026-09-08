@@ -62,6 +62,10 @@ public sealed class MethodModel
     public string ReturnType { get; init; } = "";
     /// <summary>Owning class, or null for interface methods.</summary>
     public ClassModel? Class { get; init; }
+    /// <summary>Owning interface, or null for class methods.</summary>
+    public InterfaceModel? Interface { get; init; }
+    /// <summary>Declaring type name (class or interface), or empty string.</summary>
+    public string DeclaringTypeName => Class?.Name ?? Interface?.Name ?? "";
     public BlockSyntax? Body { get; init; }
     /// <summary>Executable block body or expression from expression-bodied member.</summary>
     public SyntaxNode? EffectiveBody => (SyntaxNode?)Body ?? Node switch
