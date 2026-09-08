@@ -11,6 +11,9 @@ public sealed class ShortMethodNameRule : BaseRule, IMethodRule
 {
     public void Apply(RuleContext ctx, MethodModel method)
     {
+        if (method.IsConstructor)
+            return;
+
         int min = ctx.Props.Int("minimum", 3);
         if (method.Name.Length >= min)
             return;
