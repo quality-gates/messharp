@@ -399,6 +399,21 @@ public class Foo
     }
 
     [Fact]
+    public void UnusedFormalParameter_CompoundAssignmentReadsParam_NoFire()
+    {
+        var src = @"
+public class Worker
+{
+    public void Accumulate(int count)
+    {
+        count += 1;
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedFormalParameter");
+    }
+
+    [Fact]
     public void UnusedFormalParameter_DiscardParam_NoFire()
     {
         // `_` is an explicit discard parameter

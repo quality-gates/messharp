@@ -72,9 +72,11 @@ internal static class BodyAnalysis
         {
             switch (node)
             {
-                // simple assignment or compound assignment LHS
+                // simple assignment LHS is a pure write; compound assignments
+                // read the existing left-hand value before writing it back.
                 case AssignmentExpressionSyntax aes
-                    when aes.Left is IdentifierNameSyntax lhsId:
+                    when aes.IsKind(SyntaxKind.SimpleAssignmentExpression)
+                        && aes.Left is IdentifierNameSyntax lhsId:
                     writes.Add(lhsId);
                     break;
 
