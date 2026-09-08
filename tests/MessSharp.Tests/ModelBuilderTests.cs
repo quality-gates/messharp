@@ -47,7 +47,44 @@ public interface IMyInterface {
         Assert.Same(iface, iface.Methods[1].Interface);
         Assert.Null(iface.Methods[1].Class);
         Assert.Equal("IMyInterface", iface.Methods[1].DeclaringTypeName);
+        Assert.True(iface.Methods[0].Exported);
+        Assert.True(iface.Methods[1].Exported);
     }
+
+    [Fact]
+    public void ParsesInterface_MethodAccessibility()
+    {
+        var src = @"
+public interface IPublicInterface {
+    void ImplicitPublic();
+    public void ExplicitPublic();
+    private void ExplicitPrivate() { }
+    internal void ExplicitInternal();
+}
+
+interface IInternalInterface {
+    void ImplicitInternal();
+}";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        var pubIface = sf.Interfaces[0];
+        Assert.True(pubIface.Exported);
+        Assert.True(pubIface.Methods[0].Exported);
+        Assert.False(pubIface.Methods[0].IsPrivate);
+
+        Assert.True(pubIface.Methods[1].Exported);
+        Assert.False(pubIface.Methods[1].IsPrivate);
+
+        Assert.False(pubIface.Methods[2].Exported);
+        Assert.True(pubIface.Methods[2].IsPrivate);
+
+        Assert.False(pubIface.Methods[3].Exported);
+        Assert.False(pubIface.Methods[3].IsPrivate);
+
+        var internalIface = sf.Interfaces[1];
+        Assert.False(internalIface.Exported);
+        Assert.False(internalIface.Methods[0].Exported);
+    }
+
 
     [Fact]
     public void ParsesStruct_NodeTypeIsStruct()

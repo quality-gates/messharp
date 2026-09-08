@@ -16,8 +16,8 @@ public sealed class BooleanArgumentFlagRule : BaseRule, IMethodRule
         if (!method.Exported) return;
         if (IsExcluded(ctx, method)) return;
 
-        string image = method.Class != null
-            ? method.Class.Name + "::" + method.Name
+        string image = method.DeclaringTypeName.Length > 0
+            ? method.DeclaringTypeName + "::" + method.Name
             : method.Name;
 
         foreach (var param in method.Parameters)
@@ -30,7 +30,7 @@ public sealed class BooleanArgumentFlagRule : BaseRule, IMethodRule
     private static bool IsExcluded(RuleContext ctx, MethodModel method)
     {
         var exceptions = SplitList(ctx.Props.Str("exceptions", ""));
-        if (exceptions.Contains(method.Class?.Name ?? "")) return true;
+        if (exceptions.Contains(method.DeclaringTypeName)) return true;
         var ignorePattern = RuleContext.CompileRegex(ctx.Props.Str("ignorepattern", ""));
         return ignorePattern != null && ignorePattern.IsMatch(method.Name);
     }
