@@ -19,16 +19,19 @@ internal static class SuppressionFilter
         if (SuppressionMatcher.IsNodeSuppressed(file.Root, v.Rule)) return true;
 
         var cls = FindClass(file, v);
-        if (cls != null && SuppressionMatcher.IsNodeSuppressed(cls.Node, v.Rule)) return true;
+        var iface = FindInterface(file, v);
+        if (IsTypeSuppressed(cls, iface, v.Rule)) return true;
 
-        var method = FindMethod(file, cls, v);
+        var method = FindMethod(file, cls, iface, v);
         if (method != null && SuppressionMatcher.IsNodeSuppressed(method.Node, v.Rule)) return true;
 
         var field = FindField(cls, v);
-        if (field != null && SuppressionMatcher.IsNodeSuppressed(field.Node, v.Rule)) return true;
-
-        return false;
+        return field != null && SuppressionMatcher.IsNodeSuppressed(field.Node, v.Rule);
     }
+
+    private static bool IsTypeSuppressed(ClassModel? cls, InterfaceModel? iface, IRule rule) =>
+        (cls != null && SuppressionMatcher.IsNodeSuppressed(cls.Node, rule))
+        || (iface != null && SuppressionMatcher.IsNodeSuppressed(iface.Node, rule));
 
     private static ClassModel? FindClass(SourceFile file, Violation v)
     {
@@ -38,9 +41,17 @@ internal static class SuppressionFilter
         return file.Classes.FirstOrDefault(c => v.BeginLine >= c.Line && v.BeginLine <= c.EndLine);
     }
 
-    private static MethodModel? FindMethod(SourceFile file, ClassModel? cls, Violation v)
+    private static InterfaceModel? FindInterface(SourceFile file, Violation v)
     {
-        var methods = cls != null ? cls.Methods : file.AllMethods;
+        if (!string.IsNullOrEmpty(v.Class))
+            return file.Interfaces.FirstOrDefault(i => i.Name == v.Class);
+
+        return file.Interfaces.FirstOrDefault(i => v.BeginLine >= i.Line && v.BeginLine <= i.EndLine);
+    }
+
+    private static MethodModel? FindMethod(SourceFile file, ClassModel? cls, InterfaceModel? iface, Violation v)
+    {
+        var methods = cls?.Methods ?? iface?.Methods ?? file.AllMethods;
         return methods.FirstOrDefault(m =>
             (string.IsNullOrEmpty(v.Method) || m.Name == v.Method)
             && v.BeginLine >= m.Line

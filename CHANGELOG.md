@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - Resolve suppressions on overloaded methods by matching violations to the method's declared line range (#31).
+- Honor `[SuppressMessage]` attributes and `@SuppressWarnings` comments placed on interface declarations and interface methods by resolving the declaring interface in `SuppressionFilter` (#53).
 
 ## [0.2.8] - 2026-09-08
 
