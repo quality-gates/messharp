@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Honor `[SuppressMessage]` attributes and `@SuppressWarnings` comments placed on interface declarations and interface methods by resolving the declaring interface in `SuppressionFilter` (#53).
 - Flag boolean parameters in public interface methods in `BooleanArgumentFlagRule` by treating interface methods as exported when declared without non-public accessibility in an exported interface (#54).
 - Report every empty catch block in a method in `EmptyCatchBlockRule` instead of stopping after the first one, so multiple empty catch clauses in the same method are each flagged (#55).
+- Include try, catch, and finally blocks when calculating NPath complexity, so try-catch control flow no longer reports a value of 1 (#57).
 
 
 ## [0.2.8] - 2026-09-08

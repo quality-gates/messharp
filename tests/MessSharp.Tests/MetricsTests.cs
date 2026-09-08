@@ -130,6 +130,29 @@ class C {
     }
 
     [Fact]
+    public void NPathComplexity_TryCatch_SumsTryAndCatchPaths()
+    {
+        var src = @"
+class C
+{
+    public void Foo(bool a, bool b)
+    {
+        try
+        {
+            if (a) { }
+        }
+        catch (System.Exception)
+        {
+            if (b) { }
+        }
+    }
+}";
+        var body = GetMethodBody(src);
+
+        Assert.Equal(4, MetricsCalc.NPathComplexity(body));
+    }
+
+    [Fact]
     public void NPathComplexity_ThirtyTwoSequentialIfs_DoesNotOverflow()
     {
         var ifs = string.Join(" ", Enumerable.Range(0, 32).Select(i => $"if (a > {i}) {{}}"));
