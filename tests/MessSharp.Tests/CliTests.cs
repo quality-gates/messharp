@@ -38,6 +38,50 @@ public class CliTests
     }
 
     [Fact]
+    public void HelpFlag_AfterOtherArgs_PrintsUsage()
+    {
+        var (code, stdout, stderr) = RunCli("--verbose", "--help");
+        Assert.Equal(0, code);
+        Assert.Contains("Usage", stdout);
+        Assert.DoesNotContain("unknown option", stderr);
+    }
+
+    [Fact]
+    public void HelpFlag_AfterPositionals_PrintsUsage()
+    {
+        var (code, stdout, stderr) = RunCli("somepath", "text", "csharp", "--help");
+        Assert.Equal(0, code);
+        Assert.Contains("Usage", stdout);
+        Assert.DoesNotContain("unknown option", stderr);
+    }
+
+    [Fact]
+    public void ShortHelpFlag_AfterOtherArgs_PrintsUsage()
+    {
+        var (code, stdout, stderr) = RunCli("--verbose", "-h");
+        Assert.Equal(0, code);
+        Assert.Contains("Usage", stdout);
+        Assert.DoesNotContain("unknown option", stderr);
+    }
+
+    [Fact]
+    public void ShortHelpFlag_AfterPositionals_PrintsUsage()
+    {
+        var (code, stdout, _) = RunCli("somepath", "text", "csharp", "-h");
+        Assert.Equal(0, code);
+        Assert.Contains("Usage", stdout);
+    }
+
+    [Fact]
+    public void VersionFlag_AfterOtherArgs_PrintsVersion()
+    {
+        var (code, stdout, stderr) = RunCli("--verbose", "--version");
+        Assert.Equal(0, code);
+        Assert.Equal($"messharp {BuildInfo.Version}{Environment.NewLine}", stdout);
+        Assert.DoesNotContain("unknown option", stderr);
+    }
+
+    [Fact]
     public void UnknownOption_ReturnsError()
     {
         var (code, _, stderr) = RunCli("--nonexistent-flag");
