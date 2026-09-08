@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Count object creations in expression-bodied methods and constructors toward Coupling Between Objects (CBO) metrics in `CouplingBetweenObjectsRule` (#40).
+
 ## [0.2.7] - 2026-09-07
 
 ### Fixed

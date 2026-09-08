@@ -45,9 +45,10 @@ public sealed class CouplingBetweenObjectsRule : BaseRule, IClassRule
                 Collect(p.Type);
             Collect(m.ReturnType);
 
-            if (m.Body != null)
+            var body = m.EffectiveBody;
+            if (body != null)
             {
-                foreach (var objCreate in m.Body.DescendantNodes().OfType<ObjectCreationExpressionSyntax>())
+                foreach (var objCreate in body.DescendantNodesAndSelf().OfType<ObjectCreationExpressionSyntax>())
                     Collect(objCreate.Type.ToString());
             }
         }

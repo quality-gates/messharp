@@ -478,6 +478,50 @@ public class Simple {
         MustNotHave(vs, "CouplingBetweenObjects");
     }
 
+    [Fact]
+    public void CouplingBetweenObjects_ExpressionBodiedMethod_ObjectCreationsCounted()
+    {
+        var src = @"
+public class Factory
+{
+    public void Make() => new Service();
+}
+public class Service {}
+";
+        var vs = Analyze(src, MakeCboRule(1));
+        MustHave(vs, "CouplingBetweenObjects");
+    }
+
+    [Fact]
+    public void CouplingBetweenObjects_ExpressionBodiedMethods_OverThreshold_Flagged()
+    {
+        var src = @"
+public class Factory
+{
+    public object Make1() => new Service1();
+    public object Make2() => new Service2();
+    public object Make3() => new Service3();
+    public object Make4() => new Service4();
+    public object Make5() => new Service5();
+    public object Make6() => new Service6();
+    public object Make7() => new Service7();
+    public object Make8() => new Service8();
+    public object Make9() => new Service9();
+    public object Make10() => new Service10();
+    public object Make11() => new Service11();
+    public object Make12() => new Service12();
+    public object Make13() => new Service13();
+    public object Make14() => new Service14();
+}
+public class Service1 {} public class Service2 {} public class Service3 {} public class Service4 {}
+public class Service5 {} public class Service6 {} public class Service7 {} public class Service8 {}
+public class Service9 {} public class Service10 {} public class Service11 {} public class Service12 {}
+public class Service13 {} public class Service14 {}
+";
+        var vs = Analyze(src, MakeCboRule(13));
+        MustHave(vs, "CouplingBetweenObjects");
+    }
+
     // -------------------------------------------------------------------------
     // GlobalVariable
     // -------------------------------------------------------------------------
