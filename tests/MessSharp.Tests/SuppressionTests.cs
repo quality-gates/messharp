@@ -140,6 +140,98 @@ public class ComplexClass {
         Assert.Empty(violations);
     }
 
+    private const string AttributeSuppressedSecondOverloadSource = @"
+using System.Diagnostics.CodeAnalysis;
+
+public class ComplexClass {
+    public int HeavyMethod(int a) {
+        int x = 0;
+        if (a > 0) { x++; }
+        if (a > 1) { x++; }
+        if (a > 2) { x++; }
+        if (a > 3) { x++; }
+        if (a > 4) { x++; }
+        if (a > 5) { x++; }
+        if (a > 6) { x++; }
+        if (a > 7) { x++; }
+        if (a > 8) { x++; }
+        if (a > 9) { x++; }
+        return x;
+    }
+
+    [SuppressMessage(""MessSharp"", ""CyclomaticComplexity"")]
+    public int HeavyMethod(int a, int b) {
+        int x = 0;
+        if (a > 0) { x++; }
+        if (a > 1) { x++; }
+        if (a > 2) { x++; }
+        if (a > 3) { x++; }
+        if (a > 4) { x++; }
+        if (a > 5) { x++; }
+        if (a > 6) { x++; }
+        if (a > 7) { x++; }
+        if (a > 8) { x++; }
+        if (a > 9) { x++; }
+        return x;
+    }
+}";
+
+    [Fact]
+    public void Engine_SuppressedSecondOverloadByAttribute_DoesNotSuppressFirst()
+    {
+        var sf = ModelBuilder.Parse("complex.cs", AttributeSuppressedSecondOverloadSource);
+        var sets = new[] { MakeCodeSizeSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+
+        Assert.Single(violations);
+        Assert.Equal(sf.AllMethods[0].Line, violations[0].BeginLine);
+    }
+
+    private const string CommentSuppressedFirstOverloadSource = @"
+public class ComplexClass {
+    // @SuppressWarnings(PHPMD.CyclomaticComplexity)
+    public int HeavyMethod(int a) {
+        int x = 0;
+        if (a > 0) { x++; }
+        if (a > 1) { x++; }
+        if (a > 2) { x++; }
+        if (a > 3) { x++; }
+        if (a > 4) { x++; }
+        if (a > 5) { x++; }
+        if (a > 6) { x++; }
+        if (a > 7) { x++; }
+        if (a > 8) { x++; }
+        if (a > 9) { x++; }
+        return x;
+    }
+
+    public int HeavyMethod(int a, int b) {
+        int x = 0;
+        if (a > 0) { x++; }
+        if (a > 1) { x++; }
+        if (a > 2) { x++; }
+        if (a > 3) { x++; }
+        if (a > 4) { x++; }
+        if (a > 5) { x++; }
+        if (a > 6) { x++; }
+        if (a > 7) { x++; }
+        if (a > 8) { x++; }
+        if (a > 9) { x++; }
+        return x;
+    }
+}";
+
+    [Fact]
+    public void Engine_SuppressedFirstOverloadByComment_DoesNotSuppressSecond()
+    {
+        var sf = ModelBuilder.Parse("complex.cs", CommentSuppressedFirstOverloadSource);
+        var sets = new[] { MakeCodeSizeSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+
+        Assert.Single(violations);
+        Assert.Equal(sf.AllMethods[1].Line, violations[0].BeginLine);
+    }
+
     [Fact]
     public void Cli_WithSuppressedViolation_StrictFlagControlsExitCode()
     {

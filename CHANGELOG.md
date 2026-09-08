@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Resolve suppressions on overloaded methods by matching violations to the method's declared line range (#31).
+
 ## [0.2.8] - 2026-09-08
 
 ### Fixed
