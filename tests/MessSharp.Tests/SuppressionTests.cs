@@ -492,4 +492,163 @@ public class Sample
         var violations = Engine.Analyze(sf, sets, strict: false);
         Assert.Empty(violations);
     }
+
+    private static RuleSetType MakeCamelCaseClassNameSet()
+    {
+        var rule = new CamelCaseClassNameRule
+        {
+            Name = "CamelCaseClassName",
+            Message = "The {0} {1} is not named in PascalCase",
+            Priority = 1,
+            SetName = "controversial",
+        };
+        return new RuleSetType { Name = "controversial", Rules = { rule } };
+    }
+
+    private static RuleSetType MakeCamelCaseMethodNameSet()
+    {
+        var rule = new CamelCaseMethodNameRule
+        {
+            Name = "CamelCaseMethodName",
+            Message = "The method {0}() is not named in PascalCase",
+            Priority = 1,
+            SetName = "controversial",
+        };
+        return new RuleSetType { Name = "controversial", Rules = { rule } };
+    }
+
+    private const string AttributeSuppressedInterfaceSource = @"
+using System.Diagnostics.CodeAnalysis;
+
+[SuppressMessage(""MessSharp"", ""CamelCaseClassName"")]
+public interface I_Bad_Name
+{
+}";
+
+    private const string CommentSuppressedInterfaceSource = @"
+public class PlainClass
+{
+}
+
+// @SuppressWarnings(PHPMD.CamelCaseClassName)
+public interface I_Bad_Name
+{
+}";
+
+    [Fact]
+    public void Engine_SuppressedInterfaceByAttribute_SuppressedWhenNotStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", AttributeSuppressedInterfaceSource);
+        var sets = new[] { MakeCamelCaseClassNameSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedInterfaceByAttribute_ReportedWhenStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", AttributeSuppressedInterfaceSource);
+        var sets = new[] { MakeCamelCaseClassNameSet() };
+        var violations = Engine.Analyze(sf, sets, strict: true);
+        Assert.Single(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedInterfaceByComment_SuppressedWhenNotStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", CommentSuppressedInterfaceSource);
+        var sets = new[] { MakeCamelCaseClassNameSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedInterfaceByComment_ReportedWhenStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", CommentSuppressedInterfaceSource);
+        var sets = new[] { MakeCamelCaseClassNameSet() };
+        var violations = Engine.Analyze(sf, sets, strict: true);
+        Assert.Single(violations);
+    }
+
+    private const string AttributeSuppressedInterfaceMethodSource = @"
+using System.Diagnostics.CodeAnalysis;
+
+public interface IGoodName
+{
+    [SuppressMessage(""MessSharp"", ""CamelCaseMethodName"")]
+    void Do_Thing();
+}";
+
+    private const string CommentSuppressedInterfaceMethodSource = @"
+public interface IGoodName
+{
+    // @SuppressWarnings(PHPMD.CamelCaseMethodName)
+    void Do_Thing();
+}";
+
+    [Fact]
+    public void Engine_SuppressedInterfaceMethodByAttribute_SuppressedWhenNotStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", AttributeSuppressedInterfaceMethodSource);
+        var sets = new[] { MakeCamelCaseMethodNameSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedInterfaceMethodByAttribute_ReportedWhenStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", AttributeSuppressedInterfaceMethodSource);
+        var sets = new[] { MakeCamelCaseMethodNameSet() };
+        var violations = Engine.Analyze(sf, sets, strict: true);
+        Assert.Single(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedInterfaceMethodByComment_SuppressedWhenNotStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", CommentSuppressedInterfaceMethodSource);
+        var sets = new[] { MakeCamelCaseMethodNameSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedInterfaceMethodByComment_ReportedWhenStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", CommentSuppressedInterfaceMethodSource);
+        var sets = new[] { MakeCamelCaseMethodNameSet() };
+        var violations = Engine.Analyze(sf, sets, strict: true);
+        Assert.Single(violations);
+    }
+
+    private const string UnsuppressedInterfaceSource = @"
+public interface I_Bad_Name
+{
+}";
+
+    private const string UnsuppressedInterfaceMethodSource = @"
+public interface IGoodName
+{
+    void Do_Thing();
+}";
+
+    [Fact]
+    public void Engine_UnsuppressedInterface_ReportedWhenNotStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", UnsuppressedInterfaceSource);
+        var sets = new[] { MakeCamelCaseClassNameSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+        Assert.Single(violations);
+    }
+
+    [Fact]
+    public void Engine_UnsuppressedInterfaceMethod_ReportedWhenNotStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", UnsuppressedInterfaceMethodSource);
+        var sets = new[] { MakeCamelCaseMethodNameSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+        Assert.Single(violations);
+    }
 }
