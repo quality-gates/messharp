@@ -65,6 +65,14 @@ class C {
         return method.Body!;
     }
 
+    private static ExpressionSyntax GetMethodExpression(string source)
+    {
+        var tree = CSharpSyntaxTree.ParseText(source);
+        var root = tree.GetRoot();
+        var method = root.DescendantNodes().OfType<MethodDeclarationSyntax>().First();
+        return method.ExpressionBody?.Expression ?? throw new InvalidOperationException();
+    }
+
     [Fact]
     public void CyclomaticComplexity_ReferenceFunction_Returns12()
     {
@@ -143,10 +151,36 @@ class C {
     public void NPathComplexity_ExpressionBodiedMethod_CalculatesComplexity()
     {
         var src = "class C { bool Foo(bool a, bool b, bool c) => a && (b || c); }";
-        var tree = CSharpSyntaxTree.ParseText(src);
-        var method = tree.GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>().First();
-        var npath = MetricsCalc.NPathComplexity(method.ExpressionBody?.Expression);
+        var npath = MetricsCalc.NPathComplexity(GetMethodExpression(src));
         Assert.Equal(3, npath);
+    }
+
+    [Fact]
+    public void CyclomaticComplexity_ExpressionBodiedMethodWithSwitchExpression_CountsNonDiscardArms()
+    {
+        var src = "class C { string Classify(int x) => x switch { 1 => \"one\", 2 => \"two\", _ => \"other\" }; }";
+        var ccn = MetricsCalc.CyclomaticComplexity(GetMethodExpression(src));
+
+        Assert.Equal(3, ccn);
+    }
+
+    [Fact]
+    public void NPathComplexity_ExpressionBodiedMethodWithSwitchExpression_CountsArms()
+    {
+        var src = "class C { string Classify(int x) => x switch { 1 => \"one\", 2 => \"two\", _ => \"other\" }; }";
+        var npath = MetricsCalc.NPathComplexity(GetMethodExpression(src));
+
+        Assert.Equal(3, npath);
+    }
+
+    [Fact]
+    public void Complexity_ExpressionBodiedMethodWithNestedSwitchExpressionAndGuard_CountsBranches()
+    {
+        var src = "class C { int Classify(int x, int y, bool a, bool b) => x switch { 1 when a && b => y switch { 2 => 2, _ => 0 }, _ => 0 }; }";
+        var expression = GetMethodExpression(src);
+
+        Assert.Equal(4, MetricsCalc.CyclomaticComplexity(expression));
+        Assert.Equal(4, MetricsCalc.NPathComplexity(expression));
     }
 
     [Fact]
@@ -178,9 +212,7 @@ class C {
     public void CyclomaticComplexity_ExpressionBodiedMethodWithTernary_CalculatesComplexity()
     {
         var src = "class C { int Foo(int a, int b) => a > 0 ? (b > 0 ? 1 : 2) : 3; }";
-        var tree = CSharpSyntaxTree.ParseText(src);
-        var method = tree.GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>().First();
-        var ccn = MetricsCalc.CyclomaticComplexity(method.ExpressionBody?.Expression);
+        var ccn = MetricsCalc.CyclomaticComplexity(GetMethodExpression(src));
         Assert.Equal(3, ccn);
     }
 
@@ -294,4 +326,3 @@ class C {
         Assert.Equal(3, MetricsCalc.EffectiveLinesOfCode(node, src));
     }
 }
-
