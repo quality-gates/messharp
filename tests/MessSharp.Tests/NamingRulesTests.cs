@@ -345,6 +345,38 @@ class Foo
     }
 
     [Fact]
+    public void ShortMethodName_Constructor_WhenClassNameIsShort_NoViolation()
+    {
+        var src = @"
+public class Db
+{
+    public Db() { }
+    public Db(int x) { }
+}";
+        var rule = MakeRule<ShortMethodNameRule>("ShortMethodName",
+            "Avoid using short method names like {0}::{1}(). The configured minimum method name length is {2}.");
+        var violations = Run(src, rule);
+        MustNotHave(violations, "ShortMethodName");
+    }
+
+    [Fact]
+    public void ShortMethodName_ShortMethodInShortClass_StillReportsViolation()
+    {
+        var src = @"
+public class Db
+{
+    public Db() { }
+    public void A() { }
+}";
+        var rule = MakeRule<ShortMethodNameRule>("ShortMethodName",
+            "Avoid using short method names like {0}::{1}(). The configured minimum method name length is {2}.");
+        var violations = Run(src, rule);
+        MustHave(violations, "ShortMethodName");
+        Assert.Single(violations);
+        Assert.Contains("Db::A()", violations[0].Description);
+    }
+
+    [Fact]
     public void ShortMethodName_Message_ContainsClassAndMethod()
     {
         var src = @"
