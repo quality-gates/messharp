@@ -503,6 +503,40 @@ public class Baz {
     }
 
     [Fact]
+    public void StaticAccess_ExpressionBodiedMethod_Fires()
+    {
+        var src = @"
+public class Foo {
+    public void Bar() => Baz.DoSomething();
+}
+public class Baz {
+    public static void DoSomething() { }
+}";
+        var v = Analyze(src, MakeRule<StaticAccessRule>("StaticAccess"));
+        Assert.Single(v);
+        Assert.Contains("Baz", v[0].Description);
+    }
+
+    [Fact]
+    public void StaticAccess_NamespaceQualifiedCall_Fires()
+    {
+        var src = @"
+namespace MyNamespace {
+    public class Foo {
+        public void Bar() {
+            MyNamespace.Baz.DoSomething();
+        }
+    }
+    public class Baz {
+        public static void DoSomething() { }
+    }
+}";
+        var v = Analyze(src, MakeRule<StaticAccessRule>("StaticAccess"));
+        Assert.Single(v);
+        Assert.Contains("Baz", v[0].Description);
+    }
+
+    [Fact]
     public void StaticAccess_ExceptionClass_DoesNotFire()
     {
         var src = @"

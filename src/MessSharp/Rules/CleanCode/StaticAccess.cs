@@ -17,14 +17,15 @@ public sealed class StaticAccessRule : BaseRule, IMethodRule
 {
     public void Apply(RuleContext ctx, MethodModel method)
     {
-        if (method.Body == null) return;
+        var body = method.EffectiveBody;
+        if (body == null) return;
 
         var exceptions = SplitList(ctx.Props.Str("exceptions", ""));
         var ignorePattern = RuleContext.CompileRegex(ctx.Props.Str("ignorepattern", ""));
         if (ignorePattern != null && ignorePattern.IsMatch(method.Name)) return;
 
         var ownClass = method.Class?.Name ?? "";
-        foreach (var invocation in method.Body.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
+        foreach (var invocation in body.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
             CheckInvocation(ctx, method.Name, invocation, ownClass, exceptions);
     }
 
@@ -33,14 +34,22 @@ public sealed class StaticAccessRule : BaseRule, IMethodRule
     {
         if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess) return;
         if (!memberAccess.IsKind(SyntaxKind.SimpleMemberAccessExpression)) return;
-        if (memberAccess.Expression is not SimpleNameSyntax targetName) return;
 
-        var targetClassName = targetName.Identifier.Text;
+        var targetClassName = GetTargetClassName(memberAccess.Expression);
+        if (targetClassName == null) return;
         if (IsSkipped(targetClassName, ownClass, exceptions)) return;
 
         var line = invocation.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
         ctx.Report(line, line, targetClassName, methodName);
     }
+
+    private static string? GetTargetClassName(ExpressionSyntax expression) =>
+        expression switch
+        {
+            SimpleNameSyntax simpleName => simpleName.Identifier.Text,
+            MemberAccessExpressionSyntax qualifiedName => qualifiedName.Name.Identifier.Text,
+            _ => null,
+        };
 
     private static bool IsSkipped(string targetClassName, string ownClass, HashSet<string> exceptions)
     {
