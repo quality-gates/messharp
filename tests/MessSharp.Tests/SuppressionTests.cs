@@ -4,6 +4,8 @@ using CliRunner = MessSharp.Cli.Cli;
 using MessSharp.Model;
 using MessSharp.Rule;
 using MessSharp.Rules.CodeSize;
+using MessSharp.Rules.Controversial;
+using MessSharp.Rules.Naming;
 using Xunit;
 using RuleSetType = MessSharp.Rule.RuleSet;
 
@@ -160,5 +162,148 @@ public class ComplexClass {
         {
             File.Delete(tmpFile);
         }
+    }
+
+    private static RuleSetType MakeNamingSet()
+    {
+        var rule = new ConstantNamingConventionsRule
+        {
+            Name = "ConstantNamingConventions",
+            Message = "Constant {0} should be defined in PascalCase",
+            Priority = 3,
+            SetName = "naming",
+        };
+        return new RuleSetType { Name = "naming", Rules = { rule } };
+    }
+
+    private const string AttributeSuppressedConstantSource = @"
+using System.Diagnostics.CodeAnalysis;
+
+public class Sample
+{
+    [SuppressMessage(""MessSharp"", ""ConstantNamingConventions"")]
+    public const int legacy_const_value = 42;
+}";
+
+    private const string CommentSuppressedConstantSource = @"
+public class Sample
+{
+    // @SuppressWarnings(PHPMD.ConstantNamingConventions)
+    public const int legacy_const_value = 42;
+}";
+
+    [Fact]
+    public void Engine_SuppressedConstantByAttribute_SuppressedWhenNotStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", AttributeSuppressedConstantSource);
+        var sets = new[] { MakeNamingSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedConstantByAttribute_ReportedWhenStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", AttributeSuppressedConstantSource);
+        var sets = new[] { MakeNamingSet() };
+        var violations = Engine.Analyze(sf, sets, strict: true);
+        Assert.Single(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedConstantByComment_SuppressedWhenNotStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", CommentSuppressedConstantSource);
+        var sets = new[] { MakeNamingSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedConstantByComment_ReportedWhenStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", CommentSuppressedConstantSource);
+        var sets = new[] { MakeNamingSet() };
+        var violations = Engine.Analyze(sf, sets, strict: true);
+        Assert.Single(violations);
+    }
+
+    private const string UnsuppressedConstantSource = @"
+public class Sample
+{
+    public const int legacy_const_value = 42;
+}";
+
+    [Fact]
+    public void Engine_UnsuppressedConstant_ReportedWhenNotStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", UnsuppressedConstantSource);
+        var sets = new[] { MakeNamingSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+        Assert.Single(violations);
+    }
+
+    private static RuleSetType MakeControversialSet()
+    {
+        var rule = new CamelCasePropertyNameRule
+        {
+            Name = "CamelCasePropertyName",
+            Message = "Field {0} should be defined in camelCase",
+            Priority = 3,
+            SetName = "controversial",
+        };
+        return new RuleSetType { Name = "controversial", Rules = { rule } };
+    }
+
+    private const string AttributeSuppressedFieldSource = @"
+using System.Diagnostics.CodeAnalysis;
+
+public class Sample
+{
+    [SuppressMessage(""MessSharp"", ""CamelCasePropertyName"")]
+    private int PascalCaseField = 42;
+}";
+
+    private const string CommentSuppressedFieldSource = @"
+public class Sample
+{
+    // @SuppressWarnings(PHPMD.CamelCasePropertyName)
+    private int PascalCaseField = 42;
+}";
+
+    [Fact]
+    public void Engine_SuppressedFieldByAttribute_SuppressedWhenNotStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", AttributeSuppressedFieldSource);
+        var sets = new[] { MakeControversialSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedFieldByAttribute_ReportedWhenStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", AttributeSuppressedFieldSource);
+        var sets = new[] { MakeControversialSet() };
+        var violations = Engine.Analyze(sf, sets, strict: true);
+        Assert.Single(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedFieldByComment_SuppressedWhenNotStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", CommentSuppressedFieldSource);
+        var sets = new[] { MakeControversialSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedFieldByComment_ReportedWhenStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", CommentSuppressedFieldSource);
+        var sets = new[] { MakeControversialSet() };
+        var violations = Engine.Analyze(sf, sets, strict: true);
+        Assert.Single(violations);
     }
 }
