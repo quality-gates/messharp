@@ -399,6 +399,89 @@ public class Foo {
         Assert.Contains("\"alpha\"", v[0].Description);
     }
 
+    [Fact]
+    public void DuplicatedArrayKey_NegativeIntegerKeys_Fires()
+    {
+        var src = @"
+using System.Collections.Generic;
+public class Sample
+{
+    public void Init()
+    {
+        var d = new Dictionary<int, string>
+        {
+            [-1] = ""first"",
+            [-1] = ""second"",
+        };
+    }
+}";
+        var v = Analyze(src, MakeRule<DuplicatedArrayKeyRule>("DuplicatedArrayKey"));
+        MustHave(v, "DuplicatedArrayKey");
+    }
+
+    [Fact]
+    public void DuplicatedArrayKey_NegativeIntegerKeys_ComplexInitializer_Fires()
+    {
+        var src = @"
+using System.Collections.Generic;
+public class Sample
+{
+    public void Init()
+    {
+        var d = new Dictionary<int, string>
+        {
+            { -1, ""first"" },
+            { -1, ""second"" },
+        };
+    }
+}";
+        var v = Analyze(src, MakeRule<DuplicatedArrayKeyRule>("DuplicatedArrayKey"));
+        MustHave(v, "DuplicatedArrayKey");
+    }
+
+    [Fact]
+    public void DuplicatedArrayKey_DistinctPositiveAndNegativeIntegerKeys_DoesNotFire()
+    {
+        var src = @"
+using System.Collections.Generic;
+public class Sample
+{
+    public void Init()
+    {
+        var d = new Dictionary<int, string>
+        {
+            [-1] = ""first"",
+            [1] = ""second"",
+        };
+    }
+}";
+        var v = Analyze(src, MakeRule<DuplicatedArrayKeyRule>("DuplicatedArrayKey"));
+        MustNotHave(v, "DuplicatedArrayKey");
+    }
+
+    [Fact]
+    public void DuplicatedArrayKey_NegativeInteger_DuplicateMessage_ContainsKey()
+    {
+        var src = @"
+using System.Collections.Generic;
+public class Sample
+{
+    public void Init()
+    {
+        var d = new Dictionary<int, string>
+        {
+            [-42] = ""first"",
+            [-42] = ""second"",
+        };
+    }
+}";
+        var rule = MakeRule<DuplicatedArrayKeyRule>("DuplicatedArrayKey");
+        rule.Message = "Duplicated array key {0}, first declared at line {1}.";
+        var v = Analyze(src, rule);
+        Assert.Single(v);
+        Assert.Contains("-42", v[0].Description);
+    }
+
     // -------------------------------------------------------------------------
     // StaticAccess
     // -------------------------------------------------------------------------
