@@ -239,6 +239,46 @@ class C
         Assert.Equal(3, ccn);
     }
 
+    [Fact]
+    public void NPathComplexity_ExpressionBodiedMethodWithNestedTernary_CountsBranches()
+    {
+        var src = "class C { int Foo(int a, int b) => a > 0 ? (b > 0 ? 1 : 2) : 3; }";
+        var npath = MetricsCalc.NPathComplexity(GetMethodExpression(src));
+        Assert.Equal(5, npath);
+    }
+
+    [Fact]
+    public void NPathComplexity_ExpressionBodiedMethodWithSingleTernary_CountsBranches()
+    {
+        var src = "class C { int Foo(int a) => a > 0 ? 1 : 2; }";
+        var npath = MetricsCalc.NPathComplexity(GetMethodExpression(src));
+        Assert.Equal(3, npath);
+    }
+
+    [Fact]
+    public void NPathComplexity_ReturnTernary_CountsBranches()
+    {
+        var src = "class C { int Foo(int a) { return a > 0 ? 1 : 2; } }";
+        var npath = MetricsCalc.NPathComplexity(GetMethodBody(src));
+        Assert.Equal(2, npath);
+    }
+
+    [Fact]
+    public void NPathComplexity_LocalDeclarationTernary_CountsBranches()
+    {
+        var src = "class C { int Foo(int a) { int x = a > 0 ? 1 : 2; return x; } }";
+        var npath = MetricsCalc.NPathComplexity(GetMethodBody(src));
+        Assert.Equal(2, npath);
+    }
+
+    [Fact]
+    public void NPathComplexity_AssignmentTernary_CountsBranches()
+    {
+        var src = "class C { int Foo(int a) { int x = 0; x = a > 0 ? 1 : 2; return x; } }";
+        var npath = MetricsCalc.NPathComplexity(GetMethodBody(src));
+        Assert.Equal(2, npath);
+    }
+
     private static Microsoft.CodeAnalysis.SyntaxNode GetClassNode(string source)
     {
         var tree = CSharpSyntaxTree.ParseText(source);
