@@ -36,5 +36,22 @@ internal static class SarifDocumentBuilder
             },
         };
 
+    internal static SarifResult BuildErrorResult(ProcessingError e) =>
+        new SarifResult
+        {
+            Level = "error",
+            Message = new SarifMessage { Text = e.Message },
+            Locations = new List<SarifLocation>
+            {
+                new SarifLocation
+                {
+                    PhysicalLocation = new SarifPhysicalLocation
+                    {
+                        ArtifactLocation = new SarifArtifactLocation { Uri = e.File },
+                    },
+                },
+            },
+        };
+
     private static string ViolationLevel(int priority) => priority <= 2 ? "error" : "warning";
 }

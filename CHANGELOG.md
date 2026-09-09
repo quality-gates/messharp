@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - Count ternary conditional expressions (`? :`) in NPath complexity, including expression-bodied methods, returns, assignments, and local declarations (#58).
+- Include processing errors in HTML, Checkstyle, GitLab, and SARIF reports so parse and I/O failures are visible in those formats (#59).
 
 ## [0.2.9] - 2026-09-08
 

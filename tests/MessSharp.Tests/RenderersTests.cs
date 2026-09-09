@@ -360,6 +360,13 @@ public class RenderersTests
         Assert.Contains("&gt;", out_);
     }
 
+    [Fact]
+    public void Html_Errors()
+    {
+        var out_ = Render(new HtmlRenderer());
+        Assert.Contains("<p>/src/Bad.cs: Syntax error on line 1.</p>", out_);
+    }
+
     // -------------------------------------------------------------------------
     // GitHub renderer
     // -------------------------------------------------------------------------
@@ -409,7 +416,7 @@ public class RenderersTests
     {
         var out_ = Render(new GitLabRenderer());
         var doc = JsonDocument.Parse(out_);
-        Assert.Equal(3, doc.RootElement.GetArrayLength());
+        Assert.Equal(4, doc.RootElement.GetArrayLength());
     }
 
     [Fact]
@@ -475,6 +482,23 @@ public class RenderersTests
         Assert.Equal(fps.Count, fps.Distinct().Count());
     }
 
+    [Fact]
+    public void GitLab_ErrorEntries()
+    {
+        var out_ = Render(new GitLabRenderer());
+        var doc = JsonDocument.Parse(out_);
+        var entry = doc.RootElement[3];
+        Assert.Equal("issue", entry.GetProperty("type").GetString());
+        Assert.Equal("parse-error", entry.GetProperty("check_name").GetString());
+        Assert.Equal("Syntax error on line 1.", entry.GetProperty("description").GetString());
+        Assert.Equal("blocker", entry.GetProperty("severity").GetString());
+        Assert.Equal("/src/Bad.cs", entry.GetProperty("location").GetProperty("path").GetString());
+
+        var fp = entry.GetProperty("fingerprint").GetString()!;
+        var decoded = Encoding.UTF8.GetString(Convert.FromHexString(fp));
+        Assert.Equal("/src/Bad.cs:Syntax error on line 1.", decoded);
+    }
+
     // -------------------------------------------------------------------------
     // Checkstyle renderer
     // -------------------------------------------------------------------------
@@ -505,10 +529,10 @@ public class RenderersTests
         doc.LoadXml(out_);
 
         var files = doc.SelectNodes("//file")!;
-        Assert.Equal(2, files.Count);
+        Assert.Equal(3, files.Count);
 
         var errors = doc.SelectNodes("//error")!;
-        Assert.Equal(3, errors.Count);  // 3 violations become 3 <error> elements
+        Assert.Equal(4, errors.Count);  // 3 violations + 1 processing error
 
         var e1 = (XmlElement)errors[0]!;
         Assert.Equal("10", e1.GetAttribute("line"));
@@ -538,6 +562,23 @@ public class RenderersTests
     {
         var out_ = Render(new CheckstyleRenderer());
         Assert.Contains("codesize/CyclomaticComplexity", out_);
+    }
+
+    [Fact]
+    public void Checkstyle_ProcessingErrors()
+    {
+        var out_ = Render(new CheckstyleRenderer());
+        var doc = new XmlDocument();
+        doc.LoadXml(out_);
+        var files = doc.SelectNodes("//file")!;
+        var last = (XmlElement)files[files.Count - 1]!;
+        Assert.Equal("/src/Bad.cs", last.GetAttribute("name"));
+        var error = (XmlElement)last.SelectSingleNode("error")!;
+        Assert.Equal("0", error.GetAttribute("line"));
+        Assert.Equal("1", error.GetAttribute("column"));
+        Assert.Equal("error", error.GetAttribute("severity"));
+        Assert.Equal("Syntax error on line 1.", error.GetAttribute("message"));
+        Assert.Equal("messharp/parse-error", error.GetAttribute("source"));
     }
 
     // -------------------------------------------------------------------------
@@ -635,7 +676,7 @@ public class RenderersTests
         var out_ = Render(new SarifRenderer());
         var doc = JsonDocument.Parse(out_);
         var results = doc.RootElement.GetProperty("runs")[0].GetProperty("results");
-        Assert.Equal(3, results.GetArrayLength());
+        Assert.Equal(4, results.GetArrayLength());
 
         var r1 = results[0];
         Assert.Equal("CyclomaticComplexity", r1.GetProperty("ruleId").GetString());
@@ -664,6 +705,20 @@ public class RenderersTests
         Assert.Equal("warning", results[2].GetProperty("level").GetString());
     }
 
+    [Fact]
+    public void Sarif_ErrorResults()
+    {
+        var out_ = Render(new SarifRenderer());
+        var doc = JsonDocument.Parse(out_);
+        var results = doc.RootElement.GetProperty("runs")[0].GetProperty("results");
+        var err = results[3];
+        Assert.Equal("error", err.GetProperty("level").GetString());
+        Assert.Equal("Syntax error on line 1.", err.GetProperty("message").GetProperty("text").GetString());
+        var physLoc = err.GetProperty("locations")[0].GetProperty("physicalLocation");
+        Assert.Equal("/src/Bad.cs", physLoc.GetProperty("artifactLocation").GetProperty("uri").GetString());
+        Assert.False(physLoc.TryGetProperty("region", out _));
+    }
+
     // -------------------------------------------------------------------------
     // Renderers.TryGet wiring
     // -------------------------------------------------------------------------
@@ -682,6 +737,26 @@ public class RenderersTests
     {
         Assert.True(Renderers.TryGet(format, out var renderer));
         Assert.NotNull(renderer);
+    }
+
+    [Theory]
+    [InlineData("html")]
+    [InlineData("checkstyle")]
+    [InlineData("gitlab")]
+    [InlineData("sarif")]
+    public void Renderer_SurfacesProcessingErrors(string format)
+    {
+        var report = new ViolationReport
+        {
+            Errors = new List<ProcessingError>
+            {
+                new ProcessingError { File = "broken.cs", Message = "Syntax error" },
+            },
+        };
+        Assert.True(Renderers.TryGet(format, out var renderer));
+        var output = Render(renderer!, report);
+        Assert.Contains("broken.cs", output);
+        Assert.Contains("Syntax error", output);
     }
 
     [Theory]
