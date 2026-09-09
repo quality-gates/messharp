@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.10] - 2026-09-09
+
 ### Fixed
 
 - Count ternary conditional expressions (`? :`) in NPath complexity, including expression-bodied methods, returns, assignments, and local declarations (#58).
