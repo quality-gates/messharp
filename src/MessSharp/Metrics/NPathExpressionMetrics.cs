@@ -6,7 +6,7 @@ namespace MessSharp.Metrics;
 
 /// <summary>
 /// NPath contributions from expressions: boolean operators, null-coalescing,
-/// and additional switch-expression arms.
+/// ternary conditionals, and additional switch-expression arms.
 /// </summary>
 internal static class NPathExpressionMetrics
 {
@@ -19,13 +19,19 @@ internal static class NPathExpressionMetrics
 
         int count = 0;
         foreach (var node in expression.DescendantNodesAndSelf())
-        {
-            if (node is SwitchExpressionSyntax switchExpression)
-                count = NPathArithmetic.Add(count, Math.Max(0, switchExpression.Arms.Count - 1));
-            else if (node is BinaryExpressionSyntax bin && IsBooleanOperator(bin))
-                count = NPathArithmetic.Add(count, 1);
-        }
+            count = NPathArithmetic.Add(count, NodeComplexity(node));
         return count;
+    }
+
+    private static int NodeComplexity(SyntaxNode node)
+    {
+        if (node is SwitchExpressionSyntax switchExpression)
+            return Math.Max(0, switchExpression.Arms.Count - 1);
+        if (node is ConditionalExpressionSyntax)
+            return 2;
+        if (node is BinaryExpressionSyntax bin && IsBooleanOperator(bin))
+            return 1;
+        return 0;
     }
 
     private static bool IsBooleanOperator(BinaryExpressionSyntax bin) =>

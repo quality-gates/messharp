@@ -39,7 +39,9 @@ internal static class NPathStatementMetrics
         TryStatementSyntax tryStatement => NPathTry(tryStatement),
         SwitchStatementSyntax switchStatement => NPathSwitch(switchStatement),
         BlockSyntax block => Stmts(block.Statements),
-        ReturnStatementSyntax returnStatement => ReturnComplexity(returnStatement),
+        ReturnStatementSyntax returnStatement => ExpressionContribution(returnStatement.Expression),
+        LocalDeclarationStatementSyntax local => LocalDeclarationComplexity(local),
+        ExpressionStatementSyntax expressionStatement => ExpressionContribution(expressionStatement.Expression),
         LabeledStatementSyntax labeled => Stmt(labeled.Statement),
         _ => 1,
     };
@@ -101,10 +103,20 @@ internal static class NPathStatementMetrics
         _ => Stmt(statement),
     };
 
-    private static int ReturnComplexity(ReturnStatementSyntax statement)
+    private static int LocalDeclarationComplexity(LocalDeclarationStatementSyntax statement)
     {
-        if (statement.Expression == null) return 1;
-        int complexity = NPathExpressionMetrics.Complexity(statement.Expression);
+        int complexity = 0;
+        foreach (var variable in statement.Declaration.Variables)
+            complexity = NPathArithmetic.Add(
+                complexity,
+                NPathExpressionMetrics.Complexity(variable.Initializer?.Value));
+        return complexity == 0 ? 1 : complexity;
+    }
+
+    private static int ExpressionContribution(ExpressionSyntax? expression)
+    {
+        if (expression == null) return 1;
+        int complexity = NPathExpressionMetrics.Complexity(expression);
         return complexity == 0 ? 1 : complexity;
     }
 }
