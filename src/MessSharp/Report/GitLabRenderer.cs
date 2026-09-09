@@ -21,7 +21,7 @@ public sealed class GitLabRenderer : IRenderer
 
     public void Render(TextWriter w, Report report)
     {
-        var entries = new List<GitLabEntry>(report.Violations.Count);
+        var entries = new List<GitLabEntry>(report.Violations.Count + report.Errors.Count);
         foreach (var v in report.Violations)
         {
             entries.Add(new GitLabEntry
@@ -39,6 +39,22 @@ public sealed class GitLabRenderer : IRenderer
             });
         }
 
+        foreach (var e in report.Errors)
+        {
+            entries.Add(new GitLabEntry
+            {
+                Type = "issue",
+                CheckName = "parse-error",
+                Description = e.Message,
+                Fingerprint = Fingerprint(e),
+                Severity = "blocker",
+                Location = new GitLabLocation
+                {
+                    Path = e.File,
+                },
+            });
+        }
+
         var json = JsonSerializer.Serialize(entries, _opts);
         w.WriteLine(json);
     }
@@ -48,9 +64,15 @@ public sealed class GitLabRenderer : IRenderer
     /// This is NOT a hash — it's a direct hex encoding of the raw bytes,
     /// exactly as Go's fmt.Sprintf("%x", bytes) does.
     /// </summary>
-    internal static string Fingerprint(Violation v)
+    internal static string Fingerprint(Violation v) =>
+        HexFingerprint($"{v.File}:{v.BeginLine}:{v.Rule.Name}");
+
+    internal static string Fingerprint(ProcessingError e) =>
+        HexFingerprint($"{e.File}:{e.Message}");
+
+    private static string HexFingerprint(string s)
     {
-        var raw = Encoding.UTF8.GetBytes($"{v.File}:{v.BeginLine}:{v.Rule.Name}");
+        var raw = Encoding.UTF8.GetBytes(s);
         return Convert.ToHexString(raw).ToLowerInvariant();
     }
 

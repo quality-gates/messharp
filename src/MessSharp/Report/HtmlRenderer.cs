@@ -30,6 +30,10 @@ public sealed class HtmlRenderer : IRenderer
         }
 
         if (open) w.WriteLine("</table>");
+
+        foreach (var e in report.Errors)
+            w.WriteLine($"<p>{HtmlEscape(e.File)}: {HtmlEscape(e.Message)}</p>");
+
         w.WriteLine("</body></html>");
     }
 

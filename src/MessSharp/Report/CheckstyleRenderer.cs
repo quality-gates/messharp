@@ -27,6 +27,14 @@ public sealed class CheckstyleRenderer : IRenderer
         }
 
         if (open) w.WriteLine("  </file>");
+
+        foreach (var e in report.Errors)
+        {
+            w.WriteLine($"  <file name=\"{XmlRenderer.XmlEscape(e.File)}\">");
+            w.WriteLine($"    <error line=\"0\" column=\"1\" severity=\"error\" message=\"{XmlRenderer.XmlEscape(e.Message)}\" source=\"messharp/parse-error\"/>");
+            w.WriteLine("  </file>");
+        }
+
         w.WriteLine("</checkstyle>");
     }
 

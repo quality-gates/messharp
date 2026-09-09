@@ -60,7 +60,7 @@ internal sealed class SarifLocation
 internal sealed class SarifPhysicalLocation
 {
     [JsonPropertyName("artifactLocation")] public SarifArtifactLocation ArtifactLocation { get; set; } = new();
-    [JsonPropertyName("region")] public SarifRegion Region { get; set; } = new();
+    [JsonPropertyName("region")] public SarifRegion? Region { get; set; }
 }
 
 internal sealed class SarifArtifactLocation

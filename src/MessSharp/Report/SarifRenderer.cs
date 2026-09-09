@@ -43,6 +43,9 @@ public sealed class SarifRenderer : IRenderer
             results.Add(SarifDocumentBuilder.BuildResult(v));
         }
 
+        foreach (var e in report.Errors)
+            results.Add(SarifDocumentBuilder.BuildErrorResult(e));
+
         return (rules, results);
     }
 
