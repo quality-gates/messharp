@@ -22,7 +22,7 @@ public sealed class PhysicalFileDiscoverer : IFileDiscoverer
             if (Directory.Exists(p))
                 WalkDir(p, suffixes, exclude, ignoreTests, Add);
             else if (File.Exists(p))
-                Add(p);
+                AddFileEntry(p, suffixes, exclude, ignoreTests, Add);
             else
                 // phpmd/messgo error out on a path that does not exist
                 throw new FileNotFoundException($"no such file or directory: {p}");
