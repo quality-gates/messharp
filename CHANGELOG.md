@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Resolve bare identifier reads against enclosing lexical scopes in `UnusedPrivateField` and `UnusedPrivateMethod`, so local variables and parameters that shadow a private field or method name no longer count as member usage (#90).
 - Recognize fully qualified `System.Boolean` parameter and return types in `BooleanArgumentFlag` and `BooleanGetMethodName` (#89).
 - Do not report explicit interface implementations as unused private methods, including qualified and generic interface implementations (#88).
 - Include simple and deconstructed `foreach` iteration variables in `ShortVariable` and `LongVariable` naming analysis (#86).

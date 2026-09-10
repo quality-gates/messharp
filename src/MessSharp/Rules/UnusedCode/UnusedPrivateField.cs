@@ -30,22 +30,25 @@ public sealed class UnusedPrivateFieldRule : BaseRule, IClassRule
     /// (this.Name or x.Name), an object-initializer key, or a nameof()
     /// argument — all of which count as "read" for field-usage purposes.
     /// Also collects bare identifier reads (covers access without `this.`),
-    /// except when the identifier is only a plain-assignment target.
+    /// except when the identifier is only a plain-assignment target or is
+    /// lexically bound to a local variable or parameter that shadows the
+    /// member name.
     /// </summary>
     internal static HashSet<string> CollectUsedNames(SourceFile file)
     {
+        var shadowed = ShadowMap.From(file.Root);
         var used = new HashSet<string>(StringComparer.Ordinal);
         foreach (var node in file.Root.DescendantNodes())
-            CollectUsedNode(node, used);
+            CollectUsedNode(node, shadowed, used);
         return used;
     }
 
-    private static void CollectUsedNode(SyntaxNode node, HashSet<string> used)
+    private static void CollectUsedNode(SyntaxNode node, ShadowMap shadowed, HashSet<string> used)
     {
         if (TryCollectMemberAccess(node, used)) return;
         if (TryCollectInitializerAssignment(node, used)) return;
         if (TryCollectNameof(node, used)) return;
-        CollectBareIdentifier(node, used);
+        CollectBareIdentifier(node, shadowed, used);
     }
 
     private static bool TryCollectMemberAccess(SyntaxNode node, HashSet<string> used)
@@ -68,11 +71,12 @@ public sealed class UnusedPrivateFieldRule : BaseRule, IClassRule
         return true;
     }
 
-    private static void CollectBareIdentifier(SyntaxNode node, HashSet<string> used)
+    private static void CollectBareIdentifier(SyntaxNode node, ShadowMap shadowed, HashSet<string> used)
     {
         if (node is not IdentifierNameSyntax id) return;
         if (IsDeclarationContext(id)) return;
         if (IsWriteOnlyAssignmentTarget(id)) return;
+        if (shadowed.IsShadowed(id)) return;
         used.Add(id.Identifier.Text);
     }
 
