@@ -62,6 +62,20 @@ class Fo
     }
 
     [Fact]
+    public void ShortClassName_SecondNamespace_PackageIsDeclaringNamespace()
+    {
+        var src = @"
+namespace First { class FirstType { } }
+namespace Second { class Ab { } }";
+        var rule = MakeRule<ShortClassNameRule>("ShortClassName",
+            "Avoid classes with short names like {0}. Configured minimum length is {1}.");
+        var violations = Run(src, rule);
+        var v = Assert.Single(violations);
+        Assert.Equal("Second", v.Package);
+        Assert.Contains("Ab", v.Description);
+    }
+
+    [Fact]
     public void ShortClassName_LongEnoughClass_NoViolation()
     {
         var src = @"

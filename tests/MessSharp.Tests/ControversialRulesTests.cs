@@ -514,4 +514,93 @@ public class MyService
             "CamelCaseParameterName",
             "CamelCaseVariableName");
     }
+
+    [Fact]
+    public void CamelCaseMethodName_SecondNamespace_PackageIsDeclaringNamespace()
+    {
+        var src = @"
+namespace First
+{
+    public class FirstType { }
+}
+
+namespace Second
+{
+    public class SecondType
+    {
+        public void bad_method() { }
+    }
+}";
+        var vs = Analyze(src);
+        var v = Assert.Single(vs.Where(v => v.Rule.Name == "CamelCaseMethodName"));
+        Assert.Equal("Second", v.Package);
+        Assert.Equal("SecondType", v.Class);
+    }
+
+    [Fact]
+    public void CamelCaseMethodName_ThreeNamespaces_EachPackageMatchesDeclaringNamespace()
+    {
+        var src = @"
+namespace First { public class FirstType { public void bad_one() {} } }
+namespace Second { public class SecondType { public void bad_two() {} } }
+namespace Third { public class ThirdType { public void bad_three() {} } }";
+        var vs = Analyze(src).Where(v => v.Rule.Name == "CamelCaseMethodName").ToList();
+        Assert.Equal("First", vs.Single(v => v.Class == "FirstType").Package);
+        Assert.Equal("Second", vs.Single(v => v.Class == "SecondType").Package);
+        Assert.Equal("Third", vs.Single(v => v.Class == "ThirdType").Package);
+    }
+
+    [Fact]
+    public void CamelCaseMethodName_SingleNamespace_PackageUnchanged()
+    {
+        var src = @"
+namespace Foo
+{
+    public class Bar
+    {
+        public void bad_method() { }
+    }
+}";
+        var vs = Analyze(src);
+        var v = Assert.Single(vs.Where(v => v.Rule.Name == "CamelCaseMethodName"));
+        Assert.Equal("Foo", v.Package);
+    }
+
+    [Fact]
+    public void CamelCaseMethodName_DottedNamespace_FullyQualifiedPackage()
+    {
+        var src = @"
+namespace A.B
+{
+    public class C
+    {
+        public void bad_method() { }
+    }
+}";
+        var vs = Analyze(src);
+        var v = Assert.Single(vs.Where(v => v.Rule.Name == "CamelCaseMethodName"));
+        Assert.Equal("A.B", v.Package);
+    }
+
+    [Fact]
+    public void CamelCaseClassName_SecondNamespace_PackageIsDeclaringNamespace()
+    {
+        var src = @"
+namespace First { public class FirstType { } }
+namespace Second { public class bad_name { } }";
+        var vs = Analyze(src);
+        var v = Assert.Single(vs.Where(v => v.Rule.Name == "CamelCaseClassName"));
+        Assert.Equal("Second", v.Package);
+    }
+
+    [Fact]
+    public void CamelCaseMethodName_GlobalTypeBeforeNamespace_EmptyPackage()
+    {
+        var src = @"
+public class GlobalType { public void bad_method() {} }
+namespace First { public class FirstType {} }";
+        var vs = Analyze(src);
+        var v = Assert.Single(vs.Where(v => v.Rule.Name == "CamelCaseMethodName"));
+        Assert.Equal("", v.Package);
+    }
 }

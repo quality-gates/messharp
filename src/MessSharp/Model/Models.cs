@@ -66,6 +66,7 @@ public sealed class MethodModel
     public InterfaceModel? Interface { get; init; }
     /// <summary>Declaring type name (class or interface), or empty string.</summary>
     public string DeclaringTypeName => Class?.Name ?? Interface?.Name ?? "";
+    public string Namespace => Class?.Namespace ?? Interface?.Namespace ?? "";
     public BlockSyntax? Body { get; init; }
     /// <summary>Executable block body or expression from expression-bodied member.</summary>
     public SyntaxNode? EffectiveBody => (SyntaxNode?)Body ?? Node switch
