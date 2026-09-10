@@ -666,8 +666,6 @@ class GetActiveTester
     [Fact]
     public void ShortVariable_ForEachLoopVar_IsReported()
     {
-        // Unlike a for-init, a foreach variable is a regular local and IS flagged.
-        // Only the for() initializer gets the skip treatment.
         var src = @"
 class Foo
 {
@@ -677,15 +675,52 @@ class Foo
         foreach (var it in items) { }
     }
 }";
-        // "it" is 2 chars, declared in foreach — not a for-init, so it fires
         var rule = MakeRule<ShortVariableRule>("ShortVariable",
             "Avoid variables with short names like {0}. Configured minimum length is {1}.");
-        // Note: foreach iteration variable is NOT a LocalDeclarationStatementSyntax,
-        // it lives in ForEachStatementSyntax.Identifier, so our walker won't pick it up.
-        // This matches phpmd's scope: phpmd only flags variable declarations, not foreach vars.
         var violations = Run(src, rule);
-        // "it" is in a foreach, not a local declaration statement — consistent with phpmd scope
-        MustNotHave(violations, "ShortVariable");
+        MustHave(violations, "ShortVariable");
+        Assert.Contains(violations, v => v.Rule.Name == "ShortVariable"
+            && v.Description.Contains("it"));
+    }
+
+    [Fact]
+    public void LongVariable_ForEachLoopVar_IsReported()
+    {
+        var src = @"
+class Foo
+{
+    public void Bar()
+    {
+        var items = new[] { 1, 2, 3 };
+        foreach (var excessivelyLongForeachVariableName in items) { }
+    }
+}";
+        var rule = MakeRule<LongVariableRule>("LongVariable",
+            "Avoid excessively long variable names like {0}. Keep variable name length under {1}.");
+        var violations = Run(src, rule);
+        MustHave(violations, "LongVariable");
+        Assert.Contains(violations, v => v.Rule.Name == "LongVariable"
+            && v.Description.Contains("excessivelyLongForeachVariableName"));
+    }
+
+    [Fact]
+    public void ShortVariable_DeconstructedForEachVars_AreReported()
+    {
+        var src = @"
+class Foo
+{
+    public void Bar()
+    {
+        var items = new[] { (1, 2) };
+        foreach (var (x, value) in items) { }
+    }
+}";
+        var rule = MakeRule<ShortVariableRule>("ShortVariable",
+            "Avoid variables with short names like {0}. Configured minimum length is {1}.");
+        var violations = Run(src, rule);
+        MustHave(violations, "ShortVariable");
+        Assert.Contains(violations, v => v.Rule.Name == "ShortVariable"
+            && v.Description.Contains("x"));
     }
 
     [Fact]
