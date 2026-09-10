@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Exclude arrays of built-in types (`int[]`, `int[,]`, `string?[]`, `int[][]`) from `CouplingBetweenObjects` coupling counts by stripping trailing array rank syntax before the built-in type comparison; arrays of user-defined types still count toward their element type (#87).
 - Recognize fully qualified `System.Boolean` parameter and return types in `BooleanArgumentFlag` and `BooleanGetMethodName` (#89).
 - Do not report explicit interface implementations as unused private methods, including qualified and generic interface implementations (#88).
 - Include simple and deconstructed `foreach` iteration variables in `ShortVariable` and `LongVariable` naming analysis (#86).

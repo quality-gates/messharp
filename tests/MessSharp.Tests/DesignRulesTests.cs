@@ -515,6 +515,72 @@ public class Simple {
     }
 
     [Fact]
+    public void CouplingBetweenObjects_PrimitiveArrayNotCounted()
+    {
+        // Twelve distinct user-defined types plus arrays of built-in types
+        // must stay at coupling 12, below the threshold of 13 (issue #87).
+        var src = @"
+public class ArrayCouplingThreshold {
+    private A _a; private B _b; private C _c; private D _d;
+    private E _e; private F _f; private G _g; private H _h;
+    private I _i; private J _j; private K _k; private L _l;
+    private int[] _numbers;
+    private int[,] _grid;
+    private string?[] _names;
+    private int[][] _jagged;
+}
+public class A{} public class B{} public class C{} public class D{}
+public class E{} public class F{} public class G{} public class H{}
+public class I{} public class J{} public class K{} public class L{}
+";
+        var vs = Analyze(src, MakeCboRule(13));
+        MustNotHave(vs, "CouplingBetweenObjects");
+    }
+
+    [Fact]
+    public void CouplingBetweenObjects_UserDefinedArrayStillCounted()
+    {
+        // An array of a user-defined type counts as one dependency for its
+        // element type: eleven scalar custom fields plus M[] is coupling 12.
+        var src = @"
+public class ArrayCouplingThreshold {
+    private A _a; private B _b; private C _c; private D _d;
+    private E _e; private F _f; private G _g; private H _h;
+    private I _i; private J _j; private K _k;
+    private M[] _m;
+}
+public class A{} public class B{} public class C{} public class D{}
+public class E{} public class F{} public class G{} public class H{}
+public class I{} public class J{} public class K{} public class M{}
+";
+        var vs = Analyze(src, MakeCboRule(12));
+        var v = Assert.Single(vs);
+        Assert.Equal("CouplingBetweenObjects", v.Rule.Name);
+        Assert.Equal(12, v.Args[1]);
+    }
+
+    [Fact]
+    public void CouplingBetweenObjects_PrimitiveArrayParameterNotCounted()
+    {
+        // Array normalization must apply wherever the rule reads a type,
+        // including parameter types and return types.
+        var src = @"
+public class ArrayCouplingThreshold {
+    private A _a; private B _b; private C _c; private D _d;
+    private E _e; private F _f; private G _g; private H _h;
+    private I _i; private J _j; private K _k; private L _l;
+    public int[] Process(int[,] grid) => _numbers;
+    private int[][] _numbers;
+}
+public class A{} public class B{} public class C{} public class D{}
+public class E{} public class F{} public class G{} public class H{}
+public class I{} public class J{} public class K{} public class L{}
+";
+        var vs = Analyze(src, MakeCboRule(13));
+        MustNotHave(vs, "CouplingBetweenObjects");
+    }
+
+    [Fact]
     public void CouplingBetweenObjects_ExpressionBodiedMethod_ObjectCreationsCounted()
     {
         var src = @"
