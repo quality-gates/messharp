@@ -199,6 +199,39 @@ public class Foo {
         MustHave(v, "BooleanArgumentFlag");
     }
 
+    [Fact]
+    public void BooleanArgumentFlag_FullyQualifiedSystemBoolean_Fires()
+    {
+        var src = @"
+public class Foo {
+    public void Bar(System.Boolean flag) { }
+}";
+        var v = Analyze(src, MakeRule<BooleanArgumentFlagRule>("BooleanArgumentFlag"));
+        MustHave(v, "BooleanArgumentFlag");
+    }
+
+    [Fact]
+    public void BooleanArgumentFlag_FullyQualifiedNullableSystemBoolean_Fires()
+    {
+        var src = @"
+public class Foo {
+    public void Bar(System.Boolean? flag) { }
+}";
+        var v = Analyze(src, MakeRule<BooleanArgumentFlagRule>("BooleanArgumentFlag"));
+        MustHave(v, "BooleanArgumentFlag");
+    }
+
+    [Fact]
+    public void BooleanArgumentFlag_FullyQualifiedNonBoolean_DoesNotFire()
+    {
+        var src = @"
+public class Foo {
+    public void Bar(System.Int32 value) { }
+}";
+        var v = Analyze(src, MakeRule<BooleanArgumentFlagRule>("BooleanArgumentFlag"));
+        MustNotHave(v, "BooleanArgumentFlag");
+    }
+
     // -------------------------------------------------------------------------
     // ElseExpression
     // -------------------------------------------------------------------------

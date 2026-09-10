@@ -33,6 +33,7 @@ public sealed class BooleanGetMethodNameRule : BaseRule, IMethodRule
     {
         var t = returnType.Trim();
         return t.Equals("bool", StringComparison.OrdinalIgnoreCase)
-            || t.Equals("boolean", StringComparison.OrdinalIgnoreCase);
+            || t.Equals("boolean", StringComparison.OrdinalIgnoreCase)
+            || t.Equals("System.Boolean", StringComparison.OrdinalIgnoreCase);
     }
 }

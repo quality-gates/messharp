@@ -569,6 +569,34 @@ class Foo
     }
 
     [Fact]
+    public void BooleanGetMethodName_FullyQualifiedSystemBoolean_ReportsViolation()
+    {
+        var src = @"
+class Foo
+{
+    public System.Boolean GetFoo() { return true; }
+}";
+        var rule = MakeRule<BooleanGetMethodNameRule>("BooleanGetMethodName",
+            "The '{0}()' method which returns a boolean should be named 'Is...()' or 'Has...()'");
+        var violations = Run(src, rule);
+        MustHave(violations, "BooleanGetMethodName");
+    }
+
+    [Fact]
+    public void BooleanGetMethodName_FullyQualifiedNonBoolean_NoViolation()
+    {
+        var src = @"
+class Foo
+{
+    public System.Int32 GetFoo() { return 0; }
+}";
+        var rule = MakeRule<BooleanGetMethodNameRule>("BooleanGetMethodName",
+            "The '{0}()' method which returns a boolean should be named 'Is...()' or 'Has...()'");
+        var violations = Run(src, rule);
+        MustNotHave(violations, "BooleanGetMethodName");
+    }
+
+    [Fact]
     public void BooleanGetMethodName_IsBoolMethod_NoViolation()
     {
         var src = @"
