@@ -25,7 +25,7 @@ internal static class LocalVariableCollector
 
     /// <summary>
     /// Collects variables declared by a deconstruction expression, such as a
-    /// deconstructed foreach variable.
+    /// local deconstruction or a deconstructed foreach variable.
     /// </summary>
     internal static void CollectDeclarationNames(ExpressionSyntax expr, SyntaxTree tree,
         List<(string Name, int Line)> result)

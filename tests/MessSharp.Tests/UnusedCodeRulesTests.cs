@@ -356,6 +356,26 @@ class C
     }
 
     [Fact]
+    public void UnusedLocalVariable_DeconstructionLocals_FiresIncludingNestedNames()
+    {
+        var src = @"
+public class C
+{
+    public void M()
+    {
+        var (x, (y, _)) = (1, (2, 3));
+    }
+}";
+        var violations = Analyze(src)
+            .Where(v => v.Rule.Name == "UnusedLocalVariable")
+            .ToList();
+
+        Assert.Equal(2, violations.Count);
+        Assert.Contains(violations, v => v.Description.Contains("x") && v.BeginLine == 6);
+        Assert.Contains(violations, v => v.Description.Contains("y") && v.BeginLine == 6);
+    }
+
+    [Fact]
     public void UnusedLocalVariable_ReadDeclarationPattern_NoFire()
     {
         var src = @"

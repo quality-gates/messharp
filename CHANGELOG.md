@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Include named locals from nested deconstruction declarations in `ShortVariable` and `UnusedLocalVariable`, while excluding discards (#91).
 - Resolve bare identifier reads against enclosing lexical scopes in `UnusedPrivateField` and `UnusedPrivateMethod`, so local variables and parameters that shadow a private field or method name no longer count as member usage (#90).
 - Recognize fully qualified `System.Boolean` parameter and return types in `BooleanArgumentFlag` and `BooleanGetMethodName` (#89).
 - Do not report explicit interface implementations as unused private methods, including qualified and generic interface implementations (#88).
