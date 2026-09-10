@@ -399,6 +399,38 @@ public class RenderersTests
         Assert.Contains("::warning file=/src/Foo.cs,line=10,col=1::", out_);
     }
 
+    [Fact]
+    public void GitHub_EscapesWorkflowCommandProperties()
+    {
+        var rule = new FakeRule { Name = "R", SetName = "s", Priority = 3 };
+        var file = "src/with%percent:colon,comma\r\nfile.cs";
+        var report = new ViolationReport
+        {
+            Violations = new List<Violation>
+            {
+                new Violation
+                {
+                    Rule = rule,
+                    File = file,
+                    BeginLine = 7,
+                    EndLine = 7,
+                    Description = "problem",
+                    RuleSetName = "s",
+                    Priority = 3,
+                },
+            },
+            Errors = new List<ProcessingError>
+            {
+                new ProcessingError { File = file, Message = "parse error" },
+            },
+        };
+
+        var out_ = Render(new GitHubRenderer(), report);
+
+        Assert.Contains("::warning file=src/with%25percent%3Acolon%2Ccomma%0D%0Afile.cs,line=7,col=1::", out_);
+        Assert.Contains("::error file=src/with%25percent%3Acolon%2Ccomma%0D%0Afile.cs::parse error", out_);
+    }
+
     // -------------------------------------------------------------------------
     // GitLab renderer
     // -------------------------------------------------------------------------
