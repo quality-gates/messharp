@@ -38,8 +38,8 @@ public sealed class BooleanArgumentFlagRule : BaseRule, IMethodRule
     private static bool IsBoolType(string type)
     {
         var t = type.Trim();
-        return t == "bool" || t == "Boolean"
-            || t == "bool?" || t == "Boolean?"
+        return t == "bool" || t == "Boolean" || t == "System.Boolean"
+            || t == "bool?" || t == "Boolean?" || t == "System.Boolean?"
             || t == "Nullable<bool>" || t == "Nullable<Boolean>";
     }
 

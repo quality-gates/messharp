@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Recognize fully qualified `System.Boolean` parameter and return types in `BooleanArgumentFlag` and `BooleanGetMethodName` (#89).
 - Do not report explicit interface implementations as unused private methods, including qualified and generic interface implementations (#88).
 - Include simple and deconstructed `foreach` iteration variables in `ShortVariable` and `LongVariable` naming analysis (#86).
 - Reject a value-taking option (`--reportfile`, `--suffixes`, `--exclude`, `--enable`/`--only`, `--disable`, `--minimumpriority`, `--maximumpriority`) with no value, instead of treating end of input as an empty value or swallowing the following option, and reject positional arguments beyond the required paths, format, and ruleset. Both cases now emit an argument error and exit 1 (#85).
