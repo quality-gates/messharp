@@ -411,4 +411,29 @@ namespace First { public class FirstType { } }";
         Assert.Equal("", Assert.Single(sf.Classes, c => c.Name == "GlobalType").Namespace);
         Assert.Equal("First", Assert.Single(sf.Classes, c => c.Name == "FirstType").Namespace);
     }
+
+    // Recoverable syntax errors must be surfaced, not silently dropped (#75).
+    private const string BrokenSource = @"
+public class Broken
+{
+    public void Method(
+}";
+
+    [Fact]
+    public void Parse_SyntaxInvalidSource_ExposesSyntaxErrorMessages()
+    {
+        var sf = ModelBuilder.Parse("Broken.cs", BrokenSource);
+
+        Assert.NotEmpty(sf.SyntaxErrorMessages);
+        Assert.Contains(sf.SyntaxErrorMessages, m => m.Contains("CS1026") && m.Contains(") expected"));
+        Assert.All(sf.SyntaxErrorMessages, m => Assert.Matches(@"on line \d+$", m));
+    }
+
+    [Fact]
+    public void Parse_SyntaxValidSource_HasNoSyntaxErrorMessages()
+    {
+        var sf = ModelBuilder.Parse("Valid.cs", "public class Valid { }");
+
+        Assert.Empty(sf.SyntaxErrorMessages);
+    }
 }

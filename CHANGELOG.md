@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Report the parser's recoverable syntax diagnostics as processing errors, so syntactically invalid files are listed as errors (in every renderer that shows errors) and drive exit code 1 instead of being silently reported as clean (#75).
 - Resolve `GlobalVariable` mutation targets against enclosing lexical scopes, so a local or parameter that shadows a static field is no longer reported as a mutation of that field (#74).
 - Include variables declared by direct C# declaration patterns in unused and naming rule analysis (#73).
 - Report private fields that are only written by plain assignments as unused (#72).

@@ -250,6 +250,49 @@ public class CliTests
         Assert.True(runner.LastOpts.Strict);
     }
 
+    // End-to-end over the real runner: a syntactically invalid file must be
+    // reported as a processing error and drive exit code 1 (#75).
+    [Fact]
+    public void Cli_SyntaxInvalidFile_ReportsErrorsAndExitsWithError()
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-cli-");
+        try
+        {
+            File.WriteAllText(Path.Combine(directory.FullName, "Broken.cs"),
+                "public class Broken\n{\n    public void Method(\n}");
+
+            var (code, stdout, _) = RunCli(directory.FullName, "json", "codesize");
+
+            Assert.Equal(1, code);
+            Assert.Contains("errors", stdout);
+            Assert.Contains("Broken.cs", stdout);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Cli_SyntaxInvalidFile_WithIgnoreErrorsOnExit_ExitsCleanButListsErrors()
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-cli-");
+        try
+        {
+            File.WriteAllText(Path.Combine(directory.FullName, "Broken.cs"),
+                "public class Broken\n{\n    public void Method(\n}");
+
+            var (code, stdout, _) = RunCli(directory.FullName, "json", "codesize", "--ignore-errors-on-exit");
+
+            Assert.Equal(0, code);
+            Assert.Contains("errors", stdout);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
     private class DummyRule : MessSharp.Rule.BaseRule
     {
         public DummyRule(string name)
