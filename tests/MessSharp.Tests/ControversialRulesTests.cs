@@ -133,6 +133,77 @@ public class ControversialRulesTests
         Assert.Equal("The class my_class is not named in PascalCase.", v.Description);
     }
 
+    [Fact]
+    public void CamelCaseClassName_NestedClass_Fires()
+    {
+        var src = @"
+public class Outer
+{
+    public class inner
+    {
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "CamelCaseClassName");
+        var v = Assert.Single(vs.Where(v => v.Rule.Name == "CamelCaseClassName"));
+        Assert.Contains("inner", v.Description);
+        Assert.Equal(4, v.BeginLine);
+        Assert.Equal("inner", v.Class);
+    }
+
+    [Fact]
+    public void CamelCaseClassName_NestedInterface_Fires()
+    {
+        var src = @"
+public class Outer
+{
+    public interface inner
+    {
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "CamelCaseClassName");
+        var v = Assert.Single(vs.Where(v => v.Rule.Name == "CamelCaseClassName"));
+        Assert.Contains("inner", v.Description);
+        Assert.Equal("inner", v.Class);
+    }
+
+    [Fact]
+    public void CamelCaseClassName_NestedStructAndRecord_Fires()
+    {
+        var src = @"
+public class Outer
+{
+    public struct nested_struct { }
+    public record nested_record();
+}";
+        var vs = Analyze(src);
+        var className = vs.Where(v => v.Rule.Name == "CamelCaseClassName").ToList();
+        Assert.Contains(className, v => v.Description.Contains("nested_struct"));
+        Assert.Contains(className, v => v.Description.Contains("nested_record"));
+        Assert.Equal(2, className.Count);
+    }
+
+    [Fact]
+    public void CamelCaseMethodName_NestedClassMethod_Fires()
+    {
+        var src = @"
+public class Outer
+{
+    public class Inner
+    {
+        public void bad_method() { }
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "CamelCaseMethodName");
+        var v = Assert.Single(vs.Where(v => v.Rule.Name == "CamelCaseMethodName"));
+        Assert.Contains("bad_method", v.Description);
+        Assert.Equal(6, v.BeginLine);
+        Assert.Equal("Inner", v.Class);
+        Assert.Equal("bad_method", v.Method);
+    }
+
     // ─── CamelCaseMethodName ─────────────────────────────────────────────────
 
     [Fact]

@@ -190,4 +190,144 @@ class B { void M2() {} void M3() {} }";
         var sf = ModelBuilder.Parse("test.cs", src);
         Assert.Equal(3, sf.AllMethods.Count);
     }
+
+    [Fact]
+    public void ParsesNestedClass_CollectsOuterAndNested()
+    {
+        var src = @"
+namespace Foo;
+public class Outer
+{
+    public class Inner
+    {
+    }
+}";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        Assert.Equal(2, sf.Classes.Count);
+        Assert.Contains(sf.Classes, c => c.Name == "Outer");
+        var inner = Assert.Single(sf.Classes, c => c.Name == "Inner");
+        Assert.Equal("class", inner.NodeType);
+        Assert.Equal("Foo", inner.Namespace);
+        Assert.Equal(5, inner.Line);
+    }
+
+    [Fact]
+    public void ParsesNestedStructAndRecord()
+    {
+        var src = @"
+public class Outer
+{
+    public struct NestedStruct { }
+    public record NestedRecord();
+}";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        Assert.Equal(3, sf.Classes.Count);
+        Assert.Equal("struct", Assert.Single(sf.Classes, c => c.Name == "NestedStruct").NodeType);
+        Assert.Equal("record", Assert.Single(sf.Classes, c => c.Name == "NestedRecord").NodeType);
+    }
+
+    [Fact]
+    public void ParsesNestedInterface()
+    {
+        var src = @"
+public class Outer
+{
+    public interface INested
+    {
+        void M();
+    }
+}";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        var nested = Assert.Single(sf.Interfaces);
+        Assert.Equal("INested", nested.Name);
+        Assert.Equal("Outer", sf.Classes[0].Name);
+        Assert.Single(nested.Methods);
+        Assert.Equal("M", nested.Methods[0].Name);
+        Assert.Same(nested, nested.Methods[0].Interface);
+    }
+
+    [Fact]
+    public void NestedTypeMembers_AttributedToNestedTypeNotOuter()
+    {
+        var src = @"
+public class Outer
+{
+    public void OuterMethod() { }
+    private int outerField;
+
+    public class Inner
+    {
+        public void NestedMethod() { }
+        private int nestedField;
+    }
+}";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        var outer = Assert.Single(sf.Classes, c => c.Name == "Outer");
+        var inner = Assert.Single(sf.Classes, c => c.Name == "Inner");
+
+        Assert.Single(outer.Methods);
+        Assert.Equal("OuterMethod", outer.Methods[0].Name);
+        Assert.Same(outer, outer.Methods[0].Class);
+        Assert.Contains(outer.Fields, f => f.Name == "outerField");
+        Assert.DoesNotContain(outer.Fields, f => f.Name == "nestedField");
+        Assert.DoesNotContain(outer.Methods, m => m.Name == "NestedMethod");
+
+        Assert.Single(inner.Methods);
+        Assert.Equal("NestedMethod", inner.Methods[0].Name);
+        Assert.Same(inner, inner.Methods[0].Class);
+        Assert.Contains(inner.Fields, f => f.Name == "nestedField");
+        Assert.DoesNotContain(inner.Fields, f => f.Name == "outerField");
+    }
+
+    [Fact]
+    public void NestedType_NotCollectedAsFieldOfOuter()
+    {
+        var src = @"
+public class Outer
+{
+    public class Inner { }
+    private int x;
+}";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        var outer = Assert.Single(sf.Classes, c => c.Name == "Outer");
+        Assert.DoesNotContain(outer.Fields, f => f.Name == "Inner");
+        Assert.Single(outer.Fields);
+        Assert.Equal("x", outer.Fields[0].Name);
+    }
+
+    [Fact]
+    public void AllMethods_IncludesNestedClassMethods()
+    {
+        var src = @"
+public class Outer
+{
+    public void OuterMethod() { }
+    public class Inner
+    {
+        public void NestedMethod() { }
+    }
+}";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        Assert.Equal(2, sf.AllMethods.Count);
+        Assert.Contains(sf.AllMethods, m => m.Name == "OuterMethod");
+        Assert.Contains(sf.AllMethods, m => m.Name == "NestedMethod");
+    }
+
+    [Fact]
+    public void ParsesDeeplyNestedClass()
+    {
+        var src = @"
+public class Outer
+{
+    public class Middle
+    {
+        public class Inner { }
+    }
+}";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        Assert.Equal(3, sf.Classes.Count);
+        Assert.Contains(sf.Classes, c => c.Name == "Outer");
+        Assert.Contains(sf.Classes, c => c.Name == "Middle");
+        Assert.Contains(sf.Classes, c => c.Name == "Inner");
+    }
 }

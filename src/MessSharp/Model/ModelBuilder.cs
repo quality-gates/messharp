@@ -48,33 +48,19 @@ public static class ModelBuilder
             switch (node)
             {
                 case InterfaceDeclarationSyntax iface:
-                    if (!IsNested(iface))
-                        file.Interfaces.Add(BuildInterface(file, iface, nsName));
+                    file.Interfaces.Add(BuildInterface(file, iface, nsName));
                     break;
                 case TypeDeclarationSyntax type
                     when type is ClassDeclarationSyntax
                       || type is StructDeclarationSyntax
                       || type is RecordDeclarationSyntax:
-                    if (!IsNested(type))
-                        file.Classes.Add(BuildClass(file, type, nsName));
+                    file.Classes.Add(BuildClass(file, type, nsName));
                     break;
             }
         }
 
         foreach (var cls in file.Classes)
             file.AllMethods.AddRange(cls.Methods);
-    }
-
-    private static bool IsNested(Microsoft.CodeAnalysis.SyntaxNode node)
-    {
-        var parent = node.Parent;
-        while (parent != null)
-        {
-            if (parent is TypeDeclarationSyntax or InterfaceDeclarationSyntax)
-                return true;
-            parent = parent.Parent;
-        }
-        return false;
     }
 
     private static ClassModel BuildClass(SourceFile file, TypeDeclarationSyntax node, string ns)
