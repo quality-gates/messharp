@@ -222,6 +222,42 @@ class Foo
     }
 
     [Fact]
+    public void ShortVariable_DeclarationPattern_ReportsViolation()
+    {
+        var src = @"
+class C
+{
+    public void M()
+    {
+        if (new object() is int x) { }
+    }
+}";
+        var rule = MakeRule<ShortVariableRule>("ShortVariable",
+            "Avoid variables with short names like {0}. Configured minimum length is {1}.");
+        var violations = Run(src, rule);
+        MustHave(violations, "ShortVariable");
+        Assert.Contains(violations, v => v.Rule.Name == "ShortVariable"
+            && v.Description.Contains("x"));
+    }
+
+    [Fact]
+    public void ShortVariable_DeclarationPatternDiscard_NoViolation()
+    {
+        var src = @"
+class C
+{
+    public void M()
+    {
+        if (new object() is int _) { }
+    }
+}";
+        var rule = MakeRule<ShortVariableRule>("ShortVariable",
+            "Avoid variables with short names like {0}. Configured minimum length is {1}.");
+        var violations = Run(src, rule);
+        MustNotHave(violations, "ShortVariable");
+    }
+
+    [Fact]
     public void ShortVariable_ForLoopCounter_NoViolation()
     {
         var src = @"

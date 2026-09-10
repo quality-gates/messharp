@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Include variables declared by direct C# declaration patterns in unused and naming rule analysis (#73).
 - Report private fields that are only written by plain assignments as unused (#72).
 - Assign each violation's package from the namespace of the declaring type, so files with multiple namespaces no longer attribute later types to the first namespace (#71).
 - Analyze nested class, struct, record, and interface declarations instead of omitting them from the model (#70).

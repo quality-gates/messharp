@@ -407,6 +407,37 @@ public class Foo
     }
 
     [Fact]
+    public void CamelCaseVariableName_DeclarationPattern_Fires()
+    {
+        var src = @"
+class C
+{
+    public void M()
+    {
+        if (new object() is string bad_name) { }
+    }
+}";
+        var vs = Analyze(src);
+        Assert.Contains(vs, v => v.Rule.Name == "CamelCaseVariableName"
+            && v.Description.Contains("bad_name"));
+    }
+
+    [Fact]
+    public void CamelCaseVariableName_DeclarationPatternDiscard_NoFire()
+    {
+        var src = @"
+class C
+{
+    public void M()
+    {
+        if (new object() is int _) { }
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "CamelCaseVariableName");
+    }
+
+    [Fact]
     public void CamelCaseVariableName_CamelCase_NoFire()
     {
         var src = @"
