@@ -49,11 +49,26 @@ public sealed class Runner : IRunner
                 continue;
             }
 
+            if (TryRecordSyntaxErrors(sf, report)) continue;
+
             var violations = Engine.Analyze(sf, opts.RuleSets, opts.Strict);
             report.Violations.AddRange(violations);
         }
 
         RuleContext.SortViolations(report.Violations);
         return report;
+    }
+
+    /// <summary>
+    /// Surfaces the parser's recoverable syntax diagnostics as processing errors.
+    /// Returns true when the file is syntactically invalid and must not be analyzed:
+    /// its partial tree would only yield spurious violations.
+    /// </summary>
+    private static bool TryRecordSyntaxErrors(SourceFile sf, Report.Report report)
+    {
+        var messages = sf.SyntaxErrorMessages;
+        foreach (var message in messages)
+            report.Errors.Add(new ProcessingError { File = sf.Path, Message = message });
+        return messages.Count > 0;
     }
 }

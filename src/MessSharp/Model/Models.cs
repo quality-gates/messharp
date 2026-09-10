@@ -17,6 +17,16 @@ public sealed class SourceFile
     public List<InterfaceModel> Interfaces { get; init; } = new();
     /// <summary>All methods across all classes, in source order.</summary>
     public List<MethodModel> AllMethods { get; init; } = new();
+
+    /// <summary>
+    /// Recoverable syntax errors reported by the parser, each formatted as
+    /// "CSxxxx: message on line N". Empty for syntactically valid files.
+    /// </summary>
+    public IReadOnlyList<string> SyntaxErrorMessages => Tree
+        .GetDiagnostics()
+        .Where(d => d.Severity == DiagnosticSeverity.Error)
+        .Select(d => $"{d.Id}: {d.GetMessage()} on line {d.Location.GetLineSpan().StartLinePosition.Line + 1}")
+        .ToList();
 }
 
 public sealed class ClassModel
