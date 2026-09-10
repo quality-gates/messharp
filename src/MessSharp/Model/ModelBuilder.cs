@@ -122,6 +122,7 @@ public static class ModelBuilder
             EndLine = span.EndLinePosition.Line + 1,
             Exported = ModelBuilderHelpers.IsExported(node.Modifiers),
             IsPrivate = ModelBuilderHelpers.IsPrivate(node.Modifiers),
+            IsExplicitInterfaceImplementation = node.ExplicitInterfaceSpecifier is not null,
             Parameters = ModelBuilderHelpers.BuildParameters(node.ParameterList),
             ReturnType = node.ReturnType.ToString(),
             Class = cls,

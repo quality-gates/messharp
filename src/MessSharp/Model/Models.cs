@@ -68,6 +68,8 @@ public sealed class MethodModel
     public bool Exported { get; init; }
     /// <summary>Declared private, including the implicit class-member default.</summary>
     public bool IsPrivate { get; init; }
+    /// <summary>Implemented through an explicit interface member declaration.</summary>
+    public bool IsExplicitInterfaceImplementation { get; init; }
     public List<ParameterModel> Parameters { get; init; } = new();
     public string ReturnType { get; init; } = "";
     /// <summary>Owning class, or null for interface methods.</summary>
