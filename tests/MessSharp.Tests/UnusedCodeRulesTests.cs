@@ -247,6 +247,78 @@ public class Outer
         Assert.Equal("Inner", v.Class);
     }
 
+    // ─── shadowing (issue #90) ───────────────────────────────────────────────
+
+    [Fact]
+    public void UnusedPrivateField_ParameterShadowing_Fires()
+    {
+        var src = @"
+public class FieldShadowing
+{
+    private int value;
+    public void Use(int value)
+    {
+        System.Console.WriteLine(value);
+    }
+}";
+        var vs = Analyze(src);
+        var v = Assert.Single(vs.Where(v => v.Rule.Name == "UnusedPrivateField"));
+        Assert.Contains("value", v.Description);
+    }
+
+    [Fact]
+    public void UnusedPrivateField_LocalShadowing_Fires()
+    {
+        var src = @"
+public class FieldShadowing
+{
+    private int value;
+    public void Use()
+    {
+        int value = 5;
+        System.Console.WriteLine(value);
+    }
+}";
+        var vs = Analyze(src);
+        var v = Assert.Single(vs.Where(v => v.Rule.Name == "UnusedPrivateField"));
+        Assert.Contains("value", v.Description);
+    }
+
+    [Fact]
+    public void UnusedPrivateField_OtherInstanceAccess_NoFire()
+    {
+        // Reading a private field through another instance of the same class
+        // is legal C# and must still count as a use.
+        var src = @"
+public class FieldShadowing
+{
+    private int value;
+    public int ReadOther(FieldShadowing other)
+    {
+        return other.value;
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedPrivateField");
+    }
+
+    [Fact]
+    public void UnusedPrivateMethod_ParameterShadowing_Fires()
+    {
+        var src = @"
+public class MethodShadowing
+{
+    private void Helper() {}
+    public void Use(int Helper)
+    {
+        System.Console.WriteLine(Helper);
+    }
+}";
+        var vs = Analyze(src);
+        var v = Assert.Single(vs.Where(v => v.Rule.Name == "UnusedPrivateMethod"));
+        Assert.Contains("Helper", v.Description);
+    }
+
     // ─── UnusedLocalVariable ────────────────────────────────────────────────
 
     [Fact]
