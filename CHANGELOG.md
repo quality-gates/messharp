@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Apply `--suffixes`, `--exclude`, and `--ignore-tests` filters to explicit file inputs as well as files discovered through directory walks (#69).
+
 ## [0.2.10] - 2026-09-09
 
 ### Fixed
