@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.11] - 2026-09-10
+
 ### Fixed
 
 - Report the parser's recoverable syntax diagnostics as processing errors, so syntactically invalid files are listed as errors (in every renderer that shows errors) and drive exit code 1 instead of being silently reported as clean (#75).
