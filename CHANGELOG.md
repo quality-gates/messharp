@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.12] - 2026-09-10
+
 ### Changed
 
 - Cap development Docker containers (`scripts/dotnet.sh`, `scripts/fuzz.sh`) at `--cpus=2 --memory=2g`, run Stryker.NET with `--concurrency 1` in the pre-push hook, and document the resource-safe mutation and Docker guidance in `AGENTS.md` (#84).
