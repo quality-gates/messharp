@@ -752,6 +752,28 @@ class Foo
     }
 
     [Fact]
+    public void ShortVariable_DeconstructionLocals_AreReportedIncludingNestedNames()
+    {
+        var src = @"
+class Foo
+{
+    public void Bar()
+    {
+        var (x, (y, _)) = (1, (2, 3));
+    }
+}";
+        var rule = MakeRule<ShortVariableRule>("ShortVariable",
+            "Avoid variables with short names like {0}. Configured minimum length is {1}.");
+        var violations = Run(src, rule)
+            .Where(v => v.Rule.Name == "ShortVariable")
+            .ToList();
+
+        Assert.Equal(2, violations.Count);
+        Assert.Contains(violations, v => v.Description.Contains("x") && v.BeginLine == 6);
+        Assert.Contains(violations, v => v.Description.Contains("y") && v.BeginLine == 6);
+    }
+
+    [Fact]
     public void ShortVariable_RegularLocal_Short_IsReported()
     {
         var src = @"
