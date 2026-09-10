@@ -2,6 +2,9 @@
 # Pre-push hook mirroring .github/workflows/mutation.yml (Stryker mutation
 # testing, --break-at 75), scoped to the outgoing diff instead of the whole
 # tree: Stryker's --since limits mutants to files changed since origin/main.
+# Unlike CI it also runs with --concurrency 1: local mutation shares the
+# host with other jobs (see "Resource-safe mutation and Docker runs" in
+# AGENTS.md).
 #
 # CI only mutates src/MessSharp/Metrics/**, so when the diff against
 # origin/main touches nothing under that path there are no mutants to run
