@@ -49,7 +49,7 @@ public static class Engine
         if (rule is IMethodRule mr)
             ApplyMethodRule(ctx, mr, file);
 
-        if (rule is IFunctionRule fnr)
+        if (rule is IFunctionRule)
         {
             // C# has no free functions at the class level.
             // IFunctionRule exists for parity but rarely fires.

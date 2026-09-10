@@ -267,6 +267,53 @@ public class Foo
     }
 
     [Fact]
+    public void UnusedLocalVariable_DeclarationPattern_Fires()
+    {
+        var src = @"
+class C
+{
+    public void M()
+    {
+        if (new object() is int unused) { }
+    }
+}";
+        var vs = Analyze(src);
+        Assert.Contains(vs, v => v.Rule.Name == "UnusedLocalVariable"
+            && v.BeginLine == 6
+            && v.Description.Contains("unused"));
+    }
+
+    [Fact]
+    public void UnusedLocalVariable_ReadDeclarationPattern_NoFire()
+    {
+        var src = @"
+class C
+{
+    public void M()
+    {
+        if (new object() is int value) { _ = value; }
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedLocalVariable");
+    }
+
+    [Fact]
+    public void UnusedLocalVariable_DeclarationPatternDiscard_NoFire()
+    {
+        var src = @"
+class C
+{
+    public void M()
+    {
+        if (new object() is int _) { }
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedLocalVariable");
+    }
+
+    [Fact]
     public void UnusedLocalVariable_UsedLocal_NoFire()
     {
         var src = @"

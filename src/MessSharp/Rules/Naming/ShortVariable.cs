@@ -1,5 +1,6 @@
 using MessSharp.Model;
 using MessSharp.Rule;
+using MessSharp.Rules;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -52,24 +53,32 @@ public sealed class ShortVariableRule : BaseRule, IClassRule, IMethodRule
             StringComparer.Ordinal);
 
     /// <summary>
-    /// Walks a method body and yields (name, line, isLoop) for every local
-    /// variable declaration. isLoop = true when the declarator is the
-    /// initializer of a for-statement (phpmd skips those).
+    /// Walks a method body and yields (name, line, isLoop) for local declaration
+    /// statements and direct <c>is</c> declaration patterns. isLoop = true when
+    /// the declarator is the initializer of a for-statement (phpmd skips those).
     /// </summary>
     internal static IEnumerable<(string Name, int Line, bool IsLoop)> CollectLocals(
         Microsoft.CodeAnalysis.SyntaxNode body)
     {
         foreach (var node in body.DescendantNodes())
         {
-            if (node is not LocalDeclarationStatementSyntax local)
-                continue;
-
-            bool isForInit = local.Parent is ForStatementSyntax;
-            foreach (var v in local.Declaration.Variables)
+            if (node is LocalDeclarationStatementSyntax local)
             {
-                var span = v.SyntaxTree.GetLineSpan(v.Span);
-                int line = span.StartLinePosition.Line + 1;
-                yield return (v.Identifier.Text, line, isForInit);
+                bool isForInit = local.Parent is ForStatementSyntax;
+                foreach (var v in local.Declaration.Variables)
+                {
+                    var span = v.SyntaxTree.GetLineSpan(v.Span);
+                    int line = span.StartLinePosition.Line + 1;
+                    yield return (v.Identifier.Text, line, isForInit);
+                }
+
+                continue;
+            }
+
+            if (node is DeclarationPatternSyntax pattern)
+            {
+                foreach (var (name, line) in LocalVariableCollector.DeclarationPatternVariables(pattern))
+                    yield return (name, line, false);
             }
         }
     }

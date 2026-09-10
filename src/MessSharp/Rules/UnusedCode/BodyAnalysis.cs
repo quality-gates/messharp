@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using MessSharp.Rules;
 
 namespace MessSharp.Rules.UnusedCode;
 
@@ -90,7 +91,7 @@ internal static class BodyAnalysis
 
                 // out-variable declarations: Method(out var x) / Method(out Type x)
                 case DeclarationExpressionSyntax decl
-                    when decl.Designation is SingleVariableDesignationSyntax svd:
+                    when decl.Designation is SingleVariableDesignationSyntax:
                     // These are write-only declarations; we do NOT add them to reads
                     // The name will appear as a IdentifierNameSyntax in the designation
                     // but is not a real identifier node — nothing to mark.
@@ -121,14 +122,23 @@ internal static class BodyAnalysis
     /// <summary>
     /// Collects declared local variable names from a body node.
     /// Returns (name, line) pairs. Excludes `_` discards.
-    /// Covers: LocalDeclarationStatement, foreach variables, pattern variables,
-    /// out-variable declarations, and range-loop variables.
+    /// Covers: LocalDeclarationStatement, foreach variables, direct `is`
+    /// declaration-pattern variables, out-variable declarations, and
+    /// range-loop variables.
     /// </summary>
     internal static List<(string Name, int Line)> LocalVariables(SyntaxNode body)
     {
         var result = new List<(string, int)>();
         foreach (var node in body.DescendantNodesAndSelf())
+        {
+            if (node is DeclarationPatternSyntax pattern)
+            {
+                result.AddRange(LocalVariableCollector.DeclarationPatternVariables(pattern));
+                continue;
+            }
+
             CollectLocalNode(node, result);
+        }
         return result;
     }
 
@@ -155,7 +165,7 @@ internal static class BodyAnalysis
 
             // foreach (var (k, v) in dict)
             case ForEachVariableStatementSyntax feVar:
-                CollectDesignationNames(feVar.Variable, feVar.SyntaxTree, result);
+                LocalVariableCollector.CollectDeclarationNames(feVar.Variable, feVar.SyntaxTree, result);
                 break;
 
             // out var x in argument lists
@@ -165,38 +175,9 @@ internal static class BodyAnalysis
                     result.Add((outVar.Identifier.Text,
                         decl.SyntaxTree.GetLineSpan(decl.Span).StartLinePosition.Line + 1));
                 break;
+
         }
     }
-
-    private static void CollectDesignationNames(ExpressionSyntax expr, SyntaxTree tree,
-        List<(string, int)> result)
-    {
-        // For deconstruction foreach: var (a, b) in ...
-        if (expr is DeclarationExpressionSyntax decl)
-        {
-            CollectDesignation(decl.Designation, tree, result);
-        }
-    }
-
-    private static void CollectDesignation(VariableDesignationSyntax des, SyntaxTree tree,
-        List<(string, int)> result)
-    {
-        switch (des)
-        {
-            case SingleVariableDesignationSyntax sv:
-                if (sv.Identifier.Text != "_")
-                {
-                    var line = tree.GetLineSpan(sv.Span).StartLinePosition.Line + 1;
-                    result.Add((sv.Identifier.Text, line));
-                }
-                break;
-            case ParenthesizedVariableDesignationSyntax pv:
-                foreach (var child in pv.Variables)
-                    CollectDesignation(child, tree, result);
-                break;
-        }
-    }
-
     /// <summary>
     /// Returns the effective body syntax node for a method. Handles both
     /// block bodies `{ ... }` and expression bodies `=> expr`.
