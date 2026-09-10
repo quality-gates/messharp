@@ -18,7 +18,12 @@ case "$TARGET" in
     ;;
 esac
 
+# Development containers are resource-capped so they do not starve other
+# concurrent jobs on the host (see "Resource-safe mutation and Docker runs"
+# in AGENTS.md). Both options must stay before the image name.
 exec docker run --rm \
+  --cpus=2 \
+  --memory=2g \
   -v "$REPO_ROOT":/src \
   -v messharp-nuget:/root/.nuget \
   -w /src \

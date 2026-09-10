@@ -49,6 +49,16 @@ git config core.hooksPath githooks
 - `githooks/pre-push` runs Stryker mutation testing (`--break-at 75`, via the tool manifest in `.config/dotnet-tools.json`) scoped to the diff against `origin/main` using `--since:origin/main`, and only when the outgoing diff touches `src/MessSharp/Metrics/` (the only path CI mutates).
 - The NuGet vulnerability audit (`security.yml`) depends on external advisory feeds and stays CI-only.
 
+### Resource-safe mutation and Docker runs
+
+Fleet runs many repositories concurrently on an 8-core macOS host. Run Stryker.NET with `--concurrency 1`. Keep mutation limited to Metrics and to the diff against `origin/main`:
+
+```console
+scripts/dotnet.sh stryker --solution MessSharp.sln --project src/MessSharp/MessSharp.csproj --mutate "Metrics/**/*.cs" --since:origin/main --concurrency 1 --break-at 75
+```
+
+Run every development Docker container with `--cpus=2 --memory=2g`. Place both options before the image name. Keep these limits in the `scripts/dotnet.sh` wrapper.
+
 ## Shipping workflow
 
 Follow these steps in order when landing a change:
