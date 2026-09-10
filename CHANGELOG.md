@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Cap development Docker containers at `--cpus=2 --memory=2g` in `scripts/dotnet.sh`, run Stryker.NET with `--concurrency 1` in the pre-push hook, and document the resource-safe mutation and Docker guidance in `AGENTS.md` (#84).
+
 ### Fixed
 
 - Escape reserved characters in GitHub Actions workflow-command file properties so paths with special characters produce valid annotations (#92).
