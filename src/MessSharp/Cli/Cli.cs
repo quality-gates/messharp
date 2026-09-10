@@ -23,6 +23,11 @@ public static class Cli
         var (opts, positionals, err) = CliArgParser.Parse(args);
         if (err != null) { stderr.WriteLine($"error: {err}"); return ExitError; }
         if (positionals.Count < 3) { CliArgParser.PrintUsage(stderr, BuildInfo.Version); return ExitError; }
+        if (positionals.Count > 3)
+        {
+            stderr.WriteLine($"error: unexpected argument: {positionals[3]}");
+            return ExitError;
+        }
 
         opts.Paths = positionals[0];
         opts.Format = positionals[1];
