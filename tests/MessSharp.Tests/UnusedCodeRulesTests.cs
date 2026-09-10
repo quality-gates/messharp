@@ -421,6 +421,60 @@ public class Foo
     // ─── UnusedPrivateMethod ─────────────────────────────────────────────────
 
     [Fact]
+    public void UnusedPrivateMethod_ExplicitInterfaceImplementation_NotChecked()
+    {
+        var src = @"
+public interface IWorker
+{
+    void Run(bool flag);
+}
+
+public class Worker : IWorker
+{
+    void IWorker.Run(bool flag) {}
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedPrivateMethod");
+    }
+
+    [Fact]
+    public void UnusedPrivateMethod_QualifiedExplicitInterfaceImplementation_NotChecked()
+    {
+        var src = @"
+namespace Contracts
+{
+    public interface IWorker
+    {
+        void Run();
+    }
+}
+
+public class Worker : Contracts.IWorker
+{
+    void Contracts.IWorker.Run() {}
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedPrivateMethod");
+    }
+
+    [Fact]
+    public void UnusedPrivateMethod_GenericExplicitInterfaceImplementation_NotChecked()
+    {
+        var src = @"
+public interface IWorker<T>
+{
+    void Run();
+}
+
+public class Worker : IWorker<string>
+{
+    void IWorker<string>.Run() {}
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedPrivateMethod");
+    }
+
+    [Fact]
     public void UnusedPrivateMethod_UnusedMethod_Fires()
     {
         var src = @"
