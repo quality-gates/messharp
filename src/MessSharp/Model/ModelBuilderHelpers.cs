@@ -120,5 +120,14 @@ internal static class ModelBuilderHelpers
 
     internal static bool IsInterfaceMethodPrivate(SyntaxTokenList modifiers) =>
         modifiers.Any(m => m.IsKind(SyntaxKind.PrivateKeyword));
+
+    internal static string EnclosingNamespace(SyntaxNode node)
+    {
+        var names = node.Ancestors()
+            .OfType<BaseNamespaceDeclarationSyntax>()
+            .Select(ns => ns.Name.ToString())
+            .Reverse();
+        return string.Join(".", names);
+    }
 }
 

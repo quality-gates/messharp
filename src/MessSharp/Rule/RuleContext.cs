@@ -12,6 +12,7 @@ public sealed class RuleContext
 
     public SourceFile File { get; }
     public Properties Props { get; }
+    public string CurrentPackage { get; set; }
     private readonly IRule _rule;
 
     public RuleContext(SourceFile file, IRule rule, Properties props, List<Violation> violations)
@@ -20,31 +21,32 @@ public sealed class RuleContext
         _rule = rule;
         Props = props;
         _violations = violations;
+        CurrentPackage = file.Namespace;
     }
 
     public void Report(int beginLine, int endLine, params object[] args) =>
-        AppendViolation(beginLine, endLine, "", "", "", args);
+        AppendViolation(beginLine, endLine, "", "", "", CurrentPackage, args);
 
     public void ReportMethod(MethodModel method, params object[] args) =>
         AppendViolation(method.Line, method.EndLine,
-            method.DeclaringTypeName, method.Name, "", args);
+            method.DeclaringTypeName, method.Name, "", method.Namespace, args);
 
     public void ReportClass(ClassModel cls, params object[] args) =>
-        AppendViolation(cls.Line, cls.EndLine, cls.Name, "", "", args);
+        AppendViolation(cls.Line, cls.EndLine, cls.Name, "", "", cls.Namespace, args);
 
     public void ReportField(ClassModel cls, FieldModel field, params object[] args) =>
         AppendViolation(field.Line, field.EndLine > 0 ? field.EndLine : field.Line,
-            cls.Name, "", "", args);
+            cls.Name, "", "", cls.Namespace, args);
 
     public void ReportField(FieldModel field, params object[] args) =>
         AppendViolation(field.Line, field.EndLine > 0 ? field.EndLine : field.Line,
-            "", "", "", args);
+            "", "", "", CurrentPackage, args);
 
     public void ReportInterface(InterfaceModel iface, params object[] args) =>
-        AppendViolation(iface.Line, iface.EndLine, iface.Name, "", "", args);
+        AppendViolation(iface.Line, iface.EndLine, iface.Name, "", "", iface.Namespace, args);
 
     private void AppendViolation(int beginLine, int endLine,
-        string cls, string method, string function, object[] args)
+        string cls, string method, string function, string package, object[] args)
     {
         _violations.Add(new Violation
         {
@@ -57,7 +59,7 @@ public sealed class RuleContext
             Class = cls,
             Method = method,
             Function = function,
-            Package = File.Namespace,
+            Package = package,
             Priority = _rule.Priority,
             RuleSetName = _rule.SetName,
         });

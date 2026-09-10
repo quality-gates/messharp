@@ -330,4 +330,85 @@ public class Outer
         Assert.Contains(sf.Classes, c => c.Name == "Middle");
         Assert.Contains(sf.Classes, c => c.Name == "Inner");
     }
+
+    [Fact]
+    public void ParsesMultipleNamespaces_EachTypeKeepsItsNamespace()
+    {
+        var src = @"
+namespace First
+{
+    public class FirstType { }
+}
+
+namespace Second
+{
+    public class SecondType { }
+}";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        Assert.Equal("First", sf.Namespace);
+        Assert.Equal("First", Assert.Single(sf.Classes, c => c.Name == "FirstType").Namespace);
+        Assert.Equal("Second", Assert.Single(sf.Classes, c => c.Name == "SecondType").Namespace);
+    }
+
+    [Fact]
+    public void ParsesThreeNamespaces_EachTypeKeepsItsNamespace()
+    {
+        var src = @"
+namespace First { public class FirstType { } }
+namespace Second { public class SecondType { } }
+namespace Third { public class ThirdType { } }";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        Assert.Equal("First", Assert.Single(sf.Classes, c => c.Name == "FirstType").Namespace);
+        Assert.Equal("Second", Assert.Single(sf.Classes, c => c.Name == "SecondType").Namespace);
+        Assert.Equal("Third", Assert.Single(sf.Classes, c => c.Name == "ThirdType").Namespace);
+    }
+
+    [Fact]
+    public void ParsesDottedNamespace_FullyQualifiedName()
+    {
+        var src = @"
+namespace A.B
+{
+    public class C { }
+}";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        Assert.Equal("A.B", sf.Classes[0].Namespace);
+    }
+
+    [Fact]
+    public void ParsesNestedNamespaces_ConcatenatesNames()
+    {
+        var src = @"
+namespace A
+{
+    namespace B
+    {
+        public class C { }
+    }
+}";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        Assert.Equal("A.B", sf.Classes[0].Namespace);
+    }
+
+    [Fact]
+    public void ParsesInterfaceInSecondNamespace()
+    {
+        var src = @"
+namespace First { public interface IFirst { } }
+namespace Second { public interface ISecond { } }";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        Assert.Equal("First", Assert.Single(sf.Interfaces, i => i.Name == "IFirst").Namespace);
+        Assert.Equal("Second", Assert.Single(sf.Interfaces, i => i.Name == "ISecond").Namespace);
+    }
+
+    [Fact]
+    public void ParsesGlobalTypeAndNamespacedType_GlobalHasEmptyNamespace()
+    {
+        var src = @"
+public class GlobalType { }
+namespace First { public class FirstType { } }";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        Assert.Equal("", Assert.Single(sf.Classes, c => c.Name == "GlobalType").Namespace);
+        Assert.Equal("First", Assert.Single(sf.Classes, c => c.Name == "FirstType").Namespace);
+    }
 }

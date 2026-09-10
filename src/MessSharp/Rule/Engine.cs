@@ -31,13 +31,19 @@ public static class Engine
         if (rule is IClassRule cr)
         {
             foreach (var cls in file.Classes)
+            {
+                ctx.CurrentPackage = cls.Namespace;
                 cr.Apply(ctx, cls);
+            }
         }
 
         if (rule is IInterfaceRule ir)
         {
             foreach (var iface in file.Interfaces)
+            {
+                ctx.CurrentPackage = iface.Namespace;
                 ir.Apply(ctx, iface);
+            }
         }
 
         if (rule is IMethodRule mr)
@@ -53,10 +59,14 @@ public static class Engine
     private static void ApplyMethodRule(RuleContext ctx, IMethodRule mr, SourceFile file)
     {
         foreach (var m in file.AllMethods)
+        {
+            ctx.CurrentPackage = m.Namespace;
             mr.Apply(ctx, m);
+        }
 
         foreach (var iface in file.Interfaces)
         {
+            ctx.CurrentPackage = iface.Namespace;
             foreach (var m in iface.Methods)
                 mr.Apply(ctx, m);
         }

@@ -41,20 +41,18 @@ public static class ModelBuilder
 
     private static void BuildArtifacts(SourceFile file, Microsoft.CodeAnalysis.SyntaxNode root)
     {
-        var nsName = file.Namespace;
-
         foreach (var node in root.DescendantNodes())
         {
             switch (node)
             {
                 case InterfaceDeclarationSyntax iface:
-                    file.Interfaces.Add(BuildInterface(file, iface, nsName));
+                    file.Interfaces.Add(BuildInterface(file, iface, ModelBuilderHelpers.EnclosingNamespace(iface)));
                     break;
                 case TypeDeclarationSyntax type
                     when type is ClassDeclarationSyntax
                       || type is StructDeclarationSyntax
                       || type is RecordDeclarationSyntax:
-                    file.Classes.Add(BuildClass(file, type, nsName));
+                    file.Classes.Add(BuildClass(file, type, ModelBuilderHelpers.EnclosingNamespace(type)));
                     break;
             }
         }
