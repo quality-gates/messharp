@@ -1,5 +1,6 @@
 using MessSharp.Model;
 using MessSharp.Rule;
+using MessSharp.Rules;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -99,8 +100,12 @@ public sealed class GlobalVariableRule : BaseRule, IClassRule
     /// </summary>
     private static string? ExtractSimpleOrQualifiedName(ExpressionSyntax expr, string className)
     {
+        // A bare identifier may be bound by a local or parameter that shadows
+        // the static field; that is a mutation of the local, not the field.
         if (expr is IdentifierNameSyntax id)
-            return id.Identifier.Text;
+            return LocalShadowing.IsShadowedByLocal(id, id.Identifier.Text)
+                ? null
+                : id.Identifier.Text;
 
         if (expr is MemberAccessExpressionSyntax ma &&
             ma.Expression is IdentifierNameSyntax cls2 &&

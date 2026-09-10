@@ -649,6 +649,73 @@ public class Registry {
     }
 
     [Fact]
+    public void GlobalVariable_ShadowingLocal_NotFlagged()
+    {
+        var src = @"
+public class ShadowedGlobal {
+    public static int state;
+
+    public void Set() {
+        int state = 0;
+        state = 1;
+    }
+}";
+        var vs = Analyze(src, MakeGlobalVarRule());
+        MustNotHave(vs, "GlobalVariable");
+    }
+
+    [Fact]
+    public void GlobalVariable_ShadowingParameter_NotFlagged()
+    {
+        var src = @"
+public class ShadowedParam {
+    public static int state;
+
+    public void Set(int state) {
+        state++;
+    }
+}";
+        var vs = Analyze(src, MakeGlobalVarRule());
+        MustNotHave(vs, "GlobalVariable");
+    }
+
+    [Fact]
+    public void GlobalVariable_ShadowedElsewhere_StillFlaggedWhereMutated()
+    {
+        var src = @"
+public class MixedGlobal {
+    public static int state;
+
+    public void Local() {
+        int state = 0;
+        state = 1;
+    }
+
+    public void Real() {
+        state = 2;
+    }
+}";
+        var vs = Analyze(src, MakeGlobalVarRule());
+        MustHave(vs, "GlobalVariable");
+    }
+
+    [Fact]
+    public void GlobalVariable_QualifiedMutationDespiteLocal_Flagged()
+    {
+        var src = @"
+public class QualifiedGlobal {
+    public static int state;
+
+    public void Set() {
+        int state = 0;
+        QualifiedGlobal.state = state;
+    }
+}";
+        var vs = Analyze(src, MakeGlobalVarRule());
+        MustHave(vs, "GlobalVariable");
+    }
+
+    [Fact]
     public void GlobalVariable_InstanceField_NotFlagged()
     {
         var src = @"
