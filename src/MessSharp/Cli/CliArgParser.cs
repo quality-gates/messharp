@@ -21,6 +21,26 @@ internal static class CliArgParser
             ["--ignore-tests"] = o => o.IgnoreTests = true,
         };
 
+    // String-valued options: flag name -> setter
+    private static readonly Dictionary<string, Action<CliOptions, string>> StringFlags =
+        new(StringComparer.Ordinal)
+        {
+            ["--reportfile"] = (o, v) => o.ReportFile = v,
+            ["--suffixes"] = (o, v) => o.Suffixes = v,
+            ["--exclude"] = (o, v) => o.Filters.Exclude = v,
+            ["--enable"] = (o, v) => o.Filters.Only = v,
+            ["--only"] = (o, v) => o.Filters.Only = v,
+            ["--disable"] = (o, v) => o.Filters.Disable = v,
+        };
+
+    // Integer-valued options: flag name -> setter
+    private static readonly Dictionary<string, Action<CliOptions, int>> IntFlags =
+        new(StringComparer.Ordinal)
+        {
+            ["--minimumpriority"] = (o, v) => o.MinPriority = v,
+            ["--maximumpriority"] = (o, v) => o.MaxPriority = v,
+        };
+
     internal static (CliOptions opts, List<string> positionals, string? error) Parse(string[] args)
     {
         var opts = new CliOptions { MaxPriority = 1 };
@@ -40,60 +60,53 @@ internal static class CliArgParser
         var a = args[i];
 
         if (BoolFlags.TryGetValue(a, out var setter)) { setter(opts); return null; }
-        if (TryParseValueFlag(a, args, ref i, opts, out var err)) return err;
+        if (StringFlags.TryGetValue(a, out var setString)) return ParseStringFlag(a, args, ref i, opts, setString);
+        if (IntFlags.TryGetValue(a, out var setInt)) return ParseIntFlag(a, args, ref i, opts, setInt);
         if (a.StartsWith("--")) return $"unknown option: {a}";
 
         positionals.Add(a);
         return null;
     }
 
-    private static bool TryParseValueFlag(string a, string[] args, ref int i, CliOptions opts, out string? err)
+    private static string? ParseStringFlag(string flag, string[] args, ref int i,
+        CliOptions opts, Action<CliOptions, string> set)
     {
-        err = null;
-        if (TryParseStringFlag(a, args, ref i, opts)) return true;
-        return TryParseIntFlag(a, args, ref i, opts, out err);
+        if (!TryTakeValue(args, ref i, out var value)) return MissingValue(flag);
+        set(opts, value);
+        return null;
     }
 
-    private static bool TryParseStringFlag(string a, string[] args, ref int i, CliOptions opts)
+    private static string? ParseIntFlag(string flag, string[] args, ref int i,
+        CliOptions opts, Action<CliOptions, int> set)
     {
-        switch (a)
+        if (!TryTakeValue(args, ref i, out var value)) return MissingValue(flag);
+        if (!int.TryParse(value, out var parsed)) return $"{flag} requires an integer";
+        set(opts, parsed);
+        return null;
+    }
+
+    private static string MissingValue(string flag) => $"{flag} requires a value";
+
+    /// <summary>
+    /// Consumes the argument after the current option as its value. A known flag
+    /// (or end of input) is never consumed as a value, so a missing value is reported
+    /// rather than silently swallowing the next option.
+    /// </summary>
+    private static bool TryTakeValue(string[] args, ref int i, out string value)
+    {
+        int next = i + 1;
+        if (next >= args.Length || IsKnownFlag(args[next]))
         {
-            case "--reportfile": i++; opts.ReportFile = NextArg(args, i); return true;
-            case "--suffixes": i++; opts.Suffixes = NextArg(args, i); return true;
-            case "--exclude": i++; opts.Filters.Exclude = NextArg(args, i); return true;
-            case "--enable":
-            case "--only": i++; opts.Filters.Only = NextArg(args, i); return true;
-            case "--disable": i++; opts.Filters.Disable = NextArg(args, i); return true;
-            default: return false;
+            value = "";
+            return false;
         }
+        i = next;
+        value = args[next];
+        return true;
     }
 
-    private static bool TryParseIntFlag(string a, string[] args, ref int i, CliOptions opts, out string? err)
-    {
-        err = null;
-        switch (a)
-        {
-            case "--minimumpriority":
-                if (!TryParseInt(a, args, ref i, out var min, out err)) return true;
-                opts.MinPriority = min; return true;
-            case "--maximumpriority":
-                if (!TryParseInt(a, args, ref i, out var max, out err)) return true;
-                opts.MaxPriority = max; return true;
-            default:
-                return false;
-        }
-    }
-
-    private static bool TryParseInt(string flag, string[] args, ref int i, out int value, out string? err)
-    {
-        i++;
-        if (int.TryParse(NextArg(args, i), out value)) { err = null; return true; }
-        err = $"{flag} requires an integer";
-        return false;
-    }
-
-    internal static string NextArg(string[] args, int i) =>
-        i < args.Length ? args[i] : "";
+    private static bool IsKnownFlag(string a) =>
+        BoolFlags.ContainsKey(a) || StringFlags.ContainsKey(a) || IntFlags.ContainsKey(a);
 
     internal static List<string> SplitList(string? s)
     {

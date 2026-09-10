@@ -293,6 +293,63 @@ public class CliTests
         }
     }
 
+    [Theory]
+    [InlineData("--reportfile")]
+    [InlineData("--suffixes")]
+    [InlineData("--exclude")]
+    [InlineData("--enable")]
+    [InlineData("--only")]
+    [InlineData("--disable")]
+    [InlineData("--minimumpriority")]
+    [InlineData("--maximumpriority")]
+    public void TrailingValueOption_WithoutValue_ReturnsError(string flag)
+    {
+        var (code, stdout, stderr) = RunCli("somepath", "text", "csharp", flag);
+        Assert.Equal(1, code);
+        Assert.Contains(flag, stderr);
+        Assert.Equal("", stdout);
+    }
+
+    [Theory]
+    [InlineData("--reportfile")]
+    [InlineData("--suffixes")]
+    [InlineData("--exclude")]
+    [InlineData("--only")]
+    [InlineData("--disable")]
+    public void ValueOption_FollowedByAnotherOption_ReturnsError(string flag)
+    {
+        var (code, _, stderr) = RunCli("somepath", "text", "csharp", flag, "--verbose");
+        Assert.Equal(1, code);
+        Assert.Contains(flag, stderr);
+    }
+
+    [Fact]
+    public void ExtraPositional_ReturnsError()
+    {
+        var (code, stdout, stderr) = RunCli("somepath", "text", "csharp", "unexpected");
+        Assert.Equal(1, code);
+        Assert.Contains("unexpected", stderr);
+        Assert.Equal("", stdout);
+    }
+
+    [Fact]
+    public void ValueOption_WithValue_IsAccepted()
+    {
+        var dir = Directory.CreateTempSubdirectory("messharp-cli");
+        try
+        {
+            File.WriteAllText(Path.Combine(dir.FullName, "Clean.cs"), "class C { }");
+            var (code, _, stderr) = RunCli(dir.FullName, "text", "codesize",
+                "--suffixes", "cs", "--minimumpriority", "1", "--exclude", "nothing");
+            Assert.Equal(0, code);
+            Assert.Equal("", stderr);
+        }
+        finally
+        {
+            Directory.Delete(dir.FullName, recursive: true);
+        }
+    }
+
     private class DummyRule : MessSharp.Rule.BaseRule
     {
         public DummyRule(string name)
