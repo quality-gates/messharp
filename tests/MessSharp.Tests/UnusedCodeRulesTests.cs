@@ -111,6 +111,58 @@ public class Foo
     }
 
     [Fact]
+    public void UnusedPrivateField_WriteOnlyAssignment_Fires()
+    {
+        var src = @"
+class C
+{
+    private int x;
+    public void Set() { x = 1; }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "UnusedPrivateField");
+    }
+
+    [Fact]
+    public void UnusedPrivateField_WriteOnlyMemberAssignment_Fires()
+    {
+        var src = @"
+class C
+{
+    private int x;
+    public void Set() { this.x = 1; }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "UnusedPrivateField");
+    }
+
+    [Fact]
+    public void UnusedPrivateField_CompoundAssignmentReadsField_NoFire()
+    {
+        var src = @"
+class C
+{
+    private int x;
+    public void Increment() { x += 1; }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedPrivateField");
+    }
+
+    [Fact]
+    public void UnusedPrivateField_ObjectInitializerKeyCountsAsUse_NoFire()
+    {
+        var src = @"
+class C
+{
+    private int x;
+    public C Create() { return new C { x = 1 }; }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedPrivateField");
+    }
+
+    [Fact]
     public void UnusedPrivateField_UsedViaMemberAccess_NoFire()
     {
         // this._x counts as a use

@@ -1,6 +1,7 @@
 using MessSharp.Model;
 using MessSharp.Rule;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules.UnusedCode;
@@ -28,7 +29,8 @@ public sealed class UnusedPrivateFieldRule : BaseRule, IClassRule
     /// Collects every identifier that appears as: a member-access selector
     /// (this.Name or x.Name), an object-initializer key, or a nameof()
     /// argument — all of which count as "read" for field-usage purposes.
-    /// Also collects bare identifier reads (covers access without `this.`).
+    /// Also collects bare identifier reads (covers access without `this.`),
+    /// except when the identifier is only a plain-assignment target.
     /// </summary>
     internal static HashSet<string> CollectUsedNames(SourceFile file)
     {
@@ -40,22 +42,62 @@ public sealed class UnusedPrivateFieldRule : BaseRule, IClassRule
 
     private static void CollectUsedNode(SyntaxNode node, HashSet<string> used)
     {
-        if (node is MemberAccessExpressionSyntax mae)
-        {
-            used.Add(mae.Name.Identifier.Text);
-            return;
-        }
-
-        if (node is AssignmentExpressionSyntax aes && aes.Parent is InitializerExpressionSyntax)
-        {
-            if (aes.Left is IdentifierNameSyntax lhs) used.Add(lhs.Identifier.Text);
-            return;
-        }
-
+        if (TryCollectMemberAccess(node, used)) return;
+        if (TryCollectInitializerAssignment(node, used)) return;
         if (TryCollectNameof(node, used)) return;
+        CollectBareIdentifier(node, used);
+    }
 
-        if (node is IdentifierNameSyntax id && !IsDeclarationContext(id))
-            used.Add(id.Identifier.Text);
+    private static bool TryCollectMemberAccess(SyntaxNode node, HashSet<string> used)
+    {
+        if (node is not MemberAccessExpressionSyntax mae) return false;
+
+        if (!IsWriteOnlyAssignmentTarget(mae))
+            used.Add(mae.Name.Identifier.Text);
+        return true;
+    }
+
+    private static bool TryCollectInitializerAssignment(SyntaxNode node, HashSet<string> used)
+    {
+        if (node is not AssignmentExpressionSyntax aes
+            || aes.Parent is not InitializerExpressionSyntax)
+            return false;
+
+        if (aes.Left is IdentifierNameSyntax lhs)
+            used.Add(lhs.Identifier.Text);
+        return true;
+    }
+
+    private static void CollectBareIdentifier(SyntaxNode node, HashSet<string> used)
+    {
+        if (node is not IdentifierNameSyntax id) return;
+        if (IsDeclarationContext(id)) return;
+        if (IsWriteOnlyAssignmentTarget(id)) return;
+        used.Add(id.Identifier.Text);
+    }
+
+    private static bool IsWriteOnlyAssignmentTarget(SyntaxNode node)
+    {
+        if (node.Parent is AssignmentExpressionSyntax assignment)
+            return IsSimpleAssignmentTarget(node, assignment);
+
+        if (node.Parent is MemberAccessExpressionSyntax member
+            && ReferenceEquals(member.Name, node)
+            && member.Parent is AssignmentExpressionSyntax memberAssignment)
+        {
+            return IsSimpleAssignmentTarget(member, memberAssignment);
+        }
+
+        return false;
+    }
+
+    private static bool IsSimpleAssignmentTarget(
+        SyntaxNode target,
+        AssignmentExpressionSyntax assignment)
+    {
+        return assignment.IsKind(SyntaxKind.SimpleAssignmentExpression)
+            && assignment.Parent is not InitializerExpressionSyntax
+            && ReferenceEquals(assignment.Left, target);
     }
 
     private static bool TryCollectNameof(SyntaxNode node, HashSet<string> used)
