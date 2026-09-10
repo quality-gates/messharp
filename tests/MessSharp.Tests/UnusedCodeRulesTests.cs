@@ -176,6 +176,25 @@ public class Foo
         Assert.Equal(4, v.BeginLine);
     }
 
+    [Fact]
+    public void UnusedPrivateField_NestedClass_Fires()
+    {
+        var src = @"
+public class Outer
+{
+    public class Inner
+    {
+        private int _dead;
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "UnusedPrivateField");
+        var v = Assert.Single(vs.Where(v => v.Rule.Name == "UnusedPrivateField"));
+        Assert.Contains("_dead", v.Description);
+        Assert.Equal(6, v.BeginLine);
+        Assert.Equal("Inner", v.Class);
+    }
+
     // ─── UnusedLocalVariable ────────────────────────────────────────────────
 
     [Fact]
@@ -366,6 +385,25 @@ public class Foo
 }";
         var vs = Analyze(src);
         MustNotHave(vs, "UnusedPrivateMethod");
+    }
+
+    [Fact]
+    public void UnusedPrivateMethod_NestedClass_Fires()
+    {
+        var src = @"
+public class Outer
+{
+    public class Inner
+    {
+        private void Dead() {}
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "UnusedPrivateMethod");
+        var v = Assert.Single(vs.Where(v => v.Rule.Name == "UnusedPrivateMethod"));
+        Assert.Contains("Dead", v.Description);
+        Assert.Equal(6, v.BeginLine);
+        Assert.Equal("Inner", v.Class);
     }
 
     // ─── UnusedFormalParameter ───────────────────────────────────────────────
