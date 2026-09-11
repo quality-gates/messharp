@@ -514,6 +514,54 @@ public class Simple {
         MustNotHave(vs, "CouplingBetweenObjects");
     }
 
+    private static int CboValue(string source)
+    {
+        var vs = Analyze(source, MakeCboRule(1));
+        var v = Assert.Single(vs, x => x.Rule.Name == "CouplingBetweenObjects");
+        return Convert.ToInt32(v.Args[1]);
+    }
+
+    [Fact]
+    public void CouplingBetweenObjects_PrimitiveArrayField_NotCounted()
+    {
+        var src = @"
+public class Hub {
+    private A _a; private B _b; private C _c; private D _d;
+    private E _e; private F _f; private G _g; private H _h;
+    private I _i; private J _j; private K _k; private L _l;
+    private int[] _values;
+}";
+        Assert.Equal(12, CboValue(src));
+        MustNotHave(Analyze(src, MakeCboRule(13)), "CouplingBetweenObjects");
+    }
+
+    [Fact]
+    public void CouplingBetweenObjects_BuiltinArraysEverywhere_NotCounted()
+    {
+        var src = @"
+public class Simple {
+    private int[,] _grid;
+    private string[][] _jagged;
+    private int?[] _maybe;
+    public byte[] Read(char[] buffer, double[,,] cube) { var x = new long[3]; return null; }
+    private Service _s;
+}";
+        Assert.Equal(1, CboValue(src));
+    }
+
+    [Fact]
+    public void CouplingBetweenObjects_UserTypeArrays_CountElementTypeOnce()
+    {
+        var src = @"
+public class Simple {
+    private Widget[] _widgets;
+    private Widget[,] _grid;
+    private Widget? _maybe;
+    public Gadget[] Make(Widget w) => new Gadget[1];
+}";
+        Assert.Equal(2, CboValue(src));
+    }
+
     [Fact]
     public void CouplingBetweenObjects_ExpressionBodiedMethod_ObjectCreationsCounted()
     {

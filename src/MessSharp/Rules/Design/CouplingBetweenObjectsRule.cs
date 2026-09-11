@@ -69,8 +69,12 @@ public sealed class CouplingBetweenObjectsRule : BaseRule, IClassRule
         var ltIdx = t.IndexOf('<');
         if (ltIdx >= 0) t = t[..ltIdx];
 
-        // Strip nullable suffix ?
-        t = t.TrimEnd('?');
+        // Strip array ranks int[], int[,], int[][] -> int
+        var bracketIdx = t.IndexOf('[');
+        if (bracketIdx >= 0) t = t[..bracketIdx];
+
+        // Strip nullable and pointer suffixes int?, int* -> int
+        t = t.TrimEnd('?', '*');
 
         // Take last part of qualified name A.B -> B
         var dotIdx = t.LastIndexOf('.');
