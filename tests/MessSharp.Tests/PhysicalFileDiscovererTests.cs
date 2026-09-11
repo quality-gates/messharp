@@ -177,6 +177,195 @@ public class PhysicalFileDiscovererTests
             Directory.Delete(directory.FullName, recursive: true);
         }
     }
+
+    [Fact]
+    public void Discover_CaseDifferentiatedFiles_BothDiscoveredOnCaseSensitiveFilesystem()
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-case-");
+        try
+        {
+            var fileUpper = Path.Combine(directory.FullName, "Foo.cs");
+            var fileLower = Path.Combine(directory.FullName, "foo.cs");
+            File.WriteAllText(fileUpper, "class Aa { }");
+            File.WriteAllText(fileLower, "class Bb { }");
+
+            // Verify the filesystem is case-sensitive:
+            if (File.ReadAllText(fileUpper) != "class Aa { }")
+            {
+                // Filesystem is case-insensitive; skip assertion for this environment
+                return;
+            }
+
+            var discoverer = new PhysicalFileDiscoverer();
+            var discovered = discoverer.Discover(
+                new[] { directory.FullName },
+                new[] { ".cs" },
+                Array.Empty<string>(),
+                ignoreTests: false);
+
+            Assert.Equal(2, discovered.Count);
+            Assert.Contains(fileUpper, discovered);
+            Assert.Contains(fileLower, discovered);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Discover_ExplicitCaseDifferentiatedFiles_BothDiscoveredOnCaseSensitiveFilesystem()
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-case-explicit-");
+        try
+        {
+            var fileUpper = Path.Combine(directory.FullName, "Foo.cs");
+            var fileLower = Path.Combine(directory.FullName, "foo.cs");
+            File.WriteAllText(fileUpper, "class Aa { }");
+            File.WriteAllText(fileLower, "class Bb { }");
+
+            if (File.ReadAllText(fileUpper) != "class Aa { }")
+            {
+                return;
+            }
+
+            var discoverer = new PhysicalFileDiscoverer();
+            var discovered = discoverer.Discover(
+                new[] { fileUpper, fileLower },
+                new[] { ".cs" },
+                Array.Empty<string>(),
+                ignoreTests: false);
+
+            Assert.Equal(2, discovered.Count);
+            Assert.Contains(fileUpper, discovered);
+            Assert.Contains(fileLower, discovered);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Discover_DuplicateExplicitPaths_Deduplicated()
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-dedupe-");
+        try
+        {
+            var file = Path.Combine(directory.FullName, "File.cs");
+            File.WriteAllText(file, "class File { }");
+
+            var discoverer = new PhysicalFileDiscoverer();
+            var discovered = discoverer.Discover(
+                new[] { file, file, Path.Combine(directory.FullName, ".", "File.cs") },
+                new[] { ".cs" },
+                Array.Empty<string>(),
+                ignoreTests: false);
+
+            Assert.Single(discovered);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Discover_CaseInsensitiveComparer_DedupesCaseDifferences()
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-case-ignore-");
+        try
+        {
+            var fileUpper = Path.Combine(directory.FullName, "Foo.cs");
+            var fileLower = Path.Combine(directory.FullName, "foo.cs");
+            File.WriteAllText(fileUpper, "class Aa { }");
+            File.WriteAllText(fileLower, "class Bb { }");
+
+            if (File.ReadAllText(fileUpper) != "class Aa { }")
+            {
+                return;
+            }
+
+            var discoverer = new PhysicalFileDiscoverer(StringComparer.OrdinalIgnoreCase);
+            var discovered = discoverer.Discover(
+                new[] { fileUpper, fileLower },
+                new[] { ".cs" },
+                Array.Empty<string>(),
+                ignoreTests: false);
+
+            Assert.Single(discovered);
+            Assert.Equal(fileUpper, discovered[0]);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Discover_CaseSensitiveComparer_PreservesCaseDifferences()
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-case-preserve-");
+        try
+        {
+            var fileUpper = Path.Combine(directory.FullName, "Foo.cs");
+            var fileLower = Path.Combine(directory.FullName, "foo.cs");
+            File.WriteAllText(fileUpper, "class Aa { }");
+            File.WriteAllText(fileLower, "class Bb { }");
+
+            if (File.ReadAllText(fileUpper) != "class Aa { }")
+            {
+                return;
+            }
+
+            var discoverer = new PhysicalFileDiscoverer(StringComparer.Ordinal);
+            var discovered = discoverer.Discover(
+                new[] { fileUpper, fileLower },
+                new[] { ".cs" },
+                Array.Empty<string>(),
+                ignoreTests: false);
+
+            Assert.Equal(2, discovered.Count);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Discover_SortsFilesDeterministicallyWhenDifferingOnlyInCase()
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-case-sort-");
+        try
+        {
+            var fileUpper = Path.Combine(directory.FullName, "Foo.cs");
+            var fileLower = Path.Combine(directory.FullName, "foo.cs");
+            File.WriteAllText(fileUpper, "class Aa { }");
+            File.WriteAllText(fileLower, "class Bb { }");
+
+            if (File.ReadAllText(fileUpper) != "class Aa { }")
+            {
+                return;
+            }
+
+            var discoverer = new PhysicalFileDiscoverer(StringComparer.Ordinal);
+            var discovered = discoverer.Discover(
+                new[] { fileLower, fileUpper },
+                new[] { ".cs" },
+                Array.Empty<string>(),
+                ignoreTests: false);
+
+            Assert.Equal(2, discovered.Count);
+            // Ordinal: 'F' (70) < 'f' (102), so Foo.cs is ordered before foo.cs
+            Assert.Equal(fileUpper, discovered[0]);
+            Assert.Equal(fileLower, discovered[1]);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
 }
 
 
