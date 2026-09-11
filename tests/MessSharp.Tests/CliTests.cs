@@ -134,6 +134,53 @@ public class CliTests
         Assert.Contains("no such file or directory", stderr);
     }
 
+    [Fact]
+    public void RulesetWithUnresolvableRulesetRef_ExitsWithError()
+    {
+        var srcFile = Path.GetTempFileName() + ".cs";
+        var rulesetFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(srcFile, "public class Aa { }");
+        File.WriteAllText(rulesetFile, @"<?xml version=""1.0""?>
+<ruleset name=""BadRef1"">
+  <rule ref=""nosuchset/SomeRule""/>
+</ruleset>");
+        try
+        {
+            var (code, _, stderr) = RunCli(srcFile, "text", rulesetFile);
+            Assert.Equal(1, code);
+            Assert.Contains("error:", stderr);
+        }
+        finally
+        {
+            File.Delete(srcFile);
+            File.Delete(rulesetFile);
+        }
+    }
+
+    [Fact]
+    public void RulesetWithUnknownRuleRef_ExitsWithError()
+    {
+        var srcFile = Path.GetTempFileName() + ".cs";
+        var rulesetFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(srcFile, "public class Aa { }");
+        File.WriteAllText(rulesetFile, @"<?xml version=""1.0""?>
+<ruleset name=""BadRef2"">
+  <rule ref=""naming/NoSuchRule""/>
+</ruleset>");
+        try
+        {
+            var (code, _, stderr) = RunCli(srcFile, "text", rulesetFile);
+            Assert.Equal(1, code);
+            Assert.Contains("error:", stderr);
+        }
+        finally
+        {
+            File.Delete(srcFile);
+            File.Delete(rulesetFile);
+        }
+    }
+
+
     private class FakeRunner : MessSharp.Runner.IRunner
     {
         public MessSharp.Runner.RunOptions? LastOpts { get; private set; }

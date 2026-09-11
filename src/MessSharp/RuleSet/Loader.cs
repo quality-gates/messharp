@@ -65,68 +65,17 @@ public sealed class Loader
         return set;
     }
 
+    private readonly RuleRefResolver _refResolver;
+
+    public Loader()
+    {
+        _refResolver = new RuleRefResolver(ReadRuleset, BuildRule, AppendIfNotNull, BuiltinNames);
+    }
+
     private void AddRule(RuleSetType set, string setName, XmlRule xr)
     {
-        if (!string.IsNullOrEmpty(xr.Ref)) { AddRef(set, xr); return; }
+        if (!string.IsNullOrEmpty(xr.Ref)) { _refResolver.AddRef(set, xr); return; }
         if (!string.IsNullOrEmpty(xr.Class)) { AppendIfNotNull(set, BuildRule(setName, xr, xr)); }
-    }
-
-    private void AddRef(RuleSetType set, XmlRule xr, HashSet<string>? visited = null)
-    {
-        visited ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var (baseName, ruleName) = LoaderFilters.SplitRef(xr.Ref!, BuiltinNames);
-        if (!visited.Add(baseName)) return;
-
-        byte[] data;
-        try { data = ReadRuleset(baseName); }
-        catch { WarnMsg($"Cannot resolve ref: {xr.Ref}"); return; }
-
-        var src = XmlRulesetParser.Deserialize(data);
-        var excluded = XmlRuleHelpers.ExcludeSet(xr.Exclude);
-        foreach (var sr in src.Rules ?? new List<XmlRule>())
-            ProcessRefRule(set, src.Name ?? "", sr, ruleName, excluded, xr, visited);
-    }
-
-    private void ProcessRefRule(RuleSetType set, string srcName, XmlRule sr,
-        string ruleName, HashSet<string> excluded, XmlRule overrideXr, HashSet<string> visited)
-    {
-        if (!string.IsNullOrEmpty(sr.Ref))
-        {
-            ProcessNestedRef(set, sr, ruleName, excluded, overrideXr, visited);
-            return;
-        }
-
-        if (!string.IsNullOrEmpty(sr.Class))
-            ProcessClassRule(set, srcName, sr, ruleName, excluded, overrideXr);
-    }
-
-    private void ProcessNestedRef(RuleSetType set, XmlRule sr, string ruleName,
-        HashSet<string> excluded, XmlRule overrideXr, HashSet<string> visited)
-    {
-        if (ruleName.Length > 0)
-        {
-            var (_, targetRule) = LoaderFilters.SplitRef(sr.Ref!, BuiltinNames);
-            if (targetRule == ruleName || sr.Name == ruleName)
-                AddRef(set, XmlRuleHelpers.MergeChildRef(sr, overrideXr), new HashSet<string>(visited, StringComparer.OrdinalIgnoreCase));
-            return;
-        }
-
-        if (!string.IsNullOrEmpty(sr.Name) && excluded.Contains(sr.Name))
-            return;
-
-        AddRef(set, XmlRuleHelpers.MergeChildRef(sr, overrideXr), new HashSet<string>(visited, StringComparer.OrdinalIgnoreCase));
-    }
-
-    private void ProcessClassRule(RuleSetType set, string srcName, XmlRule sr,
-        string ruleName, HashSet<string> excluded, XmlRule overrideXr)
-    {
-        if (ruleName.Length > 0)
-        {
-            if (sr.Name == ruleName) AppendIfNotNull(set, BuildRule(srcName, sr, overrideXr));
-            return;
-        }
-        if (!excluded.Contains(sr.Name ?? ""))
-            AppendIfNotNull(set, BuildRule(srcName, sr, sr));
     }
 
     private IRule? BuildRule(string setName, XmlRule def, XmlRule ov)

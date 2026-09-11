@@ -112,4 +112,64 @@ public class RuleSetLoaderTests
         }
         finally { File.Delete(tmpFile); }
     }
+
+    [Fact]
+    public void Load_WithUnresolvableRulesetRef_ThrowsFileNotFoundException()
+    {
+        var xmlContent = @"<?xml version=""1.0"" encoding=""UTF-8"" ?>
+<ruleset name=""Custom"">
+  <description>Custom ruleset with bad ref</description>
+  <rule ref=""nosuchset/SomeRule""/>
+</ruleset>";
+        var tmpFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(tmpFile, xmlContent);
+        try
+        {
+            var loader = new Loader { MaxPriority = 1 };
+            var ex = Assert.Throws<FileNotFoundException>(() => loader.Load(tmpFile));
+            Assert.Contains("Cannot resolve ref: nosuchset/SomeRule", ex.Message);
+        }
+        finally { File.Delete(tmpFile); }
+    }
+
+    [Fact]
+    public void Load_WithUnknownRuleRef_ThrowsInvalidOperationException()
+    {
+        var xmlContent = @"<?xml version=""1.0"" encoding=""UTF-8"" ?>
+<ruleset name=""Custom"">
+  <description>Custom ruleset with unknown rule in existing set</description>
+  <rule ref=""naming/NoSuchRule""/>
+</ruleset>";
+        var tmpFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(tmpFile, xmlContent);
+        try
+        {
+            var loader = new Loader { MaxPriority = 1 };
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(tmpFile));
+            Assert.Contains("Cannot resolve rule: naming/NoSuchRule", ex.Message);
+        }
+        finally { File.Delete(tmpFile); }
+    }
+
+    [Fact]
+    public void Load_ReferencingRuleThroughNestedRuleset_LoadsRule()
+    {
+        var xmlContent = @"<?xml version=""1.0"" encoding=""UTF-8"" ?>
+<ruleset name=""Custom"">
+  <description>Custom ruleset referencing rule via csharp</description>
+  <rule ref=""csharp/CyclomaticComplexity""/>
+</ruleset>";
+        var tmpFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(tmpFile, xmlContent);
+        try
+        {
+            var loader = new Loader { MaxPriority = 1 };
+            var sets = loader.Load(tmpFile);
+            Assert.Single(sets);
+            var rule = sets[0].Rules.FirstOrDefault(r => r.Name == "CyclomaticComplexity");
+            Assert.NotNull(rule);
+        }
+        finally { File.Delete(tmpFile); }
+    }
 }
+
