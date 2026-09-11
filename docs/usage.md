@@ -7,7 +7,7 @@ messharp <paths> <format> <ruleset[,ruleset...]> [options]
 ```
 
 - **paths** — comma-separated files or directories. Directories are walked;
-  `bin/`, `obj/`, `node_modules/`, and `.git/` are skipped.
+  directory symlinks, `bin/`, `obj/`, `node_modules/`, and `.git/` are skipped.
 - **format** — `text`, `xml`, `json`, `html`, `ansi`, `github`, `gitlab`,
   `checkstyle`, or `sarif`.
 - **ruleset** — one or more built-in names or paths to phpmd-format ruleset XML.
