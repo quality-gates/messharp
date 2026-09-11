@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Error and exit 1 on unresolvable rulesets or unknown rule references in ruleset XML files, matching phpmd semantics, instead of silently dropping them and exiting 0 (#105).
 - Use an OS-aware path comparer in `PhysicalFileDiscoverer` so file deduplication respects case-sensitive filesystems, preventing files differing only in case from being silently dropped (#104).
 - Do not descend into directory symlinks during file discovery, preventing cyclic directory walks, duplicate violation reporting, and path length limit errors (#103).
 - Strip array ranks (`int[]`, `int[,]`, `int?[]`) before built-in classification in `CouplingBetweenObjects`, so arrays of built-in types no longer count as dependencies and arrays of user-defined types count once by element type (#87).
