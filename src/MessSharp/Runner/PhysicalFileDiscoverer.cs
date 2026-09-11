@@ -2,6 +2,18 @@ namespace MessSharp.Runner;
 
 public sealed class PhysicalFileDiscoverer : IFileDiscoverer
 {
+    private readonly StringComparer _pathComparer;
+
+    public PhysicalFileDiscoverer()
+        : this(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
+    {
+    }
+
+    public PhysicalFileDiscoverer(StringComparer pathComparer)
+    {
+        _pathComparer = pathComparer;
+    }
+
     public List<string> Discover(
         IReadOnlyList<string> paths,
         IReadOnlyList<string> suffixes,
@@ -9,7 +21,7 @@ public sealed class PhysicalFileDiscoverer : IFileDiscoverer
         bool ignoreTests)
     {
         var result = new List<string>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seen = new HashSet<string>(_pathComparer);
 
         void Add(string p)
         {
@@ -28,8 +40,14 @@ public sealed class PhysicalFileDiscoverer : IFileDiscoverer
                 throw new FileNotFoundException($"no such file or directory: {p}");
         }
 
-        result.Sort(StringComparer.OrdinalIgnoreCase);
+        result.Sort(ComparePaths);
         return result;
+    }
+
+    private static int ComparePaths(string a, string b)
+    {
+        int c = StringComparer.OrdinalIgnoreCase.Compare(a, b);
+        return c != 0 ? c : StringComparer.Ordinal.Compare(a, b);
     }
 
     private void WalkDir(string root,
