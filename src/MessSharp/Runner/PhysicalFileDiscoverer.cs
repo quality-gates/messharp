@@ -55,8 +55,21 @@ public sealed class PhysicalFileDiscoverer : IFileDiscoverer
     {
         var name = Path.GetFileName(entry);
         if (ShouldSkipDir(name)) return;
+        if (IsDirectorySymlink(entry)) return;
         if (ignoreTests && IsTestDir(name)) return;
         WalkDir(entry, suffixes, exclude, ignoreTests, add);
+    }
+
+    private static bool IsDirectorySymlink(string path)
+    {
+        try
+        {
+            return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private void AddFileEntry(string entry,

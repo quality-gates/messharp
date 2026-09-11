@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Do not descend into directory symlinks during file discovery, preventing cyclic directory walks, duplicate violation reporting, and path length limit errors (#103).
 - Strip array ranks (`int[]`, `int[,]`, `int?[]`) before built-in classification in `CouplingBetweenObjects`, so arrays of built-in types no longer count as dependencies and arrays of user-defined types count once by element type (#87).
 
 ## [0.2.12] - 2026-09-10
