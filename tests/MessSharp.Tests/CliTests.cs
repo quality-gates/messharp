@@ -541,6 +541,29 @@ public class CliTests
         }
     }
 
+    [Fact]
+    public void Cli_ReportFile_CreatesMissingParentDirectories()
+    {
+        var dir = Directory.CreateTempSubdirectory("messharp-cli-");
+        try
+        {
+            var sourceFile = Path.Combine(dir.FullName, "Clean.cs");
+            File.WriteAllText(sourceFile, "public class Clean { }");
+            var reportFile = Path.Combine(dir.FullName, "nested", "parents", "report.json");
+
+            var (code, _, stderr) = RunCli(sourceFile, "json", "csharp", "--reportfile", reportFile);
+
+            Assert.Equal(0, code);
+            Assert.Equal("", stderr);
+            Assert.True(File.Exists(reportFile));
+            Assert.Contains("messharp", File.ReadAllText(reportFile));
+        }
+        finally
+        {
+            Directory.Delete(dir.FullName, recursive: true);
+        }
+    }
+
     private class DummyRule : MessSharp.Rule.BaseRule
     {
         public DummyRule(string name)

@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Create missing parent directories when writing reports with `--reportfile`, preventing `DirectoryNotFoundException` on clean checkouts or new output paths (#117).
 - Build constructor models for C# primary constructors declared on classes, structs, and records so rules such as `ExcessiveParameterList` evaluate primary constructor parameter signatures (#116).
 - Do not treat member access selectors, member bindings, or argument/initializer labels as reads of local variables or parameters in BodyAnalysis, preventing false suppression of UnusedFormalParameter and UnusedLocalVariable (#112).
 - Ensure custom rule property overrides, messages, and descriptions take precedence when `csharp` or another composite ruleset already includes the rule (#115).

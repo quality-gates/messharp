@@ -113,7 +113,10 @@ public static class Cli
         {
             TextWriter dest = stdout;
             if (!string.IsNullOrEmpty(opts.ReportFile))
+            {
+                EnsureParentDirectoryExists(opts.ReportFile);
                 dest = new StreamWriter(opts.ReportFile, append: false);
+            }
             using (dest != stdout ? dest : (IDisposable)new NoopDisposable())
                 renderer.Render(dest, report);
             return true;
@@ -123,6 +126,13 @@ public static class Cli
             stderr.WriteLine($"error: {ex.Message}");
             return false;
         }
+    }
+
+    private static void EnsureParentDirectoryExists(string filePath)
+    {
+        var dir = Path.GetDirectoryName(filePath);
+        if (!string.IsNullOrEmpty(dir))
+            Directory.CreateDirectory(dir);
     }
 
     private static List<RuleSetType> LoadRuleSets(CliOptions opts, TextWriter stderr)
