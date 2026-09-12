@@ -43,6 +43,26 @@ internal static class NPathStatementMetrics
         LocalDeclarationStatementSyntax local => LocalDeclarationComplexity(local),
         ExpressionStatementSyntax expressionStatement => ExpressionContribution(expressionStatement.Expression),
         LabeledStatementSyntax labeled => Stmt(labeled.Statement),
+        _ => StmtScoped(statement),
+    };
+
+    /// <summary>
+    /// Scope wrappers (using/lock/fixed/unsafe) introduce no branch of their own,
+    /// so they compose like a sequence: the resource they acquire followed by the
+    /// body they wrap. Without this the wrapped body would be discarded entirely.
+    /// </summary>
+    private static int StmtScoped(StatementSyntax statement) => statement switch
+    {
+        UsingStatementSyntax usingStatement => NPathArithmetic.Multiply(
+            ResourceComplexity(usingStatement.Declaration, usingStatement.Expression),
+            Block(usingStatement.Statement)),
+        LockStatementSyntax lockStatement => NPathArithmetic.Multiply(
+            ExpressionContribution(lockStatement.Expression),
+            Block(lockStatement.Statement)),
+        FixedStatementSyntax fixedStatement => NPathArithmetic.Multiply(
+            DeclarationComplexity(fixedStatement.Declaration),
+            Block(fixedStatement.Statement)),
+        UnsafeStatementSyntax unsafeStatement => Stmts(unsafeStatement.Block.Statements),
         _ => 1,
     };
 
@@ -103,10 +123,21 @@ internal static class NPathStatementMetrics
         _ => Stmt(statement),
     };
 
-    private static int LocalDeclarationComplexity(LocalDeclarationStatementSyntax statement)
+    private static int LocalDeclarationComplexity(LocalDeclarationStatementSyntax statement) =>
+        DeclarationComplexity(statement.Declaration);
+
+    /// <summary>A using statement acquires either a declaration or a plain expression.</summary>
+    private static int ResourceComplexity(
+        VariableDeclarationSyntax? declaration,
+        ExpressionSyntax? expression) =>
+        declaration == null
+            ? ExpressionContribution(expression)
+            : DeclarationComplexity(declaration);
+
+    private static int DeclarationComplexity(VariableDeclarationSyntax declaration)
     {
         int complexity = 0;
-        foreach (var variable in statement.Declaration.Variables)
+        foreach (var variable in declaration.Variables)
             complexity = NPathArithmetic.Add(
                 complexity,
                 NPathExpressionMetrics.Complexity(variable.Initializer?.Value));

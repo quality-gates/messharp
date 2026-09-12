@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Count control flow nested inside `using`, `lock`, `fixed`, and `unsafe` statements when computing NPath complexity, instead of discarding the wrapped body and reporting an NPath of 1 (#111).
+
 ## [0.2.13] - 2026-09-11
 
 ### Fixed
