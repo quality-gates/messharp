@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Ensure custom rule property overrides, messages, and descriptions take precedence when `csharp` or another composite ruleset already includes the rule (#115).
 - Resolve documented bare rule references (e.g. `<rule ref="LongVariable">`) to built-in rulesets in custom ruleset files, and allow subsequent rule definitions to override properties and priorities of earlier imported rules (#114).
 - Collect local variables declared in `for`, `using`, and `fixed` statements across naming and unused code rules (`LongVariable`, `ShortVariable`, `CamelCaseVariableName`, `UnusedLocalVariable`) (#113).
 - Count control flow nested inside `using`, `lock`, `fixed`, and `unsafe` statements when computing NPath complexity, instead of discarding the wrapped body and reporting an NPath of 1 (#111).

@@ -211,6 +211,119 @@ public class CliTests
         }
     }
 
+    [Fact]
+    public void RulesetWithQualifiedRuleOverride_HonorsOverriddenProperties()
+    {
+        var srcFile = Path.GetTempFileName() + ".cs";
+        var rulesetFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(srcFile, "public class SampleClass { private int aVeryLongFieldNameWithThirtyEightChars; }");
+        File.WriteAllText(rulesetFile, @"<?xml version=""1.0""?>
+<ruleset name=""TeamPolicy"">
+  <rule ref=""csharp""/>
+  <rule ref=""naming/LongVariable"">
+    <priority>2</priority>
+    <properties>
+      <property name=""maximum"" value=""50""/>
+    </properties>
+  </rule>
+</ruleset>");
+        try
+        {
+            // First verify csharp alone produces exit code 2 with max 35
+            var (baseCode, baseOut, _) = RunCli(srcFile, "text", "csharp", "--only", "LongVariable");
+            Assert.Equal(2, baseCode);
+            Assert.Contains("Keep variable name length under 35", baseOut);
+
+            // Verify overridden ruleset permits 38-char name under max 50
+            var (code, stdout, stderr) = RunCli(srcFile, "text", rulesetFile, "--only", "LongVariable");
+            Assert.Equal(0, code);
+            Assert.Empty(stderr);
+            Assert.Empty(stdout);
+
+            // Verify overridden ruleset reports violation when length exceeds 50
+            File.WriteAllText(srcFile, "public class SampleClass { private int aVeryLongFieldNameWithFiftyFiveCharactersExceedingFifty; }");
+            var (violationCode, violationOut, _) = RunCli(srcFile, "text", rulesetFile, "--only", "LongVariable");
+            Assert.Equal(2, violationCode);
+            Assert.Contains("Keep variable name length under 50", violationOut);
+        }
+        finally
+        {
+            File.Delete(srcFile);
+            File.Delete(rulesetFile);
+        }
+    }
+
+    [Fact]
+    public void RulesetWithBareRuleOverride_HonorsOverriddenProperties()
+    {
+        var srcFile = Path.GetTempFileName() + ".cs";
+        var rulesetFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(srcFile, "public class SampleClass { private int aVeryLongFieldNameWithThirtyEightChars; }");
+        File.WriteAllText(rulesetFile, @"<?xml version=""1.0""?>
+<ruleset name=""TeamPolicy"">
+  <rule ref=""csharp""/>
+  <rule ref=""LongVariable"">
+    <priority>2</priority>
+    <properties>
+      <property name=""maximum"" value=""50""/>
+    </properties>
+  </rule>
+</ruleset>");
+        try
+        {
+            // First verify csharp alone produces exit code 2 with max 35
+            var (baseCode, baseOut, _) = RunCli(srcFile, "text", "csharp", "--only", "LongVariable");
+            Assert.Equal(2, baseCode);
+            Assert.Contains("Keep variable name length under 35", baseOut);
+
+            // Verify overridden ruleset permits 38-char name under max 50
+            var (code, stdout, stderr) = RunCli(srcFile, "text", rulesetFile, "--only", "LongVariable");
+            Assert.Equal(0, code);
+            Assert.Empty(stderr);
+            Assert.Empty(stdout);
+
+            // Verify overridden ruleset reports violation when length exceeds 50
+            File.WriteAllText(srcFile, "public class SampleClass { private int aVeryLongFieldNameWithFiftyFiveCharactersExceedingFifty; }");
+            var (violationCode, violationOut, _) = RunCli(srcFile, "text", rulesetFile, "--only", "LongVariable");
+            Assert.Equal(2, violationCode);
+            Assert.Contains("Keep variable name length under 50", violationOut);
+        }
+        finally
+        {
+            File.Delete(srcFile);
+            File.Delete(rulesetFile);
+        }
+    }
+
+    [Fact]
+    public void CommaSeparatedRulesets_LaterRulesetOverridesPriorRule()
+    {
+        var srcFile = Path.GetTempFileName() + ".cs";
+        var rulesetFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(srcFile, "public class SampleClass { private int aVeryLongFieldNameWithThirtyEightChars; }");
+        File.WriteAllText(rulesetFile, @"<?xml version=""1.0""?>
+<ruleset name=""CustomOverride"">
+  <rule ref=""naming/LongVariable"">
+    <priority>2</priority>
+    <properties>
+      <property name=""maximum"" value=""50""/>
+    </properties>
+  </rule>
+</ruleset>");
+        try
+        {
+            var (code, stdout, stderr) = RunCli(srcFile, "text", $"csharp,{rulesetFile}", "--only", "LongVariable");
+            Assert.Equal(0, code);
+            Assert.Empty(stderr);
+            Assert.Empty(stdout);
+        }
+        finally
+        {
+            File.Delete(srcFile);
+            File.Delete(rulesetFile);
+        }
+    }
+
 
     private class FakeRunner : MessSharp.Runner.IRunner
     {

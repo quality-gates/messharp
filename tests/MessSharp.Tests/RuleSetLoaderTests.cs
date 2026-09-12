@@ -270,5 +270,42 @@ public class RuleSetLoaderTests
         }
         finally { File.Delete(tmpFile); }
     }
+
+    [Fact]
+    public void Load_TeamPolicy_CustomMessageAndDescription_OverridesDefaults()
+    {
+        var xmlContent = @"<?xml version=""1.0"" encoding=""UTF-8"" ?>
+<ruleset name=""team policy"">
+  <rule ref=""csharp"">
+    <exclude name=""DevelopmentCodeFragment"" />
+  </rule>
+  <rule ref=""naming/LongVariable"" message=""Custom long variable warning"">
+    <description>Custom description for long variables</description>
+    <priority>2</priority>
+    <properties>
+      <property name=""maximum"" value=""50"" />
+    </properties>
+  </rule>
+</ruleset>";
+        var tmpFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(tmpFile, xmlContent);
+        try
+        {
+            var loader = new Loader { MaxPriority = 1 };
+            var sets = loader.Load(tmpFile);
+            Assert.Single(sets);
+            var rules = sets[0].Rules.Where(r => r.Name == "LongVariable").ToList();
+            Assert.Single(rules);
+            var rule = rules[0];
+            Assert.Equal("Custom long variable warning", rule.Message);
+            Assert.Equal("Custom description for long variables", rule.Description);
+            Assert.Equal(2, rule.Priority);
+            if (rule is MessSharp.Rule.BaseRule br)
+            {
+                Assert.Equal(50, br.RuleProps.Int("maximum", 20));
+            }
+        }
+        finally { File.Delete(tmpFile); }
+    }
 }
 
