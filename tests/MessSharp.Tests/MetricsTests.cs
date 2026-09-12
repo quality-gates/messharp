@@ -279,6 +279,68 @@ class C
         Assert.Equal(2, npath);
     }
 
+    [Fact]
+    public void NPathComplexity_UsingStatement_KeepsBodyPaths()
+    {
+        var ifs = string.Join(" ", "abcdefgh".Select(name => $"if ({name}) {{}}"));
+        var src = $@"
+class C
+{{
+    void F(bool a, bool b, bool c, bool d, bool e, bool f, bool g, bool h)
+    {{
+        using (var s = new System.IO.MemoryStream())
+        {{
+            {ifs}
+        }}
+    }}
+}}";
+        Assert.Equal(256, MetricsCalc.NPathComplexity(GetMethodBody(src)));
+    }
+
+    [Fact]
+    public void NPathComplexity_UsingStatementWithExpression_KeepsBodyPaths()
+    {
+        var src = "class C { void F(bool a, System.IDisposable d) { using (d) { if (a) {} } } }";
+        Assert.Equal(2, MetricsCalc.NPathComplexity(GetMethodBody(src)));
+    }
+
+    [Fact]
+    public void NPathComplexity_UsingStatementWithTernaryResource_CountsResourceBranches()
+    {
+        var src = "class C { void F(bool a, bool b, System.IDisposable x, System.IDisposable y) "
+            + "{ using (var d = a ? x : y) { if (b) {} } } }";
+        Assert.Equal(4, MetricsCalc.NPathComplexity(GetMethodBody(src)));
+    }
+
+    [Fact]
+    public void NPathComplexity_UsingStatementWithLinearBody_Returns1()
+    {
+        var src = "class C { void F() { using (var s = new System.IO.MemoryStream()) { s.Flush(); } } }";
+        Assert.Equal(1, MetricsCalc.NPathComplexity(GetMethodBody(src)));
+    }
+
+    [Fact]
+    public void NPathComplexity_LockStatement_KeepsBodyPaths()
+    {
+        var src = "class C { void F(bool a, bool b, object o) { lock (o) { if (a) {} if (b) {} } } }";
+        Assert.Equal(4, MetricsCalc.NPathComplexity(GetMethodBody(src)));
+    }
+
+    [Fact]
+    public void NPathComplexity_FixedStatement_KeepsBodyPaths()
+    {
+        var src = "class C { unsafe void F(bool a, bool b, int[] n) "
+            + "{ fixed (int* p = n) { if (a) {} if (b) {} } } }";
+        Assert.Equal(4, MetricsCalc.NPathComplexity(GetMethodBody(src)));
+    }
+
+    [Fact]
+    public void NPathComplexity_UnsafeStatement_KeepsBodyPaths()
+    {
+        var src = "class C { void F(bool a, bool b) { unsafe { if (a) {} if (b) {} } } }";
+        Assert.Equal(4, MetricsCalc.NPathComplexity(GetMethodBody(src)));
+    }
+
     private static Microsoft.CodeAnalysis.SyntaxNode GetClassNode(string source)
     {
         var tree = CSharpSyntaxTree.ParseText(source);
