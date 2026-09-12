@@ -18,8 +18,8 @@ internal static class BodyAnalysis
     /// Matches messgo's identReads semantics for C# specifics:
     ///   - `_ = expr`  — the discard `_` is excluded (already excluded by name)
     ///   - `out var x` — `x` is a write-only declaration, not a read
-    ///   - `nameof(x)` — counts as a read of x
-    ///   - `this.field` — the field name counts as a read
+    ///   - `nameof(x)` — counts as a read of bare identifier x
+    ///   - member accesses (`obj.member`, `this.member`) — member names do not count as reads of locals/parameters
     /// </summary>
     internal static HashSet<string> IdentReads(SyntaxNode body)
     {
@@ -36,14 +36,27 @@ internal static class BodyAnalysis
     {
         if (TryCollectNameofRead(node, reads)) return;
 
-        if (node is MemberAccessExpressionSyntax mae)
+        if (node is IdentifierNameSyntax id
+            && !writes.Contains(id)
+            && id.Identifier.Text != "_"
+            && !IsMemberOrCallLabel(id))
         {
-            reads.Add(mae.Name.Identifier.Text);
-            return;
-        }
-
-        if (node is IdentifierNameSyntax id && !writes.Contains(id) && id.Identifier.Text != "_")
             reads.Add(id.Identifier.Text);
+        }
+    }
+
+    private static bool IsMemberOrCallLabel(IdentifierNameSyntax id)
+    {
+        return id.Parent switch
+        {
+            MemberAccessExpressionSyntax mae => ReferenceEquals(mae.Name, id),
+            MemberBindingExpressionSyntax mbe => ReferenceEquals(mbe.Name, id),
+            NameColonSyntax nameColon => ReferenceEquals(nameColon.Name, id),
+            NameEqualsSyntax nameEquals => ReferenceEquals(nameEquals.Name, id),
+            InvocationExpressionSyntax inv
+                when ReferenceEquals(inv.Expression, id) && id.Identifier.Text == "nameof" => true,
+            _ => false,
+        };
     }
 
     private static bool TryCollectNameofRead(SyntaxNode node, HashSet<string> reads)
@@ -53,10 +66,8 @@ internal static class BodyAnalysis
         if (inv.ArgumentList.Arguments.Count != 1) return false;
 
         var argExpr = inv.ArgumentList.Arguments[0].Expression;
-        if (argExpr is IdentifierNameSyntax nameofId)
+        if (argExpr is IdentifierNameSyntax nameofId && nameofId.Identifier.Text != "_")
             reads.Add(nameofId.Identifier.Text);
-        else if (argExpr is MemberAccessExpressionSyntax nameofMae)
-            reads.Add(nameofMae.Name.Identifier.Text);
         return true;
     }
 
