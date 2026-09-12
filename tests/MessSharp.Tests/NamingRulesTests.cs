@@ -789,4 +789,111 @@ class Foo
         var violations = Run(src, rule);
         MustHave(violations, "ShortVariable");
     }
+
+    [Fact]
+    public void LongVariable_ForLoopVar_IsReported()
+    {
+        var src = @"
+class Foo
+{
+    public void Bar()
+    {
+        for (int veryLongVariableNameExceedingTwentyChars = 0; veryLongVariableNameExceedingTwentyChars < 10; veryLongVariableNameExceedingTwentyChars++)
+        {
+        }
+    }
+}";
+        var rule = MakeRule<LongVariableRule>("LongVariable",
+            "Avoid excessively long variable names like {0}. Keep variable name length under {1}.");
+        var violations = Run(src, rule);
+        MustHave(violations, "LongVariable");
+        Assert.Contains(violations, v => v.Rule.Name == "LongVariable"
+            && v.Description.Contains("veryLongVariableNameExceedingTwentyChars"));
+    }
+
+    [Fact]
+    public void LongVariable_UsingStatementVar_IsReported()
+    {
+        var src = @"
+class Foo
+{
+    public void Bar()
+    {
+        using (var veryLongVariableNameExceedingTwentyChars = new System.IO.MemoryStream())
+        {
+        }
+    }
+}";
+        var rule = MakeRule<LongVariableRule>("LongVariable",
+            "Avoid excessively long variable names like {0}. Keep variable name length under {1}.");
+        var violations = Run(src, rule);
+        MustHave(violations, "LongVariable");
+        Assert.Contains(violations, v => v.Rule.Name == "LongVariable"
+            && v.Description.Contains("veryLongVariableNameExceedingTwentyChars"));
+    }
+
+    [Fact]
+    public void LongVariable_FixedStatementVar_IsReported()
+    {
+        var src = @"
+class Foo
+{
+    public unsafe void Bar()
+    {
+        int[] arr = new int[5];
+        fixed (int* veryLongVariableNameExceedingTwentyChars = arr)
+        {
+        }
+    }
+}";
+        var rule = MakeRule<LongVariableRule>("LongVariable",
+            "Avoid excessively long variable names like {0}. Keep variable name length under {1}.");
+        var violations = Run(src, rule);
+        MustHave(violations, "LongVariable");
+        Assert.Contains(violations, v => v.Rule.Name == "LongVariable"
+            && v.Description.Contains("veryLongVariableNameExceedingTwentyChars"));
+    }
+
+    [Fact]
+    public void ShortVariable_UsingStatementVar_IsReported()
+    {
+        var src = @"
+class Foo
+{
+    public void Bar()
+    {
+        using (var ms = new System.IO.MemoryStream())
+        {
+        }
+    }
+}";
+        var rule = MakeRule<ShortVariableRule>("ShortVariable",
+            "Avoid variables with short names like {0}. Configured minimum length is {1}.");
+        var violations = Run(src, rule);
+        MustHave(violations, "ShortVariable");
+        Assert.Contains(violations, v => v.Rule.Name == "ShortVariable"
+            && v.Description.Contains("ms"));
+    }
+
+    [Fact]
+    public void ShortVariable_FixedStatementVar_IsReported()
+    {
+        var src = @"
+class Foo
+{
+    public unsafe void Bar()
+    {
+        int[] arr = new int[5];
+        fixed (int* pt = arr)
+        {
+        }
+    }
+}";
+        var rule = MakeRule<ShortVariableRule>("ShortVariable",
+            "Avoid variables with short names like {0}. Configured minimum length is {1}.");
+        var violations = Run(src, rule);
+        MustHave(violations, "ShortVariable");
+        Assert.Contains(violations, v => v.Rule.Name == "ShortVariable"
+            && v.Description.Contains("pt"));
+    }
 }

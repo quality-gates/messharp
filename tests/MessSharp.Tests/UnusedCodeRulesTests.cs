@@ -510,6 +510,64 @@ public class Foo
         Assert.Equal("Avoid unused local variables such as 'deadVar'.", v.Description);
     }
 
+    [Fact]
+    public void UnusedLocalVariable_ForLoopUnusedVar_Fires()
+    {
+        var src = @"
+public class Foo
+{
+    public void Bar()
+    {
+        for (int unused = 0, i = 0; i < 10; i++)
+        {
+        }
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "UnusedLocalVariable");
+        Assert.Contains(vs, v => v.Rule.Name == "UnusedLocalVariable"
+            && v.Description.Contains("unused"));
+    }
+
+    [Fact]
+    public void UnusedLocalVariable_UsingStatementUnusedVar_Fires()
+    {
+        var src = @"
+public class Foo
+{
+    public void Bar()
+    {
+        using (var unused = new System.IO.MemoryStream())
+        {
+        }
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "UnusedLocalVariable");
+        Assert.Contains(vs, v => v.Rule.Name == "UnusedLocalVariable"
+            && v.Description.Contains("unused"));
+    }
+
+    [Fact]
+    public void UnusedLocalVariable_FixedStatementUnusedVar_Fires()
+    {
+        var src = @"
+public class Foo
+{
+    public unsafe void Bar()
+    {
+        int[] arr = new int[5];
+        fixed (int* unused = arr)
+        {
+        }
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "UnusedLocalVariable");
+        Assert.Contains(vs, v => v.Rule.Name == "UnusedLocalVariable"
+            && v.Description.Contains("unused"));
+    }
+
     // ─── UnusedPrivateMethod ─────────────────────────────────────────────────
 
     [Fact]
