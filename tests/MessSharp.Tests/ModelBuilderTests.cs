@@ -436,4 +436,92 @@ public class Broken
 
         Assert.Empty(sf.SyntaxErrorMessages);
     }
+
+    [Fact]
+    public void ParsesClass_WithPrimaryConstructor()
+    {
+        var src = @"
+public class Service(int id, string name)
+{
+    public void Execute() { }
+}";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        Assert.Single(sf.Classes);
+        var cls = sf.Classes[0];
+        Assert.Equal(2, cls.Methods.Count);
+
+        var ctor = cls.Methods[0];
+        Assert.Equal("Service", ctor.Name);
+        Assert.True(ctor.IsConstructor);
+        Assert.True(ctor.Exported);
+        Assert.False(ctor.IsPrivate);
+        Assert.Null(ctor.Body);
+        Assert.Null(ctor.EffectiveBody);
+        Assert.Equal(2, ctor.Parameters.Count);
+        Assert.Equal("id", ctor.Parameters[0].Name);
+        Assert.Equal("int", ctor.Parameters[0].Type);
+        Assert.Equal("name", ctor.Parameters[1].Name);
+        Assert.Equal("string", ctor.Parameters[1].Type);
+        Assert.Same(cls, ctor.Class);
+
+        var method = cls.Methods[1];
+        Assert.Equal("Execute", method.Name);
+        Assert.False(method.IsConstructor);
+
+        Assert.Equal(2, sf.AllMethods.Count);
+        Assert.Same(ctor, sf.AllMethods[0]);
+        Assert.Same(method, sf.AllMethods[1]);
+    }
+
+    [Fact]
+    public void ParsesRecord_WithPrimaryConstructor()
+    {
+        var src = @"public record Person(string FirstName, string LastName);";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        Assert.Single(sf.Classes);
+        var rec = sf.Classes[0];
+        Assert.Equal("record", rec.NodeType);
+        Assert.Single(rec.Methods);
+
+        var ctor = rec.Methods[0];
+        Assert.Equal("Person", ctor.Name);
+        Assert.True(ctor.IsConstructor);
+        Assert.Equal(2, ctor.Parameters.Count);
+        Assert.Equal("FirstName", ctor.Parameters[0].Name);
+        Assert.Equal("LastName", ctor.Parameters[1].Name);
+    }
+
+    [Fact]
+    public void ParsesStruct_WithPrimaryConstructor()
+    {
+        var src = @"public struct Point(double X, double Y);";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        Assert.Single(sf.Classes);
+        var str = sf.Classes[0];
+        Assert.Equal("struct", str.NodeType);
+        Assert.Single(str.Methods);
+
+        var ctor = str.Methods[0];
+        Assert.Equal("Point", ctor.Name);
+        Assert.True(ctor.IsConstructor);
+        Assert.Equal(2, ctor.Parameters.Count);
+    }
+
+    [Fact]
+    public void ParsesClass_WithPrimaryAndSecondaryConstructor()
+    {
+        var src = @"
+public class Worker(int id)
+{
+    public Worker(int id, string name) : this(id) { }
+}";
+        var sf = ModelBuilder.Parse("test.cs", src);
+        var cls = sf.Classes[0];
+        Assert.Equal(2, cls.Methods.Count);
+        Assert.True(cls.Methods[0].IsConstructor);
+        Assert.Single(cls.Methods[0].Parameters);
+        Assert.True(cls.Methods[1].IsConstructor);
+        Assert.Equal(2, cls.Methods[1].Parameters.Count);
+    }
 }
+
