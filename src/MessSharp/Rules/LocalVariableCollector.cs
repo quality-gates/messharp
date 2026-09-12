@@ -9,6 +9,33 @@ namespace MessSharp.Rules;
 internal static class LocalVariableCollector
 {
     /// <summary>
+    /// Returns true if the variable declaration is part of a local, for, using, or fixed statement.
+    /// </summary>
+    internal static bool IsLocalStatementDeclaration(VariableDeclarationSyntax declaration) =>
+        declaration.Parent is LocalDeclarationStatementSyntax
+            or ForStatementSyntax
+            or UsingStatementSyntax
+            or FixedStatementSyntax;
+
+    /// <summary>
+    /// Collects declared variable names from a variable declaration node
+    /// (e.g. from local, for, using, or fixed statements).
+    /// Excludes '_' discards.
+    /// </summary>
+    internal static IEnumerable<(string Name, int Line)> CollectVariables(
+        VariableDeclarationSyntax declaration)
+    {
+        foreach (var v in declaration.Variables)
+        {
+            if (v.Identifier.Text != "_")
+            {
+                var line = v.SyntaxTree.GetLineSpan(v.Span).StartLinePosition.Line + 1;
+                yield return (v.Identifier.Text, line);
+            }
+        }
+    }
+
+    /// <summary>
     /// Collects variables declared by a direct <c>is</c> declaration pattern.
     /// Nested recursive patterns are intentionally outside this rule's scope.
     /// </summary>

@@ -63,15 +63,12 @@ public sealed class ShortVariableRule : BaseRule, IClassRule, IMethodRule
     {
         foreach (var node in body.DescendantNodes())
         {
-            if (node is LocalDeclarationStatementSyntax local)
+            if (node is VariableDeclarationSyntax varDecl
+                && LocalVariableCollector.IsLocalStatementDeclaration(varDecl))
             {
-                bool isForInit = local.Parent is ForStatementSyntax;
-                foreach (var v in local.Declaration.Variables)
-                {
-                    var span = v.SyntaxTree.GetLineSpan(v.Span);
-                    int line = span.StartLinePosition.Line + 1;
-                    yield return (v.Identifier.Text, line, isForInit);
-                }
+                bool isForInit = varDecl.Parent is ForStatementSyntax;
+                foreach (var (name, line) in LocalVariableCollector.CollectVariables(varDecl))
+                    yield return (name, line, isForInit);
 
                 continue;
             }

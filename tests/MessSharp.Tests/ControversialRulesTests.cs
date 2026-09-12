@@ -490,6 +490,66 @@ public class Foo
         Assert.Single(matches);
     }
 
+    [Fact]
+    public void CamelCaseVariableName_ForLoopVar_Fires()
+    {
+        var src = @"
+public class Foo
+{
+    public void Bar()
+    {
+        for (int PascalCaseIndex = 0; PascalCaseIndex < 10; PascalCaseIndex++)
+        {
+        }
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "CamelCaseVariableName");
+        Assert.Contains(vs, v => v.Rule.Name == "CamelCaseVariableName"
+            && v.Description.Contains("PascalCaseIndex"));
+    }
+
+    [Fact]
+    public void CamelCaseVariableName_UsingStatementVar_Fires()
+    {
+        var src = @"
+public class Foo
+{
+    public void Bar()
+    {
+        using (var PascalCaseResource = new System.IO.MemoryStream())
+        {
+            _ = PascalCaseResource;
+        }
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "CamelCaseVariableName");
+        Assert.Contains(vs, v => v.Rule.Name == "CamelCaseVariableName"
+            && v.Description.Contains("PascalCaseResource"));
+    }
+
+    [Fact]
+    public void CamelCaseVariableName_FixedStatementVar_Fires()
+    {
+        var src = @"
+public class Foo
+{
+    public unsafe void Bar()
+    {
+        int[] arr = new int[5];
+        fixed (int* PascalCasePointer = arr)
+        {
+            _ = (long)PascalCasePointer;
+        }
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "CamelCaseVariableName");
+        Assert.Contains(vs, v => v.Rule.Name == "CamelCaseVariableName"
+            && v.Description.Contains("PascalCasePointer"));
+    }
+
     // ─── combined fixture ─────────────────────────────────────────────────────
 
     [Fact]

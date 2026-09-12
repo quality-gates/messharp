@@ -154,14 +154,10 @@ internal static class BodyAnalysis
     {
         switch (node)
         {
-            // var x = expr; or int x = expr;
-            case LocalDeclarationStatementSyntax ld:
-                foreach (var v in ld.Declaration.Variables)
-                {
-                    var name = v.Identifier.Text;
-                    if (name != "_")
-                        result.Add((name, v.SyntaxTree.GetLineSpan(v.Span).StartLinePosition.Line + 1));
-                }
+            // var x = expr;, for (int i = 0; ...), using (var s = ...), fixed (int* p = ...)
+            case VariableDeclarationSyntax vd
+                when LocalVariableCollector.IsLocalStatementDeclaration(vd):
+                result.AddRange(LocalVariableCollector.CollectVariables(vd));
                 break;
 
             // foreach (var item in ...)
