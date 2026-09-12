@@ -180,6 +180,37 @@ public class CliTests
         }
     }
 
+    [Fact]
+    public void RulesetWithBareRuleRef_Succeeds()
+    {
+        var srcFile = Path.GetTempFileName() + ".cs";
+        var rulesetFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(srcFile, "public class SampleClass { public void DoWork() { } }");
+        File.WriteAllText(rulesetFile, @"<?xml version=""1.0""?>
+<ruleset name=""TeamPolicy"">
+  <rule ref=""csharp"">
+    <exclude name=""DevelopmentCodeFragment""/>
+  </rule>
+  <rule ref=""LongVariable"">
+    <priority>2</priority>
+    <properties>
+      <property name=""maximum"" value=""50""/>
+    </properties>
+  </rule>
+</ruleset>");
+        try
+        {
+            var (code, _, stderr) = RunCli(srcFile, "text", rulesetFile);
+            Assert.Equal(0, code);
+            Assert.Empty(stderr);
+        }
+        finally
+        {
+            File.Delete(srcFile);
+            File.Delete(rulesetFile);
+        }
+    }
+
 
     private class FakeRunner : MessSharp.Runner.IRunner
     {

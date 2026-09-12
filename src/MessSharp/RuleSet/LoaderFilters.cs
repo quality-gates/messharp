@@ -12,14 +12,17 @@ internal static class LoaderFilters
     internal static void DedupeRules(List<RuleSetType> sets)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var set in sets)
+        for (int i = sets.Count - 1; i >= 0; i--)
         {
+            var set = sets[i];
             var kept = new List<IRule>();
-            foreach (var r in set.Rules)
+            for (int j = set.Rules.Count - 1; j >= 0; j--)
             {
+                var r = set.Rules[j];
                 if (seen.Add(r.Name))
                     kept.Add(r);
             }
+            kept.Reverse();
             set.Rules.Clear();
             set.Rules.AddRange(kept);
         }
@@ -55,6 +58,8 @@ internal static class LoaderFilters
         int idx = refStr.LastIndexOf('/');
         if (idx >= 0 && IsResolvable(refStr[..idx], builtins))
             return (refStr[..idx], refStr[(idx + 1)..]);
+        if (BuiltInRuleIndex.TryGetRuleset(refStr, out var ruleset))
+            return (ruleset, refStr);
         return (refStr, "");
     }
 
