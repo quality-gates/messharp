@@ -851,4 +851,182 @@ public class Widget
             "UnusedFormalParameter",
             "UnusedLocalVariable");
     }
+
+    [Fact]
+    public void UnusedFormalParameter_MemberAccessWithSameNameDoesNotCountAsRead_Fires()
+    {
+        var src = @"
+public class Person
+{
+    public int id { get; set; }
 }
+
+public class Repro
+{
+    public void TestParam(int id, Person p)
+    {
+        System.Console.WriteLine(p.id);
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "UnusedFormalParameter");
+        Assert.Contains(vs, v => v.Rule.Name == "UnusedFormalParameter"
+            && v.Description.Contains("id"));
+    }
+
+    [Fact]
+    public void UnusedLocalVariable_MemberAccessWithSameNameDoesNotCountAsRead_Fires()
+    {
+        var src = @"
+public class Person
+{
+    public int id { get; set; }
+}
+
+public class Repro
+{
+    public void TestLocal(Person p)
+    {
+        int id = 42;
+        System.Console.WriteLine(p.id);
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "UnusedLocalVariable");
+        Assert.Contains(vs, v => v.Rule.Name == "UnusedLocalVariable"
+            && v.Description.Contains("id"));
+    }
+
+    [Fact]
+    public void UnusedFormalParameter_ConditionalMemberAccessWithSameNameDoesNotCountAsRead_Fires()
+    {
+        var src = @"
+public class Person
+{
+    public int id { get; set; }
+}
+
+public class Repro
+{
+    public void TestParam(int id, Person? p)
+    {
+        System.Console.WriteLine(p?.id);
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "UnusedFormalParameter");
+        Assert.Contains(vs, v => v.Rule.Name == "UnusedFormalParameter"
+            && v.Description.Contains("id"));
+    }
+
+    [Fact]
+    public void UnusedFormalParameter_NameofMemberAccessDoesNotCountAsRead_Fires()
+    {
+        var src = @"
+public class Person
+{
+    public int id { get; set; }
+}
+
+public class Repro
+{
+    public void TestParam(int id)
+    {
+        System.Console.WriteLine(nameof(Person.id));
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "UnusedFormalParameter");
+        Assert.Contains(vs, v => v.Rule.Name == "UnusedFormalParameter"
+            && v.Description.Contains("id"));
+    }
+
+    [Fact]
+    public void UnusedFormalParameter_NameofBareIdentifier_CountsAsRead_NoFire()
+    {
+        var src = @"
+public class Repro
+{
+    public void TestParam(int id)
+    {
+        System.Console.WriteLine(nameof(id));
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedFormalParameter");
+    }
+
+    [Fact]
+    public void UnusedFormalParameter_NamedArgumentLabelDoesNotCountAsRead_Fires()
+    {
+        var src = @"
+public class Repro
+{
+    private void Other(int id) {}
+    public void TestParam(int id)
+    {
+        Other(id: 42);
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "UnusedFormalParameter");
+        Assert.Contains(vs, v => v.Rule.Name == "UnusedFormalParameter"
+            && v.Description.Contains("id"));
+    }
+
+    [Fact]
+    public void UnusedFormalParameter_MemberAccessTarget_CountsAsRead_NoFire()
+    {
+        var src = @"
+public class Person
+{
+    public int id { get; set; }
+}
+
+public class Repro
+{
+    public void TestParam(Person p)
+    {
+        System.Console.WriteLine(p.id);
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedFormalParameter");
+    }
+
+    [Fact]
+    public void UnusedFormalParameter_ThisAssignmentSourceCountsAsRead_NoFire()
+    {
+        var src = @"
+public class Person
+{
+    private int id;
+    public Person(int id)
+    {
+        this.id = id;
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedFormalParameter");
+    }
+
+    [Fact]
+    public void UnusedFormalParameter_ThisAssignmentTargetDoesNotCountAsRead_Fires()
+    {
+        var src = @"
+public class Person
+{
+    private int id;
+    public Person(int id)
+    {
+        this.id = 0;
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "UnusedFormalParameter");
+        Assert.Contains(vs, v => v.Rule.Name == "UnusedFormalParameter"
+            && v.Description.Contains("id"));
+    }
+}
+
+
