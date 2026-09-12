@@ -68,11 +68,11 @@ internal static class XmlRuleHelpers
     internal static void PopulateRule(MessSharp.Rule.BaseRule rule, string setName, XmlRule def, XmlRule ov)
     {
         rule.Name = def.Name ?? "";
-        rule.Message = def.Message?.Trim() ?? "";
+        rule.Message = Fallback(ov.Message, def.Message)?.Trim() ?? "";
         rule.SetName = setName;
-        rule.ExternalUrl = def.ExternalInfoUrl ?? "";
-        rule.Since = def.Since ?? "";
-        rule.Description = def.Description?.Trim() ?? "";
+        rule.ExternalUrl = Fallback(ov.ExternalInfoUrl, def.ExternalInfoUrl) ?? "";
+        rule.Since = Fallback(ov.Since, def.Since) ?? "";
+        rule.Description = Fallback(ov.Description, def.Description)?.Trim() ?? "";
         rule.Priority = ov.Priority ?? def.Priority ?? 3;
         rule.RuleProps = MergeProps(def.Properties, ov.Properties);
     }
