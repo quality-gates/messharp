@@ -91,6 +91,11 @@ public static class ModelBuilder
             File = file,
         };
 
+        if (node.ParameterList != null)
+        {
+            cls.Methods.Add(BuildPrimaryConstructor(file, cls, node, node.ParameterList));
+        }
+
         foreach (var member in node.Members)
         {
             var method = TryBuildMethod(file, cls, member);
@@ -148,6 +153,26 @@ public static class ModelBuilder
             Class = cls,
             Node = node,
             Body = node.Body,
+            File = file,
+        };
+    }
+
+    private static MethodModel BuildPrimaryConstructor(SourceFile file, ClassModel cls, TypeDeclarationSyntax node, ParameterListSyntax parameterList)
+    {
+        var span = parameterList.SyntaxTree.GetLineSpan(parameterList.Span);
+        return new MethodModel
+        {
+            Name = node.Identifier.Text,
+            IsConstructor = true,
+            Line = span.StartLinePosition.Line + 1,
+            EndLine = span.EndLinePosition.Line + 1,
+            Exported = ModelBuilderHelpers.IsExported(node.Modifiers),
+            IsPrivate = ModelBuilderHelpers.IsPrivate(node.Modifiers),
+            Parameters = ModelBuilderHelpers.BuildParameters(parameterList),
+            ReturnType = "",
+            Class = cls,
+            Node = parameterList,
+            Body = null,
             File = file,
         };
     }

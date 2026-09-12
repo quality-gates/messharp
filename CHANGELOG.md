@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Build constructor models for C# primary constructors declared on classes, structs, and records so rules such as `ExcessiveParameterList` evaluate primary constructor parameter signatures (#116).
 - Do not treat member access selectors, member bindings, or argument/initializer labels as reads of local variables or parameters in BodyAnalysis, preventing false suppression of UnusedFormalParameter and UnusedLocalVariable (#112).
 - Ensure custom rule property overrides, messages, and descriptions take precedence when `csharp` or another composite ruleset already includes the rule (#115).
 - Resolve documented bare rule references (e.g. `<rule ref="LongVariable">`) to built-in rulesets in custom ruleset files, and allow subsequent rule definitions to override properties and priorities of earlier imported rules (#114).

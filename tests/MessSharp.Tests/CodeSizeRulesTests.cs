@@ -142,6 +142,49 @@ public class Fixture {
     }
 
     [Fact]
+    public void ExcessiveParameterList_FiresOnPrimaryConstructorManyParams()
+    {
+        // 11 parameters in primary constructor exceeds default threshold of 10
+        var src = @"
+public class PrimaryConstructor(int a, int b, int c, int d, int e,
+    int f, int g, int h, int i, int j, int k) {}";
+        var vs = Analyze(src);
+        MustHave(vs, "ExcessiveParameterList");
+    }
+
+    [Fact]
+    public void ExcessiveParameterList_FiresOnRecordPrimaryConstructorManyParams()
+    {
+        var src = @"
+public record PrimaryRecord(int a, int b, int c, int d, int e,
+    int f, int g, int h, int i, int j, int k);";
+        var vs = Analyze(src);
+        MustHave(vs, "ExcessiveParameterList");
+    }
+
+    [Fact]
+    public void ExcessiveParameterList_FiresOnStructPrimaryConstructorManyParams()
+    {
+        var src = @"
+public struct PrimaryStruct(int a, int b, int c, int d, int e,
+    int f, int g, int h, int i, int j, int k) {}";
+        var vs = Analyze(src);
+        MustHave(vs, "ExcessiveParameterList");
+    }
+
+    [Fact]
+    public void ExcessiveParameterList_NoFireOnPrimaryConstructorBelowThreshold()
+    {
+        // 9 parameters is strictly less than threshold 10
+        var src = @"
+public class BorderlinePrimary(int a, int b, int c, int d, int e,
+    int f, int g, int h, int i) {}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "ExcessiveParameterList");
+    }
+
+
+    [Fact]
     public void TooManyFields_FiresOnLargeStruct()
     {
         // 16 fields (in groups of 8) > default threshold of 15
@@ -523,6 +566,23 @@ public class Foo {
             @"^The method ManyParams has 11 parameters\. Consider reducing the number of parameters to less than 10\.$",
             vs[0].Description);
     }
+
+    [Fact]
+    public void ExcessiveParameterList_PrimaryConstructor_RenderedMessage_MatchesTemplate()
+    {
+        var src = @"
+public class Foo(int a, int b, int c, int d, int e,
+    int f, int g, int h, int i, int j, int k) {}";
+        var sf = ModelBuilder.Parse("fixture.cs", src);
+        var set = BuildSingleRule<ExcessiveParameterListRule>(
+            new Dictionary<string, string> { ["minimum"] = "10" });
+        var vs = Engine.Analyze(sf, new[] { set });
+        Assert.Single(vs);
+        Assert.Matches(
+            @"^The constructor Foo has 11 parameters\. Consider reducing the number of parameters to less than 10\.$",
+            vs[0].Description);
+    }
+
 
     [Fact]
     public void TooManyFields_RenderedMessage_MatchesTemplate()
