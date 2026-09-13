@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.14] - 2026-09-13
+
 ### Fixed
 
 - Create missing parent directories when writing reports with `--reportfile`, preventing `DirectoryNotFoundException` on clean checkouts or new output paths (#117).
