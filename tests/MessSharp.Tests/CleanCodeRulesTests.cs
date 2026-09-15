@@ -578,6 +578,103 @@ public class Sample
         Assert.Contains("-42", v[0].Description);
     }
 
+    [Fact]
+    public void DuplicatedArrayKey_MultidimensionalArrayRows_DoesNotFire()
+    {
+        var src = @"
+public class Sample
+{
+    public void Init()
+    {
+        var matrix = new int[,]
+        {
+            { 1, 2 },
+            { 1, 3 },
+        };
+    }
+}";
+        var v = Analyze(src, MakeRule<DuplicatedArrayKeyRule>("DuplicatedArrayKey"));
+        MustNotHave(v, "DuplicatedArrayKey");
+    }
+
+    [Fact]
+    public void DuplicatedArrayKey_ImplicitMultidimensionalArrayRows_DoesNotFire()
+    {
+        var src = @"
+public class Sample
+{
+    public void Init()
+    {
+        var matrix = new[,]
+        {
+            { 0, 2 },
+            { 0, 3 },
+        };
+    }
+}";
+        var v = Analyze(src, MakeRule<DuplicatedArrayKeyRule>("DuplicatedArrayKey"));
+        MustNotHave(v, "DuplicatedArrayKey");
+    }
+
+    [Fact]
+    public void DuplicatedArrayKey_ThreeDimensionalArrayRows_DoesNotFire()
+    {
+        var src = @"
+public class Sample
+{
+    public void Init()
+    {
+        var cube = new int[,,]
+        {
+            {
+                { 1, 2 },
+                { 1, 3 },
+            },
+        };
+    }
+}";
+        var v = Analyze(src, MakeRule<DuplicatedArrayKeyRule>("DuplicatedArrayKey"));
+        MustNotHave(v, "DuplicatedArrayKey");
+    }
+
+    [Fact]
+    public void DuplicatedArrayKey_FieldMultidimensionalArrayRows_DoesNotFire()
+    {
+        var src = @"
+public class Sample
+{
+    public void Init()
+    {
+        int[,] matrix = { { 1, 2 }, { 1, 3 } };
+    }
+}";
+        var v = Analyze(src, MakeRule<DuplicatedArrayKeyRule>("DuplicatedArrayKey"));
+        MustNotHave(v, "DuplicatedArrayKey");
+    }
+
+    [Fact]
+    public void DuplicatedArrayKey_DictionaryInitializerInsideArray_StillFires()
+    {
+        var src = @"
+using System.Collections.Generic;
+public class Sample
+{
+    public void Init()
+    {
+        var maps = new Dictionary<string, int>[]
+        {
+            new Dictionary<string, int>
+            {
+                { ""foo"", 1 },
+                { ""foo"", 2 },
+            },
+        };
+    }
+}";
+        var v = Analyze(src, MakeRule<DuplicatedArrayKeyRule>("DuplicatedArrayKey"));
+        MustHave(v, "DuplicatedArrayKey");
+    }
+
     // -------------------------------------------------------------------------
     // StaticAccess
     // -------------------------------------------------------------------------
