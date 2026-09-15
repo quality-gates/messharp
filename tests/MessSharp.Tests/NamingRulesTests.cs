@@ -774,6 +774,45 @@ class Foo
     }
 
     [Fact]
+    public void ShortVariable_OutVariable_IsReported()
+    {
+        var src = @"
+class Foo
+{
+    public void Bar()
+    {
+        int.TryParse(""1"", out var x);
+    }
+}";
+        var rule = MakeRule<ShortVariableRule>("ShortVariable",
+            "Avoid variables with short names like {0}. Configured minimum length is {1}.");
+        var violations = Run(src, rule);
+        MustHave(violations, "ShortVariable");
+        Assert.Contains(violations, v => v.Rule.Name == "ShortVariable"
+            && v.Description.Contains("x") && v.BeginLine == 6);
+    }
+
+    [Fact]
+    public void LongVariable_OutVariable_IsReported()
+    {
+        var src = @"
+class Foo
+{
+    public void Bar()
+    {
+        int.TryParse(""1"", out var excessivelyLongOutVariableName);
+    }
+}";
+        var rule = MakeRule<LongVariableRule>("LongVariable",
+            "Avoid excessively long variable names like {0}. Keep variable name length under {1}.");
+        var violations = Run(src, rule);
+        MustHave(violations, "LongVariable");
+        Assert.Contains(violations, v => v.Rule.Name == "LongVariable"
+            && v.Description.Contains("excessivelyLongOutVariableName")
+            && v.BeginLine == 6);
+    }
+
+    [Fact]
     public void ShortVariable_RegularLocal_Short_IsReported()
     {
         var src = @"
