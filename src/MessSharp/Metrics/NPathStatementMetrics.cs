@@ -60,7 +60,7 @@ internal static class NPathStatementMetrics
             ExpressionContribution(lockStatement.Expression),
             Block(lockStatement.Statement)),
         FixedStatementSyntax fixedStatement => NPathArithmetic.Multiply(
-            DeclarationComplexity(fixedStatement.Declaration),
+            NPathDeclarationMetrics.Complexity(fixedStatement.Declaration),
             Block(fixedStatement.Statement)),
         UnsafeStatementSyntax unsafeStatement => Stmts(unsafeStatement.Block.Statements),
         _ => 1,
@@ -88,6 +88,10 @@ internal static class NPathStatementMetrics
         int npath = NPathArithmetic.Add(
             1,
             NPathExpressionMetrics.Complexity(statement.Condition));
+        if (statement.Declaration != null)
+            npath = NPathArithmetic.Add(
+                npath,
+                NPathDeclarationMetrics.InitializerComplexity(statement.Declaration));
         foreach (var initializer in statement.Initializers)
             npath = NPathArithmetic.Add(
                 npath,
@@ -124,7 +128,7 @@ internal static class NPathStatementMetrics
     };
 
     private static int LocalDeclarationComplexity(LocalDeclarationStatementSyntax statement) =>
-        DeclarationComplexity(statement.Declaration);
+        NPathDeclarationMetrics.Complexity(statement.Declaration);
 
     /// <summary>A using statement acquires either a declaration or a plain expression.</summary>
     private static int ResourceComplexity(
@@ -132,17 +136,7 @@ internal static class NPathStatementMetrics
         ExpressionSyntax? expression) =>
         declaration == null
             ? ExpressionContribution(expression)
-            : DeclarationComplexity(declaration);
-
-    private static int DeclarationComplexity(VariableDeclarationSyntax declaration)
-    {
-        int complexity = 0;
-        foreach (var variable in declaration.Variables)
-            complexity = NPathArithmetic.Add(
-                complexity,
-                NPathExpressionMetrics.Complexity(variable.Initializer?.Value));
-        return complexity == 0 ? 1 : complexity;
-    }
+            : NPathDeclarationMetrics.Complexity(declaration);
 
     private static int ExpressionContribution(ExpressionSyntax? expression)
     {

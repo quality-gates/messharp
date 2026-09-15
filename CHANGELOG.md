@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Count variable declaration initializer complexity in `for` loops for NPath analysis (#129).
 - Include local variables declared in `out var` arguments in `ShortVariable` and `LongVariable` naming analysis (#128).
 - Do not report `DuplicatedArrayKey` for multidimensional array initializer rows (e.g. `new int[,] { { 1, 2 }, { 1, 3 } }`); only `{ key, value }` element initializers are treated as keyed entries (#126).
 - Resolve the innermost enclosing type when filtering suppressions, so `[SuppressMessage]` and `@SuppressWarnings` on nested classes/interfaces and their methods are honoured for violations reported without an explicit class name (#127).

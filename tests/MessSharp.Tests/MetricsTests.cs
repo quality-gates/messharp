@@ -280,6 +280,16 @@ class C
     }
 
     [Fact]
+    public void NPathComplexity_ForDeclarationInitializer_CountsBranches()
+    {
+        var declared = "class C { void Foo(bool a) { for (int i = a ? 1 : 2; i < 10; i++) { } } }";
+        var assigned = "class C { void Foo(bool a) { int i; for (i = a ? 1 : 2; i < 10; i++) { } } }";
+
+        Assert.Equal(4, MetricsCalc.NPathComplexity(GetMethodBody(declared)));
+        Assert.Equal(4, MetricsCalc.NPathComplexity(GetMethodBody(assigned)));
+    }
+
+    [Fact]
     public void NPathComplexity_UsingStatement_KeepsBodyPaths()
     {
         var ifs = string.Join(" ", "abcdefgh".Select(name => $"if ({name}) {{}}"));
