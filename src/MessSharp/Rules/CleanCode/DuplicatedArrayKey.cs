@@ -67,7 +67,12 @@ public sealed class DuplicatedArrayKeyRule : BaseRule, IMethodRule
             }
         }
 
-        if (expr is InitializerExpressionSyntax nested && nested.Expressions.Count >= 2)
+        // Only `{ key, value }` element initializers carry a key. Multidimensional
+        // array rows (`new int[,] { { 1, 2 }, { 1, 3 } }`) are also nested
+        // initializers, but they are positional -- their first element is not a key.
+        if (expr is InitializerExpressionSyntax nested
+            && nested.IsKind(SyntaxKind.ComplexElementInitializerExpression)
+            && nested.Expressions.Count >= 2)
         {
             var keyExpr = nested.Expressions[0];
             return (keyExpr, keyExpr.GetLocation().GetLineSpan().StartLinePosition.Line + 1);

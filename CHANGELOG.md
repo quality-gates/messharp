@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Do not report `DuplicatedArrayKey` for multidimensional array initializer rows (e.g. `new int[,] { { 1, 2 }, { 1, 3 } }`); only `{ key, value }` element initializers are treated as keyed entries (#126).
+
 ## [0.2.14] - 2026-09-13
 
 ### Fixed
