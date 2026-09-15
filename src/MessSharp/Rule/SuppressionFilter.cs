@@ -38,7 +38,7 @@ internal static class SuppressionFilter
         if (!string.IsNullOrEmpty(v.Class))
             return file.Classes.FirstOrDefault(c => c.Name == v.Class);
 
-        return file.Classes.FirstOrDefault(c => v.BeginLine >= c.Line && v.BeginLine <= c.EndLine);
+        return Innermost(file.Classes, v, c => c.Line, c => c.EndLine);
     }
 
     private static InterfaceModel? FindInterface(SourceFile file, Violation v)
@@ -46,7 +46,24 @@ internal static class SuppressionFilter
         if (!string.IsNullOrEmpty(v.Class))
             return file.Interfaces.FirstOrDefault(i => i.Name == v.Class);
 
-        return file.Interfaces.FirstOrDefault(i => v.BeginLine >= i.Line && v.BeginLine <= i.EndLine);
+        return Innermost(file.Interfaces, v, i => i.Line, i => i.EndLine);
+    }
+
+    /// <summary>
+    /// Selects the innermost declaration containing the violation's begin line.
+    /// Nested types are recorded outermost-first, so the narrowest containing span wins.
+    /// </summary>
+    private static T? Innermost<T>(
+        IEnumerable<T> declarations,
+        Violation v,
+        Func<T, int> line,
+        Func<T, int> endLine)
+        where T : class
+    {
+        return declarations
+            .Where(d => v.BeginLine >= line(d) && v.BeginLine <= endLine(d))
+            .OrderBy(d => endLine(d) - line(d))
+            .FirstOrDefault();
     }
 
     private static MethodModel? FindMethod(SourceFile file, ClassModel? cls, InterfaceModel? iface, Violation v)
