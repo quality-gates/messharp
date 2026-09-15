@@ -73,12 +73,10 @@ public sealed class ShortVariableRule : BaseRule, IClassRule, IMethodRule
                 continue;
             }
 
-            if (node is AssignmentExpressionSyntax
-                { Left: DeclarationExpressionSyntax declaration } assignment)
+            if (node is AssignmentExpressionSyntax or DeclarationExpressionSyntax)
             {
                 var variables = new List<(string Name, int Line)>();
-                LocalVariableCollector.CollectDeclarationNames(
-                    declaration, assignment.SyntaxTree, variables);
+                LocalVariableCollector.CollectDeclarationNames(node, variables);
                 foreach (var (name, line) in variables)
                     yield return (name, line, false);
 

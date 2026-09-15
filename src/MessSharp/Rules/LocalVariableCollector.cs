@@ -61,6 +61,26 @@ internal static class LocalVariableCollector
             CollectDesignation(decl.Designation, tree, result);
     }
 
+    /// <summary>
+    /// Collects variables declared by local declaration expressions, including
+    /// deconstruction assignments and <c>out var</c> arguments.
+    /// </summary>
+    internal static void CollectDeclarationNames(
+        SyntaxNode node, List<(string Name, int Line)> result)
+    {
+        switch (node)
+        {
+            case AssignmentExpressionSyntax
+            { Left: DeclarationExpressionSyntax declaration } assignment:
+                CollectDeclarationNames(declaration, assignment.SyntaxTree, result);
+                break;
+            case DeclarationExpressionSyntax declaration
+                when declaration.Parent is ArgumentSyntax:
+                CollectDeclarationNames(declaration, declaration.SyntaxTree, result);
+                break;
+        }
+    }
+
     private static void CollectDesignation(VariableDesignationSyntax designation,
         SyntaxTree tree, List<(string Name, int Line)> result)
     {
