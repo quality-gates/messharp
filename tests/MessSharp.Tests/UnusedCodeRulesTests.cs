@@ -319,6 +319,133 @@ public class MethodShadowing
         Assert.Contains("Helper", v.Description);
     }
 
+    [Fact]
+    public void UnusedPrivateField_CatchVariableShadowing_NoFalsePositive()
+    {
+        // Issue #130: a catch variable must shadow members only within its
+        // catch clause, not across the entire enclosing method body.
+        var src = @"
+public class CatchRepro
+{
+    private object ex;
+
+    public void HandleError()
+    {
+        Log(ex);
+
+        try
+        {
+            DoWork();
+        }
+        catch (System.Exception ex)
+        {
+            Handle(ex);
+        }
+    }
+
+    private void Log(object o) { }
+    private void DoWork() { }
+    private void Handle(object o) { }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedPrivateField");
+        MustNotHave(vs, "UnusedPrivateMethod");
+    }
+
+    [Fact]
+    public void UnusedPrivateMethod_CatchVariableShadowing_NoFalsePositive()
+    {
+        // Issue #130: `ex()` called before the try block is a real method
+        // use; the catch variable `ex` must not shadow it method-wide.
+        var src = @"
+public class CatchRepro
+{
+    public void HandleError()
+    {
+        ex();
+
+        try
+        {
+            DoWork();
+        }
+        catch (System.Exception ex)
+        {
+            Handle(ex);
+        }
+    }
+
+    private void ex() { }
+    private void DoWork() { }
+    private void Handle(object o) { }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedPrivateMethod");
+    }
+
+    [Fact]
+    public void UnusedLocalVariable_CatchVariableUsedInClause_NoFire()
+    {
+        // A catch variable used inside its clause is not an unused local.
+        var src = @"
+public class Foo
+{
+    public void Bar()
+    {
+        try
+        {
+        }
+        catch (System.Exception ex)
+        {
+            _ = ex;
+        }
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedLocalVariable");
+    }
+
+    [Fact]
+    public void UnusedPrivateField_ForeachVariableShadowing_NoFalsePositive()
+    {
+        // Issue #130 (companion): a foreach iteration variable shadows only
+        // within the foreach statement, not the entire enclosing block.
+        var src = @"
+public class ForeachRepro
+{
+    private int item;
+
+    public void Process()
+    {
+        System.Console.WriteLine(item);
+
+        foreach (var item in new[] { 1, 2 })
+        {
+            System.Console.WriteLine(item);
+        }
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedPrivateField");
+    }
+
+    [Fact]
+    public void UnusedLocalVariable_ForeachVariableUsedInLoop_NoFire()
+    {
+        var src = @"
+public class Foo
+{
+    public void Bar()
+    {
+        foreach (var x in new[] { 1, 2 })
+        {
+            _ = x;
+        }
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedLocalVariable");
+    }
+
     // ─── UnusedLocalVariable ────────────────────────────────────────────────
 
     [Fact]

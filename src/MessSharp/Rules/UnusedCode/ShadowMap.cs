@@ -55,8 +55,8 @@ internal sealed class ShadowMap
             ParameterSyntax parameter => (parameter.Identifier.Text, MethodLikeScope(parameter)),
             VariableDeclaratorSyntax declarator => (declarator.Identifier.Text, BlockScope(declarator)),
             SingleVariableDesignationSyntax designation => (designation.Identifier.Text, BlockScope(designation)),
-            ForEachStatementSyntax forEach => (forEach.Identifier.Text, BlockScope(forEach)),
-            CatchDeclarationSyntax catchDecl => (catchDecl.Identifier.Text, BlockScope(catchDecl)),
+            ForEachStatementSyntax forEach => (forEach.Identifier.Text, forEach),
+            CatchDeclarationSyntax catchDecl => (catchDecl.Identifier.Text, catchDecl.Ancestors().OfType<CatchClauseSyntax>().FirstOrDefault()),
             _ => ("", null),
         };
     }
