@@ -651,4 +651,91 @@ public interface IGoodName
         var violations = Engine.Analyze(sf, sets, strict: false);
         Assert.Single(violations);
     }
+
+    private static RuleSetType MakeUnusedLocalVariableSet()
+    {
+        var rule = new UnusedLocalVariableRule
+        {
+            Name = "UnusedLocalVariable",
+            Message = "Avoid unused local variables such as '{0}'.",
+            Priority = 3,
+            SetName = "unusedcode",
+            ExternalUrl = "",
+            Description = "Unused local variable rule",
+            Since = "0.2",
+            RuleProps = Properties.Empty,
+        };
+        return new RuleSetType { Name = "unusedcode", Rules = { rule } };
+    }
+
+    private const string NestedClassSuppressedMethodSource = @"
+using System.Diagnostics.CodeAnalysis;
+
+public class Outer
+{
+    public class Inner
+    {
+        [SuppressMessage(""MessSharp"", ""UnusedLocalVariable"")]
+        public void Test()
+        {
+            int unusedVar = 42;
+        }
+    }
+}";
+
+    private const string NestedClassSuppressedTypeSource = @"
+using System.Diagnostics.CodeAnalysis;
+
+public class Outer
+{
+    [SuppressMessage(""MessSharp"", ""UnusedLocalVariable"")]
+    public class Inner
+    {
+        public void Test()
+        {
+            int unusedVar = 42;
+        }
+    }
+}";
+
+    private const string NestedClassUnsuppressedSource = @"
+using System.Diagnostics.CodeAnalysis;
+
+public class Outer
+{
+    public class Inner
+    {
+        public void Test()
+        {
+            int unusedVar = 42;
+        }
+    }
+}";
+
+    [Fact]
+    public void Engine_NestedClassMethodSuppressedByAttribute_SuppressedWhenNotStrict()
+    {
+        var sf = ModelBuilder.Parse("nested.cs", NestedClassSuppressedMethodSource);
+        var sets = new[] { MakeUnusedLocalVariableSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Engine_NestedClassSuppressedByAttribute_SuppressedWhenNotStrict()
+    {
+        var sf = ModelBuilder.Parse("nested.cs", NestedClassSuppressedTypeSource);
+        var sets = new[] { MakeUnusedLocalVariableSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Engine_NestedClassWithoutSuppression_ReportedWhenNotStrict()
+    {
+        var sf = ModelBuilder.Parse("nested.cs", NestedClassUnsuppressedSource);
+        var sets = new[] { MakeUnusedLocalVariableSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+        Assert.Single(violations);
+    }
 }
