@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Count deconstructed foreach statements (`ForEachVariableStatementSyntax`) in `CyclomaticComplexity` and `NPathComplexity` metrics (#136).
 - Scope catch clause variables to their `CatchClauseSyntax` and `foreach` iteration variables to the `foreach` statement in `ShadowMap`, so bare uses of same-named private fields or methods outside those constructs no longer produce false `UnusedPrivateField`/`UnusedPrivateMethod` violations (#130).
 - Count variable declaration initializer complexity in `for` loops for NPath analysis (#129).
 - Include local variables declared in `out var` arguments in `ShortVariable` and `LongVariable` naming analysis (#128).

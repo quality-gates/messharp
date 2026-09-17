@@ -17,6 +17,7 @@ internal static class CyclomaticMetrics
         typeof(IfStatementSyntax),
         typeof(ForStatementSyntax),
         typeof(ForEachStatementSyntax),
+        typeof(ForEachVariableStatementSyntax),
         typeof(WhileStatementSyntax),
         typeof(DoStatementSyntax),
         typeof(CatchClauseSyntax),

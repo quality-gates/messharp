@@ -460,4 +460,131 @@ class C
         var node = GetClassNode(src);
         Assert.Equal(3, MetricsCalc.EffectiveLinesOfCode(node, src));
     }
+
+    [Fact]
+    public void CyclomaticComplexity_ForEachVariableStatement_CountsLoopDecisionPoint()
+    {
+        var src = @"
+class C {
+    void TestDeconstructed(System.Collections.Generic.List<(int, int)> items)
+    {
+        foreach (var (k, v) in items)
+        {
+            if (k > 0)
+            {
+            }
+        }
+    }
+}";
+        var body = GetMethodBody(src);
+        Assert.Equal(3, MetricsCalc.CyclomaticComplexity(body));
+    }
+
+    [Fact]
+    public void CyclomaticComplexity_ForEachVariableStatement_MatchesStandardForEach()
+    {
+        var standardSrc = @"
+class C {
+    void TestStandard(System.Collections.Generic.List<(int, int)> items)
+    {
+        foreach (var item in items)
+        {
+            if (item.Item1 > 0)
+            {
+            }
+        }
+    }
+}";
+        var deconstructedSrc = @"
+class C {
+    void TestDeconstructed(System.Collections.Generic.List<(int, int)> items)
+    {
+        foreach (var (k, v) in items)
+        {
+            if (k > 0)
+            {
+            }
+        }
+    }
+}";
+        var standardCcn = MetricsCalc.CyclomaticComplexity(GetMethodBody(standardSrc));
+        var deconstructedCcn = MetricsCalc.CyclomaticComplexity(GetMethodBody(deconstructedSrc));
+        Assert.Equal(3, standardCcn);
+        Assert.Equal(standardCcn, deconstructedCcn);
+    }
+
+    [Fact]
+    public void NPathComplexity_ForEachVariableStatement_CountsLoopAndInnerBody()
+    {
+        var src = @"
+class C {
+    void TestDeconstructed(System.Collections.Generic.List<(int, int)> items)
+    {
+        foreach (var (k, v) in items)
+        {
+            if (k > 0)
+            {
+            }
+        }
+    }
+}";
+        var body = GetMethodBody(src);
+        Assert.Equal(3, MetricsCalc.NPathComplexity(body));
+    }
+
+    [Fact]
+    public void NPathComplexity_ForEachVariableStatement_MatchesStandardForEach()
+    {
+        var standardSrc = @"
+class C {
+    void TestStandard(System.Collections.Generic.List<(int, int)> items)
+    {
+        foreach (var item in items)
+        {
+            if (item.Item1 > 0)
+            {
+            }
+        }
+    }
+}";
+        var deconstructedSrc = @"
+class C {
+    void TestDeconstructed(System.Collections.Generic.List<(int, int)> items)
+    {
+        foreach (var (k, v) in items)
+        {
+            if (k > 0)
+            {
+            }
+        }
+    }
+}";
+        var standardNpath = MetricsCalc.NPathComplexity(GetMethodBody(standardSrc));
+        var deconstructedNpath = MetricsCalc.NPathComplexity(GetMethodBody(deconstructedSrc));
+        Assert.Equal(3, standardNpath);
+        Assert.Equal(standardNpath, deconstructedNpath);
+    }
+
+    [Fact]
+    public void Complexity_ForEachVariableStatement_WithCollectionExpressionBranches_CountsBranches()
+    {
+        var src = @"
+class C {
+    void Foo(bool a, bool b, System.Collections.Generic.List<(int, int)> x, System.Collections.Generic.List<(int, int)> y)
+    {
+        foreach (var (k, v) in a && b ? x : y)
+        {
+            if (k > 0) { }
+        }
+    }
+}";
+        var body = GetMethodBody(src);
+        // CCN: 1 (base) + 1 (&&) + 1 (?:) + 1 (foreach) + 1 (if) = 5
+        Assert.Equal(5, MetricsCalc.CyclomaticComplexity(body));
+        // NPath: loop expr complexity: 3 (a && b ? x : y has 3 paths: (a && b) is 2 paths, ? : adds 1 -> 3).
+        // loop = expr + 1 + body = 3 + 1 + 2 = 6.
+        Assert.Equal(6, MetricsCalc.NPathComplexity(body));
+    }
 }
+
+
