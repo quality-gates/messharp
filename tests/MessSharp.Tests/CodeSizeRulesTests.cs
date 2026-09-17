@@ -641,4 +641,49 @@ public class Heavy {{
     {
         Assert.Equal(10, CodeSizeRules.All.Count);
     }
+
+    [Fact]
+    public void CyclomaticComplexity_FiresOnForEachVariableStatementAboveThreshold()
+    {
+        var src = @"
+public class Fixture {
+    public void TestDeconstructed(System.Collections.Generic.List<(int, int)> items)
+    {
+        foreach (var (k, v) in items)
+        {
+            if (k > 0)
+            {
+            }
+        }
+    }
+}";
+        var sf = ModelBuilder.Parse("fixture.cs", src);
+        var set = BuildSingleRule<CyclomaticComplexityRule>(
+            new Dictionary<string, string> { ["reportLevel"] = "2" });
+        var vs = Engine.Analyze(sf, new[] { set });
+        MustHave(vs, "CyclomaticComplexity");
+    }
+
+    [Fact]
+    public void NPathComplexity_FiresOnForEachVariableStatementAboveThreshold()
+    {
+        var src = @"
+public class Fixture {
+    public void TestDeconstructed(System.Collections.Generic.List<(int, int)> items)
+    {
+        foreach (var (k, v) in items)
+        {
+            if (k > 0)
+            {
+            }
+        }
+    }
+}";
+        var sf = ModelBuilder.Parse("fixture.cs", src);
+        var set = BuildSingleRule<NPathComplexityRule>(
+            new Dictionary<string, string> { ["minimum"] = "2" });
+        var vs = Engine.Analyze(sf, new[] { set });
+        MustHave(vs, "NPathComplexity");
+    }
 }
+

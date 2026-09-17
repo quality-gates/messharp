@@ -21,6 +21,15 @@ if [[ -n "${HTTPS_PROXY:-}" ]]; then
   fi
 fi
 
+GIT_MOUNT_ARGS=()
+if command -v git >/dev/null 2>&1; then
+  GIT_COMMON_DIR="$(git -C "$REPO_ROOT" rev-parse --git-common-dir 2>/dev/null || true)"
+  if [[ -n "$GIT_COMMON_DIR" && -d "$GIT_COMMON_DIR" && "$GIT_COMMON_DIR" != "$REPO_ROOT/.git" ]]; then
+    GIT_COMMON_DIR_ABS="$(cd "$REPO_ROOT" && cd "$GIT_COMMON_DIR" && pwd)"
+    GIT_MOUNT_ARGS+=(-v "$GIT_COMMON_DIR_ABS:$GIT_COMMON_DIR_ABS")
+  fi
+fi
+
 DOTNET_SDK_IMAGE="${DOTNET_SDK_IMAGE:-mcr.microsoft.com/dotnet/sdk:8.0}"
 
 # Development containers are resource-capped so they do not starve other
@@ -30,6 +39,7 @@ exec docker run --rm \
   --cpus=2 \
   --memory=2g \
   ${PROXY_ARGS[@]+"${PROXY_ARGS[@]}"} \
+  ${GIT_MOUNT_ARGS[@]+"${GIT_MOUNT_ARGS[@]}"} \
   -v "$REPO_ROOT":/src \
   -v messharp-nuget:/root/.nuget \
   -v messharp-dotnet:/root/.dotnet \
