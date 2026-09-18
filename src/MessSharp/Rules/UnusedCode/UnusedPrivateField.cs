@@ -92,7 +92,35 @@ public sealed class UnusedPrivateFieldRule : BaseRule, IClassRule
             return IsSimpleAssignmentTarget(member, memberAssignment);
         }
 
+        if (IsTupleDeconstructionTarget(node))
+            return true;
+
         return false;
+    }
+
+    /// <summary>
+    /// Recognises identifier/member targets inside a tuple deconstruction
+    /// assignment's LHS (e.g. `(_a, _b) = (1, 2)` or `(_a, this._b) = ...`),
+    /// which are pure writes just like a simple assignment target.
+    /// </summary>
+    private static bool IsTupleDeconstructionTarget(SyntaxNode node)
+    {
+        if (node.Parent is not ArgumentSyntax arg) return false;
+        if (arg.Parent is not TupleExpressionSyntax tuple) return false;
+        return IsSimpleAssignmentTargetTuple(tuple);
+    }
+
+    private static bool IsSimpleAssignmentTargetTuple(TupleExpressionSyntax tuple)
+    {
+        if (tuple.Parent is AssignmentExpressionSyntax assignment)
+        {
+            return assignment.IsKind(SyntaxKind.SimpleAssignmentExpression)
+                && ReferenceEquals(assignment.Left, tuple);
+        }
+
+        // nested tuple target, e.g. (_a, (_b, _c)) = ...
+        return tuple.Parent is ArgumentSyntax { Parent: TupleExpressionSyntax outer }
+            && IsSimpleAssignmentTargetTuple(outer);
     }
 
     private static bool IsSimpleAssignmentTarget(

@@ -624,6 +624,75 @@ public class Foo
     }
 
     [Fact]
+    public void UnusedLocalVariable_TupleDeconstructionAssignment_WriteOnly_Fires()
+    {
+        // Issue #140: (x, y) = (1, 2); writes into existing locals x and y;
+        // never reading them should still fire UnusedLocalVariable.
+        var src = @"
+public class Foo
+{
+    public void Bar()
+    {
+        int x;
+        int y;
+        (x, y) = (1, 2);
+    }
+}";
+        var vs = Analyze(src);
+        var names = vs.Where(v => v.Rule.Name == "UnusedLocalVariable")
+            .Select(v => v.Description)
+            .ToList();
+        Assert.Contains(names, d => d.Contains("x"));
+        Assert.Contains(names, d => d.Contains("y"));
+    }
+
+    [Fact]
+    public void UnusedPrivateField_TupleDeconstructionAssignment_WriteOnly_Fires()
+    {
+        // Issue #140: (_a, _b) = (1, 2); writes into private fields _a/_b via
+        // tuple deconstruction; never reading them should still fire.
+        var src = @"
+public class Foo
+{
+    private int _a;
+    private int _b;
+
+    public void Bar()
+    {
+        (_a, _b) = (1, 2);
+    }
+}";
+        var vs = Analyze(src);
+        MustHave(vs, "UnusedPrivateField");
+        var names = vs.Where(v => v.Rule.Name == "UnusedPrivateField")
+            .Select(v => v.Description)
+            .ToList();
+        Assert.Contains(names, d => d.Contains("_a"));
+        Assert.Contains(names, d => d.Contains("_b"));
+    }
+
+    [Fact]
+    public void UnusedFormalParameter_TupleDeconstructionAssignment_WriteOnly_Fires()
+    {
+        // Issue #140: (x, y) = (1, 2); should not count as a read of the
+        // parameters x/y that are only ever assigned via deconstruction.
+        var src = @"
+public class Foo
+{
+    public void Bar(int x, int y)
+    {
+        (x, y) = (1, 2);
+    }
+}";
+        var vs = Analyze(src);
+        var names = vs.Where(v => v.Rule.Name == "UnusedFormalParameter")
+            .Select(v => v.Description)
+            .ToList();
+        Assert.Contains(names, d => d.Contains("x"));
+        Assert.Contains(names, d => d.Contains("y"));
+    }
+
+    [Fact]
     public void UnusedLocalVariable_ExceptionsProperty_Suppresses()
     {
         var src = @"

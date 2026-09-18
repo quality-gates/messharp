@@ -23,7 +23,7 @@ internal static class BodyAnalysis
     /// </summary>
     internal static HashSet<string> IdentReads(SyntaxNode body)
     {
-        var writes = CollectWriteIdents(body);
+        var writes = WriteIdentCollector.Collect(body);
         var reads = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var node in body.DescendantNodesAndSelf())
@@ -69,48 +69,6 @@ internal static class BodyAnalysis
         if (argExpr is IdentifierNameSyntax nameofId && nameofId.Identifier.Text != "_")
             reads.Add(nameofId.Identifier.Text);
         return true;
-    }
-
-    /// <summary>
-    /// Collects the specific IdentifierNameSyntax nodes that appear only as
-    /// assignment or declaration targets (pure writes). These are excluded
-    /// from reads. We track node identity (not name) to handle shadowing.
-    /// </summary>
-    private static HashSet<SyntaxNode> CollectWriteIdents(SyntaxNode body)
-    {
-        var writes = new HashSet<SyntaxNode>(ReferenceEqualityComparer.Instance);
-
-        foreach (var node in body.DescendantNodesAndSelf())
-        {
-            switch (node)
-            {
-                // simple assignment LHS is a pure write; compound assignments
-                // read the existing left-hand value before writing it back.
-                case AssignmentExpressionSyntax aes
-                    when aes.IsKind(SyntaxKind.SimpleAssignmentExpression)
-                        && aes.Left is IdentifierNameSyntax lhsId:
-                    writes.Add(lhsId);
-                    break;
-
-                // local variable declaration: var x = ...
-                // The IdentifierToken is on the VariableDeclaratorSyntax; the
-                // IdentifierNameSyntax in the type position is something else.
-                // We mark the declarator itself; callers check via IsDeclaratorId.
-                case VariableDeclaratorSyntax vd:
-                    // handled below — we need the IdentifierNameSyntax not the token
-                    break;
-
-                // out-variable declarations: Method(out var x) / Method(out Type x)
-                case DeclarationExpressionSyntax decl
-                    when decl.Designation is SingleVariableDesignationSyntax:
-                    // These are write-only declarations; we do NOT add them to reads
-                    // The name will appear as a IdentifierNameSyntax in the designation
-                    // but is not a real identifier node — nothing to mark.
-                    break;
-            }
-        }
-
-        return writes;
     }
 
     /// <summary>

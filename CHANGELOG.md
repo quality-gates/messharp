@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Treat identifier targets inside tuple deconstruction assignments (e.g. `(x, y) = (1, 2);`, `(_a, _b) = (1, 2);`) as pure writes rather than reads, so `UnusedLocalVariable`, `UnusedPrivateField`, and `UnusedFormalParameter` correctly flag locals, fields, and parameters that are only ever assigned via deconstruction (#140).
 - Do not treat `private protected` (or `protected private`) fields and methods as private in `ModelBuilderHelpers.IsPrivate`, since these members are visible to derived types across files in the assembly and were previously false-flagged by `UnusedPrivateField`/`UnusedPrivateMethod` (#139).
 - Include reads from constructor initializers (`: base(...)`, `: this(...)`) when analyzing `UnusedFormalParameter`, since `ConstructorInitializerSyntax` is a sibling of the constructor body rather than a descendant and was previously excluded from the read analysis (#138).
 - Count `foreach` statements with variable deconstruction (e.g. `foreach (var (k, v) in items)`, represented by Roslyn as `ForEachVariableStatementSyntax`) as a decision point in `CyclomaticComplexity`, and stop discarding their loop body's control flow when computing `NPathComplexity` (#136).
