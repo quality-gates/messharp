@@ -247,6 +247,48 @@ public class Outer
         Assert.Equal("Inner", v.Class);
     }
 
+    // ─── private protected (issue #139) ────────────────────────────────────
+
+    [Fact]
+    public void UnusedPrivateField_PrivateProtectedField_NotChecked()
+    {
+        // private protected escapes the containing file to derived types in
+        // the same assembly, so it must not be treated as private.
+        var src = @"
+public class Foo
+{
+    private protected int _protectedField;
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedPrivateField");
+    }
+
+    [Fact]
+    public void UnusedPrivateMethod_PrivateProtectedMethod_NotChecked()
+    {
+        var src = @"
+public class Foo
+{
+    private protected void ProtectedMethod() {}
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedPrivateMethod");
+    }
+
+    [Fact]
+    public void UnusedPrivateField_ProtectedPrivateField_NotChecked()
+    {
+        // Modifier order is not significant; "protected private" is the
+        // same accessibility as "private protected".
+        var src = @"
+public class Foo
+{
+    protected private int _protectedField;
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedPrivateField");
+    }
+
     // ─── shadowing (issue #90) ───────────────────────────────────────────────
 
     [Fact]
