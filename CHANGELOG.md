@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Disambiguate same-named classes/interfaces across different namespaces (or nested scopes) when resolving the target type for suppression filtering, matching on the violation's namespace before falling back to the innermost enclosing declaration; previously a bare name match could leak a suppression from one type onto another same-named type, or ignore a valid suppression on the actual declaring type (#137).
 - Count `foreach` statements with variable deconstruction (e.g. `foreach (var (k, v) in items)`, represented by Roslyn as `ForEachVariableStatementSyntax`) as a decision point in `CyclomaticComplexity`, and stop discarding their loop body's control flow when computing `NPathComplexity` (#136).
 - Scope catch clause variables to their `CatchClauseSyntax` and `foreach` iteration variables to the `foreach` statement in `ShadowMap`, so bare uses of same-named private fields or methods outside those constructs no longer produce false `UnusedPrivateField`/`UnusedPrivateMethod` violations (#130).
 - Count variable declaration initializer complexity in `for` loops for NPath analysis (#129).
