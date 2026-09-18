@@ -104,9 +104,10 @@ internal static class ModelBuilderHelpers
         modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword));
 
     // A class member is private when declared so, or when it carries no
-    // accessibility modifier at all (the C# class-member default).
+    // accessibility modifier at all (the C# class-member default). Any
+    // ProtectedKeyword rules out private, even combined with PrivateKeyword
+    // (private protected escapes the containing file to derived types).
     internal static bool IsPrivate(SyntaxTokenList modifiers) =>
-        modifiers.Any(m => m.IsKind(SyntaxKind.PrivateKeyword)) ||
         !modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword) ||
                             m.IsKind(SyntaxKind.InternalKeyword) ||
                             m.IsKind(SyntaxKind.ProtectedKeyword));
