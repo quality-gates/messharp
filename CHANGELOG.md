@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Count `foreach` statements with variable deconstruction (e.g. `foreach (var (k, v) in items)`, represented by Roslyn as `ForEachVariableStatementSyntax`) as a decision point in `CyclomaticComplexity`, and stop discarding their loop body's control flow when computing `NPathComplexity` (#136).
 - Scope catch clause variables to their `CatchClauseSyntax` and `foreach` iteration variables to the `foreach` statement in `ShadowMap`, so bare uses of same-named private fields or methods outside those constructs no longer produce false `UnusedPrivateField`/`UnusedPrivateMethod` violations (#130).
 - Count variable declaration initializer complexity in `for` loops for NPath analysis (#129).
 - Include local variables declared in `out var` arguments in `ShortVariable` and `LongVariable` naming analysis (#128).

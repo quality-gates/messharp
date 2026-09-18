@@ -23,6 +23,21 @@ fi
 
 DOTNET_SDK_IMAGE="${DOTNET_SDK_IMAGE:-mcr.microsoft.com/dotnet/sdk:8.0}"
 
+# In a linked worktree (git worktree add), .git is a file pointing at a
+# git-common-dir that can live outside REPO_ROOT entirely (e.g. Fleet
+# worktrees under ~/.fleet/worktrees/*, or any .worktrees/* not nested
+# under the main checkout). Mount that path too, at the same absolute
+# location, so the in-container git install can still resolve it -- tools
+# like Stryker's --since need a working git repo, not just source files.
+GIT_MOUNT_ARGS=()
+if command -v git >/dev/null 2>&1 && git -C "$REPO_ROOT" rev-parse --git-common-dir >/dev/null 2>&1; then
+  GIT_COMMON_DIR="$(git -C "$REPO_ROOT" rev-parse --path-format=absolute --git-common-dir)"
+  case "$GIT_COMMON_DIR" in
+    "$REPO_ROOT"/*) ;; # already inside the mounted tree
+    *) GIT_MOUNT_ARGS+=(-v "$GIT_COMMON_DIR":"$GIT_COMMON_DIR") ;;
+  esac
+fi
+
 # Development containers are resource-capped so they do not starve other
 # concurrent jobs on the host (see "Resource-safe mutation and Docker runs"
 # in AGENTS.md). Both options must stay before the image name.
@@ -31,6 +46,7 @@ exec docker run --rm \
   --memory=2g \
   ${PROXY_ARGS[@]+"${PROXY_ARGS[@]}"} \
   -v "$REPO_ROOT":/src \
+  ${GIT_MOUNT_ARGS[@]+"${GIT_MOUNT_ARGS[@]}"} \
   -v messharp-nuget:/root/.nuget \
   -v messharp-dotnet:/root/.dotnet \
   -w /src \
