@@ -351,6 +351,38 @@ class C
         Assert.Equal(4, MetricsCalc.NPathComplexity(GetMethodBody(src)));
     }
 
+    [Fact]
+    public void CyclomaticComplexity_ForEach_Returns3()
+    {
+        var src = "class C { void F(System.Collections.Generic.List<int> items) "
+            + "{ foreach (var item in items) { if (item > 0) {} } } }";
+        Assert.Equal(3, MetricsCalc.CyclomaticComplexity(GetMethodBody(src)));
+    }
+
+    [Fact]
+    public void CyclomaticComplexity_ForEachVariableDeconstruction_Returns3()
+    {
+        var src = "class C { void F(System.Collections.Generic.List<(int, int)> items) "
+            + "{ foreach (var (k, v) in items) { if (k > 0) {} } } }";
+        Assert.Equal(3, MetricsCalc.CyclomaticComplexity(GetMethodBody(src)));
+    }
+
+    [Fact]
+    public void NPathComplexity_ForEach_Returns3()
+    {
+        var src = "class C { void F(System.Collections.Generic.List<int> items) "
+            + "{ foreach (var item in items) { if (item > 0) {} } } }";
+        Assert.Equal(3, MetricsCalc.NPathComplexity(GetMethodBody(src)));
+    }
+
+    [Fact]
+    public void NPathComplexity_ForEachVariableDeconstruction_Returns3()
+    {
+        var src = "class C { void F(System.Collections.Generic.List<(int, int)> items) "
+            + "{ foreach (var (k, v) in items) { if (k > 0) {} } } }";
+        Assert.Equal(3, MetricsCalc.NPathComplexity(GetMethodBody(src)));
+    }
+
     private static Microsoft.CodeAnalysis.SyntaxNode GetClassNode(string source)
     {
         var tree = CSharpSyntaxTree.ParseText(source);

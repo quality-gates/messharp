@@ -62,55 +62,63 @@ public sealed class ShortVariableRule : BaseRule, IClassRule, IMethodRule
         Microsoft.CodeAnalysis.SyntaxNode body)
     {
         foreach (var node in body.DescendantNodes())
+            foreach (var local in CollectFromNode(node))
+                yield return local;
+    }
+
+    private static IEnumerable<(string Name, int Line, bool IsLoop)> CollectFromNode(
+        Microsoft.CodeAnalysis.SyntaxNode node) => node switch
         {
-            if (node is VariableDeclarationSyntax varDecl
-                && LocalVariableCollector.IsLocalStatementDeclaration(varDecl))
-            {
-                bool isForInit = varDecl.Parent is ForStatementSyntax;
-                foreach (var (name, line) in LocalVariableCollector.CollectVariables(varDecl))
-                    yield return (name, line, isForInit);
+            VariableDeclarationSyntax varDecl
+                when LocalVariableCollector.IsLocalStatementDeclaration(varDecl)
+                => CollectVariableDeclaration(varDecl),
+            AssignmentExpressionSyntax or DeclarationExpressionSyntax => CollectDeclarationNames(node),
+            DeclarationPatternSyntax pattern => CollectDeclarationPattern(pattern),
+            ForEachStatementSyntax forEach => CollectForEach(forEach),
+            ForEachVariableStatementSyntax forEachVariable => CollectForEachVariable(forEachVariable),
+            _ => [],
+        };
 
-                continue;
-            }
+    private static IEnumerable<(string Name, int Line, bool IsLoop)> CollectVariableDeclaration(
+        VariableDeclarationSyntax varDecl)
+    {
+        bool isForInit = varDecl.Parent is ForStatementSyntax;
+        foreach (var (name, line) in LocalVariableCollector.CollectVariables(varDecl))
+            yield return (name, line, isForInit);
+    }
 
-            if (node is AssignmentExpressionSyntax or DeclarationExpressionSyntax)
-            {
-                var variables = new List<(string Name, int Line)>();
-                LocalVariableCollector.CollectDeclarationNames(node, variables);
-                foreach (var (name, line) in variables)
-                    yield return (name, line, false);
+    private static IEnumerable<(string Name, int Line, bool IsLoop)> CollectDeclarationNames(
+        Microsoft.CodeAnalysis.SyntaxNode node)
+    {
+        var variables = new List<(string Name, int Line)>();
+        LocalVariableCollector.CollectDeclarationNames(node, variables);
+        foreach (var (name, line) in variables)
+            yield return (name, line, false);
+    }
 
-                continue;
-            }
+    private static IEnumerable<(string Name, int Line, bool IsLoop)> CollectDeclarationPattern(
+        DeclarationPatternSyntax pattern)
+    {
+        foreach (var (name, line) in LocalVariableCollector.DeclarationPatternVariables(pattern))
+            yield return (name, line, false);
+    }
 
-            if (node is DeclarationPatternSyntax pattern)
-            {
-                foreach (var (name, line) in LocalVariableCollector.DeclarationPatternVariables(pattern))
-                    yield return (name, line, false);
+    private static IEnumerable<(string Name, int Line, bool IsLoop)> CollectForEach(
+        ForEachStatementSyntax forEach)
+    {
+        if (forEach.Identifier.Text == "_") yield break;
+        var span = forEach.SyntaxTree.GetLineSpan(forEach.Identifier.Span);
+        int line = span.StartLinePosition.Line + 1;
+        yield return (forEach.Identifier.Text, line, false);
+    }
 
-                continue;
-            }
-
-            if (node is ForEachStatementSyntax forEach)
-            {
-                if (forEach.Identifier.Text != "_")
-                {
-                    var span = forEach.SyntaxTree.GetLineSpan(forEach.Identifier.Span);
-                    int line = span.StartLinePosition.Line + 1;
-                    yield return (forEach.Identifier.Text, line, false);
-                }
-
-                continue;
-            }
-
-            if (node is ForEachVariableStatementSyntax forEachVariable)
-            {
-                var variables = new List<(string Name, int Line)>();
-                LocalVariableCollector.CollectDeclarationNames(
-                    forEachVariable.Variable, forEachVariable.SyntaxTree, variables);
-                foreach (var (name, line) in variables)
-                    yield return (name, line, false);
-            }
-        }
+    private static IEnumerable<(string Name, int Line, bool IsLoop)> CollectForEachVariable(
+        ForEachVariableStatementSyntax forEachVariable)
+    {
+        var variables = new List<(string Name, int Line)>();
+        LocalVariableCollector.CollectDeclarationNames(
+            forEachVariable.Variable, forEachVariable.SyntaxTree, variables);
+        foreach (var (name, line) in variables)
+            yield return (name, line, false);
     }
 }

@@ -22,7 +22,7 @@ internal static class NPathStatementMetrics
     {
         IfStatementSyntax ifStatement => NPathIf(ifStatement),
         ForStatementSyntax forStatement => NPathFor(forStatement),
-        ForEachStatementSyntax forEach => NPathArithmetic.Add(
+        CommonForEachStatementSyntax forEach => NPathArithmetic.Add(
             NPathArithmetic.Add(NPathExpressionMetrics.Complexity(forEach.Expression), 1),
             Block(forEach.Statement)),
         WhileStatementSyntax whileStatement => NPathArithmetic.Add(
