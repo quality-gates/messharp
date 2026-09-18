@@ -36,7 +36,7 @@ internal static class SuppressionFilter
     private static ClassModel? FindClass(SourceFile file, Violation v)
     {
         if (!string.IsNullOrEmpty(v.Class))
-            return file.Classes.FirstOrDefault(c => c.Name == v.Class);
+            return ResolveByName(file.Classes, v, c => c.Name, c => c.Namespace, c => c.Line, c => c.EndLine);
 
         return Innermost(file.Classes, v, c => c.Line, c => c.EndLine);
     }
@@ -44,9 +44,37 @@ internal static class SuppressionFilter
     private static InterfaceModel? FindInterface(SourceFile file, Violation v)
     {
         if (!string.IsNullOrEmpty(v.Class))
-            return file.Interfaces.FirstOrDefault(i => i.Name == v.Class);
+            return ResolveByName(file.Interfaces, v, i => i.Name, i => i.Namespace, i => i.Line, i => i.EndLine);
 
         return Innermost(file.Interfaces, v, i => i.Line, i => i.EndLine);
+    }
+
+    /// <summary>
+    /// Resolves the named type among candidates sharing that name, disambiguating by
+    /// namespace (when known) and falling back to the innermost enclosing declaration
+    /// when multiple same-named types remain (e.g. same name in the same namespace via
+    /// nesting, or an unknown package).
+    /// </summary>
+    private static T? ResolveByName<T>(
+        IEnumerable<T> declarations,
+        Violation v,
+        Func<T, string> name,
+        Func<T, string> ns,
+        Func<T, int> line,
+        Func<T, int> endLine)
+        where T : class
+    {
+        var matching = declarations
+            .Where(d => name(d) == v.Class && (string.IsNullOrEmpty(v.Package) || ns(d) == v.Package))
+            .ToList();
+
+        if (matching.Count == 1)
+            return matching[0];
+
+        if (matching.Count > 1)
+            return Innermost(matching, v, line, endLine);
+
+        return null;
     }
 
     /// <summary>

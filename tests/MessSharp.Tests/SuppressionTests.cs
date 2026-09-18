@@ -738,4 +738,76 @@ public class Outer
         var violations = Engine.Analyze(sf, sets, strict: false);
         Assert.Single(violations);
     }
+
+    private static RuleSetType MakeBooleanGetMethodNameSet()
+    {
+        var rule = new BooleanGetMethodNameRule
+        {
+            Name = "BooleanGetMethodName",
+            Message = "The '{0}()' method which returns a boolean should be named 'Is...()' or 'Has...()'",
+            Priority = 3,
+            SetName = "naming",
+        };
+        return new RuleSetType { Name = "naming", Rules = { rule } };
+    }
+
+    private const string FirstNamespaceSuppressedSameClassNameSource = @"
+using System.Diagnostics.CodeAnalysis;
+
+namespace Ns1
+{
+    [SuppressMessage(""MessSharp"", ""BooleanGetMethodName"")]
+    public class Worker
+    {
+    }
+}
+
+namespace Ns2
+{
+    public class Worker
+    {
+        public bool GetStatus() => true;
+    }
+}";
+
+    private const string SecondNamespaceSuppressedSameClassNameSource = @"
+using System.Diagnostics.CodeAnalysis;
+
+namespace Ns1
+{
+    public class Worker
+    {
+        public bool GetStatus() => true;
+    }
+}
+
+namespace Ns2
+{
+    [SuppressMessage(""MessSharp"", ""BooleanGetMethodName"")]
+    public class Worker
+    {
+    }
+}";
+
+    [Fact]
+    public void Engine_SameClassNameDifferentNamespace_SuppressionOnFirstDoesNotLeakToSecond()
+    {
+        var sf = ModelBuilder.Parse("ns.cs", FirstNamespaceSuppressedSameClassNameSource);
+        var sets = new[] { MakeBooleanGetMethodNameSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+
+        Assert.Single(violations);
+        Assert.Equal(sf.AllMethods[0].Line, violations[0].BeginLine);
+    }
+
+    [Fact]
+    public void Engine_SameClassNameDifferentNamespace_SuppressionOnSecondDoesNotBlockFirst()
+    {
+        var sf = ModelBuilder.Parse("ns.cs", SecondNamespaceSuppressedSameClassNameSource);
+        var sets = new[] { MakeBooleanGetMethodNameSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+
+        Assert.Single(violations);
+        Assert.Equal(sf.AllMethods[0].Line, violations[0].BeginLine);
+    }
 }
