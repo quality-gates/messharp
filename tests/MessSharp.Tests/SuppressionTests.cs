@@ -738,4 +738,47 @@ public class Outer
         var violations = Engine.Analyze(sf, sets, strict: false);
         Assert.Single(violations);
     }
+
+    private const string SameNameClassesDifferentNamespacesSource = @"
+using System.Diagnostics.CodeAnalysis;
+
+namespace Ns1
+{
+    [SuppressMessage(""MessSharp"", ""CyclomaticComplexity"")]
+    public class Worker
+    {
+    }
+}
+
+namespace Ns2
+{
+    public class Worker
+    {
+        public int HeavyMethod(int a, int b, int c, int d, int e) {
+            int x = 0;
+            if (a > 0 && b > 0) { x++; }
+            if (a > 1) { x++; }
+            if (b > 1) { x++; }
+            for (int i = 0; i < a; i++) { x++; }
+            switch (c) {
+                case 1: x++; break;
+                case 2: x++; break;
+                case 3: x++; break;
+            }
+            if (d > 0) { x++; }
+            if (e > 0) { x++; }
+            return x;
+        }
+    }
+}";
+
+    [Fact]
+    public void Engine_SameNameClassesInDifferentNamespaces_SuppressionDoesNotLeak()
+    {
+        var sf = ModelBuilder.Parse("ns.cs", SameNameClassesDifferentNamespacesSource);
+        var sets = new[] { MakeCodeSizeSet() };
+        var violations = Engine.Analyze(sf, sets, strict: false);
+
+        Assert.Single(violations);
+    }
 }
