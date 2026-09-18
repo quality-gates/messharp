@@ -1,3 +1,5 @@
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using MessSharp.Model;
 using MessSharp.Rule;
 
@@ -18,7 +20,7 @@ public sealed class UnusedFormalParameterRule : BaseRule, IMethodRule
         var body = BodyAnalysis.EffectiveBody(method);
         if (body == null) return;   // abstract / extern / interface declaration
 
-        var reads = BodyAnalysis.IdentReads(body);
+        var reads = CollectReads(method, body);
         HashSet<string>? writes = null;
 
         foreach (var p in method.Parameters)
@@ -34,5 +36,20 @@ public sealed class UnusedFormalParameterRule : BaseRule, IMethodRule
 
             ctx.Report(p.Line, p.Line, p.Name);
         }
+    }
+
+    /// <summary>
+    /// Reads from the effective body plus, for constructors, the `: base(...)`/`: this(...)`
+    /// initializer, which is a sibling of the body in the syntax tree rather than a descendant.
+    /// </summary>
+    private static HashSet<string> CollectReads(MethodModel method, SyntaxNode body)
+    {
+        var reads = BodyAnalysis.IdentReads(body);
+        if (method.Node is ConstructorDeclarationSyntax { Initializer: not null } ctor)
+        {
+            reads.UnionWith(BodyAnalysis.IdentReads(ctor.Initializer));
+        }
+
+        return reads;
     }
 }

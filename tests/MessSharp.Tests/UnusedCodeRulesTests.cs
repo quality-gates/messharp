@@ -1154,6 +1154,41 @@ public class Person
         Assert.Contains(vs, v => v.Rule.Name == "UnusedFormalParameter"
             && v.Description.Contains("id"));
     }
+
+    [Fact]
+    public void UnusedFormalParameter_BaseInitializerReadsParam_NoFire()
+    {
+        var src = @"
+public class BaseClass
+{
+    public BaseClass(int x) { _ = x; }
+}
+
+public class DerivedClass : BaseClass
+{
+    public DerivedClass(int x) : base(x)
+    {
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedFormalParameter");
+    }
+
+    [Fact]
+    public void UnusedFormalParameter_ThisInitializerReadsParam_NoFire()
+    {
+        var src = @"
+public class DerivedClass
+{
+    public DerivedClass(int x) { _ = x; }
+
+    public DerivedClass(int x, int y) : this(x + y)
+    {
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedFormalParameter");
+    }
 }
 
 
