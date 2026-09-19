@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Do not report `StaticAccess` for instance property chains (e.g. `obj.Prop.Method()`), `this`, `base`, field, and local variable member access chains, ensuring only static method invocations on type or namespace-qualified type receivers are reported (#150).
 - Resolve private member usage across every part of a `partial` type in the analysed paths, so `UnusedPrivateField` and `UnusedPrivateMethod` no longer report members that are declared in one file and used only in another part of the same partial type (e.g. `*.Designer.cs` or generated parts). The runner now parses all files before analysing them. Parts are matched by namespace, containing types, name, and generic arity (#149).
 - Do not report `CamelCaseParameterName` for positional parameters of `record`, `record class`, and `record struct` declarations, which declare public properties and are conventionally PascalCase; primary-constructor parameters on plain classes and structs are still checked (#148).
 - Resolve `SuppressionFilter.FindClass`/`FindInterface` by namespace (and, when ambiguous, innermost enclosing span) in addition to bare name, so violations in same-named types declared in different namespaces no longer leak suppressions from, or ignore suppressions on, an unrelated same-named type earlier in the file (#137).

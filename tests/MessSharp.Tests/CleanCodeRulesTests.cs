@@ -794,6 +794,52 @@ public class Baz {
     }
 
     [Fact]
+    public void StaticAccess_InstancePropertyChain_DoesNotFire()
+    {
+        var src = @"
+using System.Collections.Generic;
+using System.Linq;
+
+public class Cart {
+    public List<int> Items { get; } = new();
+}
+
+public class Checkout {
+    public int Count(Cart cart) => cart.Items.Count();
+    public void Add(Cart cart) => cart.Items.Add(1);
+    public int Control(int value) => System.Math.Abs(value);
+}";
+        var v = Analyze(src, MakeRule<StaticAccessRule>("StaticAccess"));
+        Assert.Single(v);
+        Assert.Contains("Math", v[0].Description);
+    }
+
+    [Fact]
+    public void StaticAccess_ThisOrBaseOrFieldChain_DoesNotFire()
+    {
+        var src = @"
+using System.Collections.Generic;
+
+public class BaseClass {
+    protected List<int> BaseItems { get; } = new();
+}
+
+public class DerivedClass : BaseClass {
+    public List<int> Items { get; } = new();
+    private List<int> _fieldItems = new();
+
+    public void Test() {
+        this.Items.Add(1);
+        base.BaseItems.Add(2);
+        _fieldItems.Add(3);
+        Items.Add(4);
+    }
+}";
+        var v = Analyze(src, MakeRule<StaticAccessRule>("StaticAccess"));
+        MustNotHave(v, "StaticAccess");
+    }
+
+    [Fact]
     public void StaticAccess_ExactMessage()
     {
         var src = @"

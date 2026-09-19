@@ -25,17 +25,19 @@ public sealed class StaticAccessRule : BaseRule, IMethodRule
         if (ignorePattern != null && ignorePattern.IsMatch(method.Name)) return;
 
         var ownClass = method.Class?.Name ?? "";
+        var instanceNames = StaticAccessReceiverClassifier.CollectInstanceNames(method, body);
         foreach (var invocation in body.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
-            CheckInvocation(ctx, method.Name, invocation, ownClass, exceptions);
+            CheckInvocation(ctx, method.Name, invocation, ownClass, exceptions, instanceNames);
     }
 
     private static void CheckInvocation(RuleContext ctx, string methodName,
-        InvocationExpressionSyntax invocation, string ownClass, HashSet<string> exceptions)
+        InvocationExpressionSyntax invocation, string ownClass, HashSet<string> exceptions,
+        HashSet<string> instanceNames)
     {
         if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess) return;
         if (!memberAccess.IsKind(SyntaxKind.SimpleMemberAccessExpression)) return;
 
-        var targetClassName = GetTargetClassName(memberAccess.Expression);
+        var targetClassName = StaticAccessReceiverClassifier.GetTargetClassName(memberAccess.Expression, instanceNames);
         if (targetClassName == null) return;
         if (IsSkipped(targetClassName, ownClass, exceptions)) return;
 
@@ -43,17 +45,9 @@ public sealed class StaticAccessRule : BaseRule, IMethodRule
         ctx.Report(line, line, targetClassName, methodName);
     }
 
-    private static string? GetTargetClassName(ExpressionSyntax expression) =>
-        expression switch
-        {
-            SimpleNameSyntax simpleName => simpleName.Identifier.Text,
-            MemberAccessExpressionSyntax qualifiedName => qualifiedName.Name.Identifier.Text,
-            _ => null,
-        };
-
     private static bool IsSkipped(string targetClassName, string ownClass, HashSet<string> exceptions)
     {
-        if (targetClassName.Length == 0 || char.IsLower(targetClassName[0])) return true;
+        if (targetClassName.Length == 0 || !char.IsUpper(targetClassName[0])) return true;
         if (targetClassName == ownClass) return true;
         return exceptions.Contains(targetClassName);
     }
