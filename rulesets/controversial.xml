@@ -60,7 +60,7 @@ class ClassName
 
     <rule name="CamelCasePropertyName"
           since="0.2"
-          message="The property {0} is not named in camelCase."
+          message="The property {0} is not named in {1}."
           class="PHPMD\Rule\Controversial\CamelCasePropertyName"
           externalInfoUrl="https://phpmd.org/rules/controversial.html#camelcasepropertyname">
         <description>
