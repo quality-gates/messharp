@@ -1,0 +1,7 @@
+::warning file=docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs,line=5,col=1::Avoid unused private fields such as 'unusedField'. (UnusedPrivateField)
+::warning file=docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs,line=7,col=1::Avoid unused private methods such as 'NeverCalled'. (UnusedPrivateMethod)
+::warning file=docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs,line=11,col=1::The method Heavy() has a Cyclomatic Complexity of 11. The configured cyclomatic complexity threshold is 10. (CyclomaticComplexity)
+::warning file=docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs,line=11,col=1::The method Heavy() has an NPath complexity of 1024. The configured NPath complexity threshold is 200. (NPathComplexity)
+::warning file=docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs,line=11,col=1::The method Heavy has 10 parameters. Consider reducing the number of parameters to less than 10. (ExcessiveParameterList)
+::warning file=docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs,line=23,col=1::Avoid unused local variables such as 'unusedLocal'. (UnusedLocalVariable)
+::warning file=docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs,line=36,col=1::The 'GetReady()' method which returns a boolean should be named 'Is...()' or 'Has...()' (BooleanGetMethodName)

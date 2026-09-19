@@ -1,0 +1,93 @@
+[
+  {
+    "type": "issue",
+    "check_name": "UnusedPrivateField",
+    "description": "Avoid unused private fields such as 'unusedField'.",
+    "fingerprint": "646f63732f6578706c6f7261746f72792d74657374696e672f323032362d30392d31322d6d657373686172702d636c692f66697874757265732f56696f6c6174696f6e732e63733a353a556e75736564507269766174654669656c64",
+    "severity": "major",
+    "location": {
+      "path": "docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs",
+      "lines": {
+        "begin": 5
+      }
+    }
+  },
+  {
+    "type": "issue",
+    "check_name": "UnusedPrivateMethod",
+    "description": "Avoid unused private methods such as 'NeverCalled'.",
+    "fingerprint": "646f63732f6578706c6f7261746f72792d74657374696e672f323032362d30392d31322d6d657373686172702d636c692f66697874757265732f56696f6c6174696f6e732e63733a373a556e75736564507269766174654d6574686f64",
+    "severity": "major",
+    "location": {
+      "path": "docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs",
+      "lines": {
+        "begin": 7
+      }
+    }
+  },
+  {
+    "type": "issue",
+    "check_name": "CyclomaticComplexity",
+    "description": "The method Heavy() has a Cyclomatic Complexity of 11. The configured cyclomatic complexity threshold is 10.",
+    "fingerprint": "646f63732f6578706c6f7261746f72792d74657374696e672f323032362d30392d31322d6d657373686172702d636c692f66697874757265732f56696f6c6174696f6e732e63733a31313a4379636c6f6d61746963436f6d706c6578697479",
+    "severity": "major",
+    "location": {
+      "path": "docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs",
+      "lines": {
+        "begin": 11
+      }
+    }
+  },
+  {
+    "type": "issue",
+    "check_name": "NPathComplexity",
+    "description": "The method Heavy() has an NPath complexity of 1024. The configured NPath complexity threshold is 200.",
+    "fingerprint": "646f63732f6578706c6f7261746f72792d74657374696e672f323032362d30392d31322d6d657373686172702d636c692f66697874757265732f56696f6c6174696f6e732e63733a31313a4e50617468436f6d706c6578697479",
+    "severity": "major",
+    "location": {
+      "path": "docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs",
+      "lines": {
+        "begin": 11
+      }
+    }
+  },
+  {
+    "type": "issue",
+    "check_name": "ExcessiveParameterList",
+    "description": "The method Heavy has 10 parameters. Consider reducing the number of parameters to less than 10.",
+    "fingerprint": "646f63732f6578706c6f7261746f72792d74657374696e672f323032362d30392d31322d6d657373686172702d636c692f66697874757265732f56696f6c6174696f6e732e63733a31313a457863657373697665506172616d657465724c697374",
+    "severity": "major",
+    "location": {
+      "path": "docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs",
+      "lines": {
+        "begin": 11
+      }
+    }
+  },
+  {
+    "type": "issue",
+    "check_name": "UnusedLocalVariable",
+    "description": "Avoid unused local variables such as 'unusedLocal'.",
+    "fingerprint": "646f63732f6578706c6f7261746f72792d74657374696e672f323032362d30392d31322d6d657373686172702d636c692f66697874757265732f56696f6c6174696f6e732e63733a32333a556e757365644c6f63616c5661726961626c65",
+    "severity": "major",
+    "location": {
+      "path": "docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs",
+      "lines": {
+        "begin": 23
+      }
+    }
+  },
+  {
+    "type": "issue",
+    "check_name": "BooleanGetMethodName",
+    "description": "The 'GetReady()' method which returns a boolean should be named 'Is...()' or 'Has...()'",
+    "fingerprint": "646f63732f6578706c6f7261746f72792d74657374696e672f323032362d30392d31322d6d657373686172702d636c692f66697874757265732f56696f6c6174696f6e732e63733a33363a426f6f6c65616e4765744d6574686f644e616d65",
+    "severity": "minor",
+    "location": {
+      "path": "docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs",
+      "lines": {
+        "begin": 36
+      }
+    }
+  }
+]

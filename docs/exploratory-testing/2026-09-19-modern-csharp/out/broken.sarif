@@ -1,0 +1,118 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "messharp",
+          "version": "0.0.0-dev",
+          "rules": [
+            {
+              "id": "BooleanGetMethodName",
+              "name": "BooleanGetMethodName",
+              "helpUri": "https://phpmd.org/rules/naming.html#booleangetmethodname",
+              "shortDescription": {
+                "text": "Looks for methods named 'GetX()' with 'bool' as the return type. The convention\nin C# is to name these methods 'IsX()' or 'HasX()'."
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "BooleanGetMethodName",
+          "level": "warning",
+          "message": {
+            "text": "The 'GetFlag()' method which returns a boolean should be named 'Is...()' or 'Has...()'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-19-modern-csharp/fixtures/ci-plain/CafeBox.cs"
+                },
+                "region": {
+                  "startLine": 5,
+                  "endLine": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "BooleanGetMethodName",
+          "level": "warning",
+          "message": {
+            "text": "The 'GetOther()' method which returns a boolean should be named 'Is...()' or 'Has...()'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-19-modern-csharp/fixtures/ci-plain/CafeBox.cs"
+                },
+                "region": {
+                  "startLine": 7,
+                  "endLine": 7
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "BooleanGetMethodName",
+          "level": "warning",
+          "message": {
+            "text": "The 'GetFlag()' method which returns a boolean should be named 'Is...()' or 'Has...()'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-19-modern-csharp/fixtures/ci-plain/CafeBox.cs"
+                },
+                "region": {
+                  "startLine": 12,
+                  "endLine": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "",
+          "level": "error",
+          "message": {
+            "text": "CS1026: ) expected on line 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-19-modern-csharp/fixtures/broken/Broken.cs"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "",
+          "level": "error",
+          "message": {
+            "text": "CS1513: } expected on line 4"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-19-modern-csharp/fixtures/broken/Broken.cs"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

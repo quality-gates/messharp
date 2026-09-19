@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="0.0.0-dev">
+  <file name="docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs">
+    <error line="5" column="1" severity="warning" message="Avoid unused private fields such as &#039;unusedField&#039;." source="Unused Code Rules/UnusedPrivateField"/>
+    <error line="7" column="1" severity="warning" message="Avoid unused private methods such as &#039;NeverCalled&#039;." source="Unused Code Rules/UnusedPrivateMethod"/>
+    <error line="11" column="1" severity="warning" message="The method Heavy() has a Cyclomatic Complexity of 11. The configured cyclomatic complexity threshold is 10." source="Code Size Rules/CyclomaticComplexity"/>
+    <error line="11" column="1" severity="warning" message="The method Heavy() has an NPath complexity of 1024. The configured NPath complexity threshold is 200." source="Code Size Rules/NPathComplexity"/>
+    <error line="11" column="1" severity="warning" message="The method Heavy has 10 parameters. Consider reducing the number of parameters to less than 10." source="Code Size Rules/ExcessiveParameterList"/>
+    <error line="23" column="1" severity="warning" message="Avoid unused local variables such as &#039;unusedLocal&#039;." source="Unused Code Rules/UnusedLocalVariable"/>
+    <error line="36" column="1" severity="info" message="The &#039;GetReady()&#039; method which returns a boolean should be named &#039;Is...()&#039; or &#039;Has...()&#039;" source="Naming Rules/BooleanGetMethodName"/>
+  </file>
+</checkstyle>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<pmd version="0.0.0-dev" tool="messharp" timestamp="2026-09-19T00:07:32.7774556+00:00">
+  <file name="docs/exploratory-testing/2026-09-19-modern-csharp/fixtures/ci/My Project &amp; Co/Café Box.cs">
+    <violation beginline="5" endline="5" rule="BooleanGetMethodName" ruleset="Naming Rules" package="Shop.Ci" externalInfoUrl="https://phpmd.org/rules/naming.html#booleangetmethodname" class="Box" method="GetFlag" priority="4">
+      The &#039;GetFlag()&#039; method which returns a boolean should be named &#039;Is...()&#039; or &#039;Has...()&#039;
+    </violation>
+    <violation beginline="7" endline="7" rule="BooleanGetMethodName" ruleset="Naming Rules" package="Shop.Ci" externalInfoUrl="https://phpmd.org/rules/naming.html#booleangetmethodname" class="Box" method="GetOther" priority="4">
+      The &#039;GetOther()&#039; method which returns a boolean should be named &#039;Is...()&#039; or &#039;Has...()&#039;
+    </violation>
+    <violation beginline="10" endline="13" rule="CamelCaseClassName" ruleset="Controversial Rules" package="Shop.Ci" externalInfoUrl="https://phpmd.org/rules/controversial.html#camelcaseclassname" class="box_of_things" priority="1">
+      The class box_of_things is not named in PascalCase.
+    </violation>
+    <violation beginline="12" endline="12" rule="BooleanGetMethodName" ruleset="Naming Rules" package="Shop.Ci" externalInfoUrl="https://phpmd.org/rules/naming.html#booleangetmethodname" class="box_of_things" method="GetFlag" priority="4">
+      The &#039;GetFlag()&#039; method which returns a boolean should be named &#039;Is...()&#039; or &#039;Has...()&#039;
+    </violation>
+  </file>
+</pmd>
