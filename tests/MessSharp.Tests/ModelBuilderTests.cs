@@ -453,6 +453,7 @@ public class Service(int id, string name)
         var ctor = cls.Methods[0];
         Assert.Equal("Service", ctor.Name);
         Assert.True(ctor.IsConstructor);
+        Assert.False(ctor.IsPositionalRecordConstructor);
         Assert.True(ctor.Exported);
         Assert.False(ctor.IsPrivate);
         Assert.Null(ctor.Body);
@@ -486,6 +487,7 @@ public class Service(int id, string name)
         var ctor = rec.Methods[0];
         Assert.Equal("Person", ctor.Name);
         Assert.True(ctor.IsConstructor);
+        Assert.True(ctor.IsPositionalRecordConstructor);
         Assert.Equal(2, ctor.Parameters.Count);
         Assert.Equal("FirstName", ctor.Parameters[0].Name);
         Assert.Equal("LastName", ctor.Parameters[1].Name);
@@ -504,6 +506,7 @@ public class Service(int id, string name)
         var ctor = str.Methods[0];
         Assert.Equal("Point", ctor.Name);
         Assert.True(ctor.IsConstructor);
+        Assert.False(ctor.IsPositionalRecordConstructor);
         Assert.Equal(2, ctor.Parameters.Count);
     }
 

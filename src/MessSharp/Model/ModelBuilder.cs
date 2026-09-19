@@ -164,6 +164,7 @@ public static class ModelBuilder
         {
             Name = node.Identifier.Text,
             IsConstructor = true,
+            IsPositionalRecordConstructor = node is RecordDeclarationSyntax,
             Line = span.StartLinePosition.Line + 1,
             EndLine = span.EndLinePosition.Line + 1,
             Exported = ModelBuilderHelpers.IsExported(node.Modifiers),

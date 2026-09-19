@@ -386,6 +386,26 @@ public class Foo
         Assert.Equal("The parameter under_score is not named in camelCase.", v.Description);
     }
 
+    [Theory]
+    [InlineData("public record Point(int X, int Y);")]
+    [InlineData("public record class Point(int X, int Y);")]
+    [InlineData("public record struct Point(int X, int Y);")]
+    public void CamelCaseParameterName_PositionalRecordPascalCase_NoFire(string src)
+    {
+        var vs = Analyze(src);
+        MustNotHave(vs, "CamelCaseParameterName");
+    }
+
+    [Theory]
+    [InlineData("public class Point(int X) { public int Get() => X; }")]
+    [InlineData("public struct Point(int X) { public int Get() => X; }")]
+    public void CamelCaseParameterName_PrimaryConstructorPascalCase_Fires(string src)
+    {
+        var vs = Analyze(src);
+        var v = Assert.Single(vs.Where(v => v.Rule.Name == "CamelCaseParameterName"));
+        Assert.Equal("The parameter X is not named in camelCase.", v.Description);
+    }
+
     // ─── CamelCaseVariableName ────────────────────────────────────────────────
 
     [Fact]

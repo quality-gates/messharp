@@ -101,12 +101,15 @@ public sealed class CamelCasePropertyNameRule : BaseRule, IClassRule
 
 /// <summary>
 /// Parameters must be camelCase (C# convention).
+/// Positional record parameters are skipped: they declare public properties,
+/// which are conventionally PascalCase.
 /// phpmd rule name kept; message unchanged (already says "camelCase").
 /// </summary>
 public sealed class CamelCaseParameterNameRule : BaseRule, IMethodRule
 {
     public void Apply(RuleContext ctx, MethodModel method)
     {
+        if (method.IsPositionalRecordConstructor) return;
         foreach (var p in method.Parameters)
         {
             if (string.IsNullOrEmpty(p.Name) || p.Name == "_") continue;

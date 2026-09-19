@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Do not report `CamelCaseParameterName` for positional parameters of `record`, `record class`, and `record struct` declarations, which declare public properties and are conventionally PascalCase; primary-constructor parameters on plain classes and structs are still checked (#148).
 - Resolve `SuppressionFilter.FindClass`/`FindInterface` by namespace (and, when ambiguous, innermost enclosing span) in addition to bare name, so violations in same-named types declared in different namespaces no longer leak suppressions from, or ignore suppressions on, an unrelated same-named type earlier in the file (#137).
 - Treat identifier targets inside tuple deconstruction assignments (e.g. `(x, y) = (1, 2);`, `(_a, _b) = (1, 2);`) as pure writes rather than reads, so `UnusedLocalVariable`, `UnusedPrivateField`, and `UnusedFormalParameter` correctly flag locals, fields, and parameters that are only ever assigned via deconstruction (#140).
 - Do not treat `private protected` (or `protected private`) fields and methods as private in `ModelBuilderHelpers.IsPrivate`, since these members are visible to derived types across files in the assembly and were previously false-flagged by `UnusedPrivateField`/`UnusedPrivateMethod` (#139).
