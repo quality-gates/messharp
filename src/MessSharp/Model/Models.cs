@@ -63,6 +63,11 @@ public sealed class MethodModel
 {
     public string Name { get; init; } = "";
     public bool IsConstructor { get; init; }
+    /// <summary>
+    /// Primary constructor of a positional record, whose parameters also
+    /// declare public properties.
+    /// </summary>
+    public bool IsPositionalRecordConstructor { get; init; }
     public int Line { get; init; }
     public int EndLine { get; init; }
     public bool Exported { get; init; }
