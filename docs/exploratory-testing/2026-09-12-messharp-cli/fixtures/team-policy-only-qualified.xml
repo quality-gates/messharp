@@ -1,0 +1,8 @@
+<ruleset name="single rule policy">
+  <rule ref="naming/LongVariable">
+    <priority>2</priority>
+    <properties>
+      <property name="maximum" value="50" />
+    </properties>
+  </rule>
+</ruleset>

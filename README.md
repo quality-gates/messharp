@@ -113,6 +113,8 @@ Command reference: [docs/usage.md](docs/usage.md). Rulesets: [docs/rules.md](doc
 Homebrew release and recovery steps:
 [docs/homebrew-release.md](docs/homebrew-release.md).
 Contributing and SOLID guidance: [CONTRIBUTING.md](CONTRIBUTING.md).
+Exploratory testing reports and replayable fixtures:
+[docs/exploratory-testing/](docs/exploratory-testing/README.md).
 
 Development checks:
 

@@ -1,0 +1,11 @@
+<ruleset name="team policy qualified">
+  <rule ref="csharp">
+    <exclude name="DevelopmentCodeFragment" />
+  </rule>
+  <rule ref="naming/LongVariable">
+    <priority>2</priority>
+    <properties>
+      <property name="maximum" value="50" />
+    </properties>
+  </rule>
+</ruleset>

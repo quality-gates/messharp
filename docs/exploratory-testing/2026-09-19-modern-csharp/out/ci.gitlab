@@ -1,0 +1,54 @@
+[
+  {
+    "type": "issue",
+    "check_name": "BooleanGetMethodName",
+    "description": "The 'GetFlag()' method which returns a boolean should be named 'Is...()' or 'Has...()'",
+    "fingerprint": "646f63732f6578706c6f7261746f72792d74657374696e672f323032362d30392d31392d6d6f6465726e2d6373686172702f66697874757265732f63692f4d792050726f6a656374202620436f2f436166c3a920426f782e63733a353a426f6f6c65616e4765744d6574686f644e616d65",
+    "severity": "minor",
+    "location": {
+      "path": "docs/exploratory-testing/2026-09-19-modern-csharp/fixtures/ci/My Project & Co/Café Box.cs",
+      "lines": {
+        "begin": 5
+      }
+    }
+  },
+  {
+    "type": "issue",
+    "check_name": "BooleanGetMethodName",
+    "description": "The 'GetOther()' method which returns a boolean should be named 'Is...()' or 'Has...()'",
+    "fingerprint": "646f63732f6578706c6f7261746f72792d74657374696e672f323032362d30392d31392d6d6f6465726e2d6373686172702f66697874757265732f63692f4d792050726f6a656374202620436f2f436166c3a920426f782e63733a373a426f6f6c65616e4765744d6574686f644e616d65",
+    "severity": "minor",
+    "location": {
+      "path": "docs/exploratory-testing/2026-09-19-modern-csharp/fixtures/ci/My Project & Co/Café Box.cs",
+      "lines": {
+        "begin": 7
+      }
+    }
+  },
+  {
+    "type": "issue",
+    "check_name": "CamelCaseClassName",
+    "description": "The class box_of_things is not named in PascalCase.",
+    "fingerprint": "646f63732f6578706c6f7261746f72792d74657374696e672f323032362d30392d31392d6d6f6465726e2d6373686172702f66697874757265732f63692f4d792050726f6a656374202620436f2f436166c3a920426f782e63733a31303a43616d656c43617365436c6173734e616d65",
+    "severity": "blocker",
+    "location": {
+      "path": "docs/exploratory-testing/2026-09-19-modern-csharp/fixtures/ci/My Project & Co/Café Box.cs",
+      "lines": {
+        "begin": 10
+      }
+    }
+  },
+  {
+    "type": "issue",
+    "check_name": "BooleanGetMethodName",
+    "description": "The 'GetFlag()' method which returns a boolean should be named 'Is...()' or 'Has...()'",
+    "fingerprint": "646f63732f6578706c6f7261746f72792d74657374696e672f323032362d30392d31392d6d6f6465726e2d6373686172702f66697874757265732f63692f4d792050726f6a656374202620436f2f436166c3a920426f782e63733a31323a426f6f6c65616e4765744d6574686f644e616d65",
+    "severity": "minor",
+    "location": {
+      "path": "docs/exploratory-testing/2026-09-19-modern-csharp/fixtures/ci/My Project & Co/Café Box.cs",
+      "lines": {
+        "begin": 12
+      }
+    }
+  }
+]

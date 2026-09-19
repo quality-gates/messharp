@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<pmd version="0.0.0-dev" tool="messharp" timestamp="2026-09-12T00:16:20.8227780+00:00">
+  <file name="docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs">
+    <violation beginline="5" endline="5" rule="UnusedPrivateField" ruleset="Unused Code Rules" package="Fixture" externalInfoUrl="https://phpmd.org/rules/unusedcode.html#unusedprivatefield" class="Violations" priority="3">
+      Avoid unused private fields such as &#039;unusedField&#039;.
+    </violation>
+    <violation beginline="7" endline="9" rule="UnusedPrivateMethod" ruleset="Unused Code Rules" package="Fixture" externalInfoUrl="https://phpmd.org/rules/unusedcode.html#unusedprivatemethod" class="Violations" method="NeverCalled" priority="3">
+      Avoid unused private methods such as &#039;NeverCalled&#039;.
+    </violation>
+    <violation beginline="11" endline="34" rule="CyclomaticComplexity" ruleset="Code Size Rules" package="Fixture" externalInfoUrl="https://phpmd.org/rules/codesize.html#cyclomaticcomplexity" class="Violations" method="Heavy" priority="3">
+      The method Heavy() has a Cyclomatic Complexity of 11. The configured cyclomatic complexity threshold is 10.
+    </violation>
+    <violation beginline="11" endline="34" rule="NPathComplexity" ruleset="Code Size Rules" package="Fixture" externalInfoUrl="https://phpmd.org/rules/codesize.html#npathcomplexity" class="Violations" method="Heavy" priority="3">
+      The method Heavy() has an NPath complexity of 1024. The configured NPath complexity threshold is 200.
+    </violation>
+    <violation beginline="11" endline="34" rule="ExcessiveParameterList" ruleset="Code Size Rules" package="Fixture" externalInfoUrl="https://phpmd.org/rules/codesize.html#excessiveparameterlist" class="Violations" method="Heavy" priority="3">
+      The method Heavy has 10 parameters. Consider reducing the number of parameters to less than 10.
+    </violation>
+    <violation beginline="23" endline="23" rule="UnusedLocalVariable" ruleset="Unused Code Rules" package="Fixture" externalInfoUrl="https://phpmd.org/rules/unusedcode.html#unusedlocalvariable" priority="3">
+      Avoid unused local variables such as &#039;unusedLocal&#039;.
+    </violation>
+    <violation beginline="36" endline="36" rule="BooleanGetMethodName" ruleset="Naming Rules" package="Fixture" externalInfoUrl="https://phpmd.org/rules/naming.html#booleangetmethodname" class="Violations" method="GetReady" priority="4">
+      The &#039;GetReady()&#039; method which returns a boolean should be named &#039;Is...()&#039; or &#039;Has...()&#039;
+    </violation>
+  </file>
+</pmd>

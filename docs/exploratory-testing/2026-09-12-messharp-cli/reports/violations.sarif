@@ -1,0 +1,214 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "messharp",
+          "version": "0.0.0-dev",
+          "rules": [
+            {
+              "id": "UnusedPrivateField",
+              "name": "UnusedPrivateField",
+              "helpUri": "https://phpmd.org/rules/unusedcode.html#unusedprivatefield",
+              "shortDescription": {
+                "text": "Detects when a private field is declared and/or assigned a value, but not used."
+              }
+            },
+            {
+              "id": "UnusedPrivateMethod",
+              "name": "UnusedPrivateMethod",
+              "helpUri": "https://phpmd.org/rules/unusedcode.html#unusedprivatemethod",
+              "shortDescription": {
+                "text": "Detects when a private method is declared but is never called within the class."
+              }
+            },
+            {
+              "id": "CyclomaticComplexity",
+              "name": "CyclomaticComplexity",
+              "helpUri": "https://phpmd.org/rules/codesize.html#cyclomaticcomplexity",
+              "shortDescription": {
+                "text": "Complexity is determined by the number of decision points in a method plus one for the\nmethod entry. The decision points are 'if', 'while', 'for', 'foreach', 'catch',\n'case labels', '&&', '||', '??', and ternary '?:'. Generally, 1-4 is low complexity,\n5-7 indicates moderate complexity, 8-10 is high complexity, and 11+ is very high complexity."
+              }
+            },
+            {
+              "id": "NPathComplexity",
+              "name": "NPathComplexity",
+              "helpUri": "https://phpmd.org/rules/codesize.html#npathcomplexity",
+              "shortDescription": {
+                "text": "The NPath complexity of a method is the number of acyclic execution paths through that method.\nA threshold of 200 is generally considered the point where measures should be taken to reduce complexity."
+              }
+            },
+            {
+              "id": "ExcessiveParameterList",
+              "name": "ExcessiveParameterList",
+              "helpUri": "https://phpmd.org/rules/codesize.html#excessiveparameterlist",
+              "shortDescription": {
+                "text": "Long parameter lists can indicate that a new object should be created to\nwrap the numerous parameters. Basically, try to group the parameters together."
+              }
+            },
+            {
+              "id": "UnusedLocalVariable",
+              "name": "UnusedLocalVariable",
+              "helpUri": "https://phpmd.org/rules/unusedcode.html#unusedlocalvariable",
+              "shortDescription": {
+                "text": "Detects when a local variable is declared and/or assigned, but not used."
+              }
+            },
+            {
+              "id": "BooleanGetMethodName",
+              "name": "BooleanGetMethodName",
+              "helpUri": "https://phpmd.org/rules/naming.html#booleangetmethodname",
+              "shortDescription": {
+                "text": "Looks for methods named 'GetX()' with 'bool' as the return type. The convention\nin C# is to name these methods 'IsX()' or 'HasX()'."
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "UnusedPrivateField",
+          "level": "warning",
+          "message": {
+            "text": "Avoid unused private fields such as 'unusedField'."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs"
+                },
+                "region": {
+                  "startLine": 5,
+                  "endLine": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UnusedPrivateMethod",
+          "level": "warning",
+          "message": {
+            "text": "Avoid unused private methods such as 'NeverCalled'."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs"
+                },
+                "region": {
+                  "startLine": 7,
+                  "endLine": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CyclomaticComplexity",
+          "level": "warning",
+          "message": {
+            "text": "The method Heavy() has a Cyclomatic Complexity of 11. The configured cyclomatic complexity threshold is 10."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs"
+                },
+                "region": {
+                  "startLine": 11,
+                  "endLine": 34
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "NPathComplexity",
+          "level": "warning",
+          "message": {
+            "text": "The method Heavy() has an NPath complexity of 1024. The configured NPath complexity threshold is 200."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs"
+                },
+                "region": {
+                  "startLine": 11,
+                  "endLine": 34
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "ExcessiveParameterList",
+          "level": "warning",
+          "message": {
+            "text": "The method Heavy has 10 parameters. Consider reducing the number of parameters to less than 10."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs"
+                },
+                "region": {
+                  "startLine": 11,
+                  "endLine": 34
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UnusedLocalVariable",
+          "level": "warning",
+          "message": {
+            "text": "Avoid unused local variables such as 'unusedLocal'."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs"
+                },
+                "region": {
+                  "startLine": 23,
+                  "endLine": 23
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "BooleanGetMethodName",
+          "level": "warning",
+          "message": {
+            "text": "The 'GetReady()' method which returns a boolean should be named 'Is...()' or 'Has...()'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs"
+                },
+                "region": {
+                  "startLine": 36,
+                  "endLine": 36
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

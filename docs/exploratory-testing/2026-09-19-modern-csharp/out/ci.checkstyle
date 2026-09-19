@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="0.0.0-dev">
+  <file name="docs/exploratory-testing/2026-09-19-modern-csharp/fixtures/ci/My Project &amp; Co/Café Box.cs">
+    <error line="5" column="1" severity="info" message="The &#039;GetFlag()&#039; method which returns a boolean should be named &#039;Is...()&#039; or &#039;Has...()&#039;" source="Naming Rules/BooleanGetMethodName"/>
+    <error line="7" column="1" severity="info" message="The &#039;GetOther()&#039; method which returns a boolean should be named &#039;Is...()&#039; or &#039;Has...()&#039;" source="Naming Rules/BooleanGetMethodName"/>
+    <error line="10" column="1" severity="error" message="The class box_of_things is not named in PascalCase." source="Controversial Rules/CamelCaseClassName"/>
+    <error line="12" column="1" severity="info" message="The &#039;GetFlag()&#039; method which returns a boolean should be named &#039;Is...()&#039; or &#039;Has...()&#039;" source="Naming Rules/BooleanGetMethodName"/>
+  </file>
+</checkstyle>

@@ -1,0 +1,103 @@
+{
+  "version": "0.0.0-dev",
+  "package": "messharp",
+  "timestamp": "2026-09-12T00:14:39.8013827+00:00",
+  "files": [
+    {
+      "file": "docs/exploratory-testing/2026-09-12-messharp-cli/fixtures/Violations.cs",
+      "violations": [
+        {
+          "beginLine": 5,
+          "endLine": 5,
+          "package": "Fixture",
+          "function": "",
+          "class": "Violations",
+          "method": "",
+          "description": "Avoid unused private fields such as 'unusedField'.",
+          "rule": "UnusedPrivateField",
+          "ruleSet": "Unused Code Rules",
+          "externalInfoUrl": "https://phpmd.org/rules/unusedcode.html#unusedprivatefield",
+          "priority": 3
+        },
+        {
+          "beginLine": 7,
+          "endLine": 9,
+          "package": "Fixture",
+          "function": "",
+          "class": "Violations",
+          "method": "NeverCalled",
+          "description": "Avoid unused private methods such as 'NeverCalled'.",
+          "rule": "UnusedPrivateMethod",
+          "ruleSet": "Unused Code Rules",
+          "externalInfoUrl": "https://phpmd.org/rules/unusedcode.html#unusedprivatemethod",
+          "priority": 3
+        },
+        {
+          "beginLine": 11,
+          "endLine": 34,
+          "package": "Fixture",
+          "function": "",
+          "class": "Violations",
+          "method": "Heavy",
+          "description": "The method Heavy() has a Cyclomatic Complexity of 11. The configured cyclomatic complexity threshold is 10.",
+          "rule": "CyclomaticComplexity",
+          "ruleSet": "Code Size Rules",
+          "externalInfoUrl": "https://phpmd.org/rules/codesize.html#cyclomaticcomplexity",
+          "priority": 3
+        },
+        {
+          "beginLine": 11,
+          "endLine": 34,
+          "package": "Fixture",
+          "function": "",
+          "class": "Violations",
+          "method": "Heavy",
+          "description": "The method Heavy() has an NPath complexity of 1024. The configured NPath complexity threshold is 200.",
+          "rule": "NPathComplexity",
+          "ruleSet": "Code Size Rules",
+          "externalInfoUrl": "https://phpmd.org/rules/codesize.html#npathcomplexity",
+          "priority": 3
+        },
+        {
+          "beginLine": 11,
+          "endLine": 34,
+          "package": "Fixture",
+          "function": "",
+          "class": "Violations",
+          "method": "Heavy",
+          "description": "The method Heavy has 10 parameters. Consider reducing the number of parameters to less than 10.",
+          "rule": "ExcessiveParameterList",
+          "ruleSet": "Code Size Rules",
+          "externalInfoUrl": "https://phpmd.org/rules/codesize.html#excessiveparameterlist",
+          "priority": 3
+        },
+        {
+          "beginLine": 23,
+          "endLine": 23,
+          "package": "Fixture",
+          "function": "",
+          "class": "",
+          "method": "",
+          "description": "Avoid unused local variables such as 'unusedLocal'.",
+          "rule": "UnusedLocalVariable",
+          "ruleSet": "Unused Code Rules",
+          "externalInfoUrl": "https://phpmd.org/rules/unusedcode.html#unusedlocalvariable",
+          "priority": 3
+        },
+        {
+          "beginLine": 36,
+          "endLine": 36,
+          "package": "Fixture",
+          "function": "",
+          "class": "Violations",
+          "method": "GetReady",
+          "description": "The 'GetReady()' method which returns a boolean should be named 'Is...()' or 'Has...()'",
+          "rule": "BooleanGetMethodName",
+          "ruleSet": "Naming Rules",
+          "externalInfoUrl": "https://phpmd.org/rules/naming.html#booleangetmethodname",
+          "priority": 4
+        }
+      ]
+    }
+  ]
+}

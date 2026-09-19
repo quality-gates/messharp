@@ -1,0 +1,4 @@
+::warning file=docs/exploratory-testing/2026-09-19-modern-csharp/fixtures/ci/My Project & Co/Café Box.cs,line=5,col=1::The 'GetFlag()' method which returns a boolean should be named 'Is...()' or 'Has...()' (BooleanGetMethodName)
+::warning file=docs/exploratory-testing/2026-09-19-modern-csharp/fixtures/ci/My Project & Co/Café Box.cs,line=7,col=1::The 'GetOther()' method which returns a boolean should be named 'Is...()' or 'Has...()' (BooleanGetMethodName)
+::warning file=docs/exploratory-testing/2026-09-19-modern-csharp/fixtures/ci/My Project & Co/Café Box.cs,line=10,col=1::The class box_of_things is not named in PascalCase. (CamelCaseClassName)
+::warning file=docs/exploratory-testing/2026-09-19-modern-csharp/fixtures/ci/My Project & Co/Café Box.cs,line=12,col=1::The 'GetFlag()' method which returns a boolean should be named 'Is...()' or 'Has...()' (BooleanGetMethodName)
