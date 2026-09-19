@@ -36,7 +36,7 @@ public class ControversialRulesTests
                 sharedProps),
             MakeRule<CamelCasePropertyNameRule>(
                 "CamelCasePropertyName",
-                "The property {0} is not named in camelCase.",
+                "The property {0} is not named in {1}.",
                 sharedProps),
             MakeRule<CamelCaseParameterNameRule>(
                 "CamelCaseParameterName",
@@ -331,6 +331,21 @@ public class Foo
 }";
         var vs = Analyze(src);
         MustNotHave(vs, "CamelCasePropertyName");
+    }
+
+    [Theory]
+    [InlineData("public int retryCount { get; set; }", "retryCount", "PascalCase")]
+    [InlineData("public int bad_public;", "bad_public", "PascalCase")]
+    [InlineData("private int bad_field;", "bad_field", "camelCase")]
+    [InlineData("private static readonly int bad_static;", "bad_static", "PascalCase or camelCase")]
+    public void CamelCasePropertyName_BundledMessage_NamesViolatedConvention(
+        string member, string name, string convention)
+    {
+        var sets = new MessSharp.RuleSet.Loader().Load("controversial");
+        var sf = ModelBuilder.Parse("fixture.cs", "public class Props { " + member + " }");
+        var vs = Engine.Analyze(sf, sets);
+        var v = Assert.Single(vs.Where(v => v.Rule.Name == "CamelCasePropertyName"));
+        Assert.Equal($"The property {name} is not named in {convention}.", v.Description);
     }
 
     // ─── CamelCaseParameterName ───────────────────────────────────────────────

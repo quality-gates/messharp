@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Name the violated convention in the `CamelCasePropertyName` message: public fields and auto-properties report "is not named in PascalCase", private fields report "camelCase", and `static readonly` fields report "PascalCase or camelCase". The bundled message is now `The property {0} is not named in {1}.`; custom rulesets that keep the old message still work (#152).
 - Percent-encode SARIF `artifactLocation.uri` values and normalize backslashes to forward slashes across all platforms, ensuring emitted SARIF validates against the OASIS SARIF 2.1.0 schema for paths containing spaces, ampersands, or non-ASCII characters (#151).
 - Do not report `StaticAccess` for instance property chains (e.g. `obj.Prop.Method()`), `this`, `base`, field, and local variable member access chains, ensuring only static method invocations on type or namespace-qualified type receivers are reported (#150).
 - Resolve private member usage across every part of a `partial` type in the analysed paths, so `UnusedPrivateField` and `UnusedPrivateMethod` no longer report members that are declared in one file and used only in another part of the same partial type (e.g. `*.Designer.cs` or generated parts). The runner now parses all files before analysing them. Parts are matched by namespace, containing types, name, and generic arity (#149).

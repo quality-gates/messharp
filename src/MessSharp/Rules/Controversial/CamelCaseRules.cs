@@ -73,7 +73,8 @@ public sealed class CamelCaseMethodNameRule : BaseRule, IMethodRule
 /// <summary>
 /// C# adaptation: public fields/auto-properties must be PascalCase;
 /// private fields may be camelCase or _camelCase (allowUnderscorePrefix=true).
-/// phpmd rule name kept; message adapted accordingly.
+/// phpmd rule name kept; the expected convention is passed as message
+/// argument {1} so the message names the convention that was violated.
 /// </summary>
 public sealed class CamelCasePropertyNameRule : BaseRule, IClassRule
 {
@@ -82,18 +83,34 @@ public sealed class CamelCasePropertyNameRule : BaseRule, IClassRule
         bool allowPrefix = ctx.Props.Bool("allowUnderscorePrefix", true);
         foreach (var field in cls.Fields)
         {
-            if (!IsValidFieldName(field, allowPrefix))
-                ctx.Report(field.Line, field.Line, field.Name);
+            var convention = ExpectedConvention(field);
+            if (!Matches(field.Name, convention, allowPrefix))
+                ctx.Report(field.Line, field.Line, field.Name, convention);
         }
     }
 
-    private static bool IsValidFieldName(MessSharp.Model.FieldModel field, bool allowPrefix)
+    private static bool Matches(string name, string convention, bool allowPrefix)
+    {
+        bool pascal = NamingConventions.IsPascalCase(name);
+        bool camel = NamingConventions.IsCamelCase(name, allowPrefix);
+        return convention switch
+        {
+            PascalCase => pascal,
+            CamelCase => camel,
+            _ => pascal || camel,
+        };
+    }
+
+    private const string PascalCase = "PascalCase";
+    private const string CamelCase = "camelCase";
+
+    private static string ExpectedConvention(MessSharp.Model.FieldModel field)
     {
         if (field.Exported || field.IsAutoProperty)
-            return NamingConventions.IsPascalCase(field.Name);
+            return PascalCase;
         if (field.IsStatic && field.IsReadonly)
-            return NamingConventions.IsPascalCase(field.Name) || NamingConventions.IsCamelCase(field.Name, allowPrefix);
-        return NamingConventions.IsCamelCase(field.Name, allowPrefix);
+            return PascalCase + " or " + CamelCase;
+        return CamelCase;
     }
 }
 
