@@ -36,27 +36,31 @@ public sealed class Runner : IRunner
         var files = _discoverer.Discover(opts.Paths, suffixes, opts.Exclude, opts.IgnoreTests);
         var report = new Report.Report();
 
+        // Parse everything before analyzing: partial types can span files.
+        var parsed = new List<SourceFile>();
         foreach (var path in files)
         {
-            SourceFile sf;
-            try
-            {
-                sf = _parser.ParseFile(path);
-            }
-            catch (Exception ex)
-            {
-                report.Errors.Add(new ProcessingError { File = path, Message = ex.Message });
-                continue;
-            }
-
-            if (TryRecordSyntaxErrors(sf, report)) continue;
-
-            var violations = Engine.Analyze(sf, opts.RuleSets, opts.Strict);
-            report.Violations.AddRange(violations);
+            var sf = TryParse(path, report);
+            if (sf != null && !TryRecordSyntaxErrors(sf, report))
+                parsed.Add(sf);
         }
 
+        report.Violations.AddRange(Engine.AnalyzeAll(parsed, opts.RuleSets, opts.Strict));
         RuleContext.SortViolations(report.Violations);
         return report;
+    }
+
+    private SourceFile? TryParse(string path, Report.Report report)
+    {
+        try
+        {
+            return _parser.ParseFile(path);
+        }
+        catch (Exception ex)
+        {
+            report.Errors.Add(new ProcessingError { File = path, Message = ex.Message });
+            return null;
+        }
     }
 
     /// <summary>
