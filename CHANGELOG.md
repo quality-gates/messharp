@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Percent-encode SARIF `artifactLocation.uri` values and normalize backslashes to forward slashes across all platforms, ensuring emitted SARIF validates against the OASIS SARIF 2.1.0 schema for paths containing spaces, ampersands, or non-ASCII characters (#151).
 - Do not report `StaticAccess` for instance property chains (e.g. `obj.Prop.Method()`), `this`, `base`, field, and local variable member access chains, ensuring only static method invocations on type or namespace-qualified type receivers are reported (#150).
 - Resolve private member usage across every part of a `partial` type in the analysed paths, so `UnusedPrivateField` and `UnusedPrivateMethod` no longer report members that are declared in one file and used only in another part of the same partial type (e.g. `*.Designer.cs` or generated parts). The runner now parses all files before analysing them. Parts are matched by namespace, containing types, name, and generic arity (#149).
 - Do not report `CamelCaseParameterName` for positional parameters of `record`, `record class`, and `record struct` declarations, which declare public properties and are conventionally PascalCase; primary-constructor parameters on plain classes and structs are still checked (#148).

@@ -751,6 +751,56 @@ public class RenderersTests
         Assert.False(physLoc.TryGetProperty("region", out _));
     }
 
+    [Fact]
+    public void Sarif_ArtifactLocationUri_PercentEncodesSpecialCharactersAndNormalizesSeparators()
+    {
+        var rule = new FakeRule { Name = "CyclomaticComplexity", SetName = "codesize", Priority = 2 };
+        var report = new ViolationReport
+        {
+            Violations = new List<Violation>
+            {
+                new Violation
+                {
+                    Rule = rule,
+                    File = "docs/exploratory-testing/2026-09-19-modern-csharp/fixtures/ci/My Project & Co/Café Box.cs",
+                    BeginLine = 5,
+                    EndLine = 5,
+                    Description = "Method complexity is high.",
+                    RuleSetName = "codesize",
+                    Priority = 2,
+                },
+            },
+            Errors = new List<ProcessingError>
+            {
+                new ProcessingError
+                {
+                    File = @"windows\path\with spaces and #hash\Café error.cs",
+                    Message = "Syntax error on line 1.",
+                },
+            },
+        };
+
+        var out_ = Render(new SarifRenderer(), report);
+        var doc = JsonDocument.Parse(out_);
+        var results = doc.RootElement.GetProperty("runs")[0].GetProperty("results");
+
+        var violationUri = results[0].GetProperty("locations")[0]
+            .GetProperty("physicalLocation")
+            .GetProperty("artifactLocation")
+            .GetProperty("uri").GetString();
+        Assert.Equal(
+            "docs/exploratory-testing/2026-09-19-modern-csharp/fixtures/ci/My%20Project%20%26%20Co/Caf%C3%A9%20Box.cs",
+            violationUri);
+
+        var errorUri = results[1].GetProperty("locations")[0]
+            .GetProperty("physicalLocation")
+            .GetProperty("artifactLocation")
+            .GetProperty("uri").GetString();
+        Assert.Equal(
+            "windows/path/with%20spaces%20and%20%23hash/Caf%C3%A9%20error.cs",
+            errorUri);
+    }
+
     // -------------------------------------------------------------------------
     // Renderers.TryGet wiring
     // -------------------------------------------------------------------------
