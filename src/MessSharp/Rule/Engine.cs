@@ -8,7 +8,21 @@ namespace MessSharp.Rule;
 /// </summary>
 public static class Engine
 {
-    public static List<Violation> Analyze(SourceFile file, IEnumerable<RuleSet> sets, bool strict = false)
+    /// <summary>
+    /// Analyzes a set of files together, so partial types split across
+    /// files are seen whole by type-scoped rules.
+    /// </summary>
+    public static List<Violation> AnalyzeAll(IReadOnlyList<SourceFile> files, IEnumerable<RuleSet> sets, bool strict = false)
+    {
+        var partials = new PartialTypeIndex(files);
+        var violations = new List<Violation>();
+        foreach (var file in files)
+            violations.AddRange(Analyze(file, sets, strict, partials));
+        return violations;
+    }
+
+    public static List<Violation> Analyze(SourceFile file, IEnumerable<RuleSet> sets, bool strict = false,
+        PartialTypeIndex? partials = null)
     {
         var violations = new List<Violation>();
         foreach (var set in sets)
@@ -16,7 +30,7 @@ public static class Engine
             foreach (var rule in set.Rules)
             {
                 var props = rule is BaseRule br ? br.RuleProps : Properties.Empty;
-                var ctx = new RuleContext(file, rule, props, violations);
+                var ctx = new RuleContext(file, rule, props, violations, partials);
                 ApplyRule(ctx, rule, file);
             }
         }

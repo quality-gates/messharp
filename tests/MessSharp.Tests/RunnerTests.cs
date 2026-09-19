@@ -1,4 +1,5 @@
 using MessSharp.Report;
+using MessSharp.Rules.UnusedCode;
 using MessSharp.Runner;
 using Xunit;
 using RuleSetType = MessSharp.Rule.RuleSet;
@@ -61,6 +62,38 @@ public class Broken
             });
 
             Assert.Empty(report.Errors);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Run_PartialClassSplitAcrossFiles_ResolvesPrivateFieldUsageAcrossParts()
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-runner-");
+        try
+        {
+            File.WriteAllText(Path.Combine(directory.FullName, "Gauge.Part1.cs"),
+                "namespace Shop; public partial class Gauge { private int reading; }");
+            File.WriteAllText(Path.Combine(directory.FullName, "Gauge.Part2.cs"),
+                "namespace Shop; public partial class Gauge { public int Read() => reading; }");
+            var rule = new UnusedPrivateFieldRule
+            {
+                Name = "UnusedPrivateField",
+                Message = "Avoid unused private fields such as '{0}'.",
+                SetName = "unusedcode",
+            };
+
+            var report = new RunnerType().Run(new RunOptions
+            {
+                Paths = new List<string> { directory.FullName },
+                RuleSets = new List<RuleSetType> { new() { Name = "unusedcode", Rules = { rule } } },
+            });
+
+            Assert.Empty(report.Errors);
+            Assert.Empty(report.Violations);
         }
         finally
         {

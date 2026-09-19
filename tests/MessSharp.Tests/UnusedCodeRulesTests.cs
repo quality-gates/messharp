@@ -21,6 +21,12 @@ public class UnusedCodeRulesTests
         return Engine.Analyze(sf, new[] { set });
     }
 
+    private static List<Violation> AnalyzeFiles(params (string Path, string Source)[] files)
+    {
+        var parsed = files.Select(f => ModelBuilder.Parse(f.Path, f.Source)).ToList();
+        return Engine.AnalyzeAll(parsed, new[] { MakeSet() });
+    }
+
     private static RuleSetType MakeSet()
     {
         var rules = new List<BaseRule>
@@ -1299,6 +1305,110 @@ public class DerivedClass
 }";
         var vs = Analyze(src);
         MustNotHave(vs, "UnusedFormalParameter");
+    }
+
+    // ─── partial types split across files (#149) ────────────────────────────
+
+    [Fact]
+    public void UnusedPrivateField_ReadInOtherFileOfPartialClass_NoFire()
+    {
+        var vs = AnalyzeFiles(
+            ("Gauge.Part1.cs", @"
+namespace Shop.Gauges;
+public partial class Gauge
+{
+    private int reading;
+}"),
+            ("Gauge.Part2.cs", @"
+namespace Shop.Gauges;
+public partial class Gauge
+{
+    public int Read() => reading;
+}"));
+        MustNotHave(vs, "UnusedPrivateField");
+    }
+
+    [Fact]
+    public void UnusedPrivateMethod_CalledFromOtherFileOfPartialClass_NoFire()
+    {
+        var vs = AnalyzeFiles(
+            ("Widget.Part1.cs", @"
+namespace Shop.Widgets;
+public partial class Widget
+{
+    public int Size(int value) => Scale(value);
+}"),
+            ("Widget.Part2.cs", @"
+namespace Shop.Widgets;
+public partial class Widget
+{
+    private int Scale(int value) => value * 2;
+}"));
+        MustNotHave(vs, "UnusedPrivateMethod");
+    }
+
+    [Fact]
+    public void UnusedPrivateField_OnlyWrittenInOtherFileOfPartialClass_Fires()
+    {
+        var vs = AnalyzeFiles(
+            ("Gauge.Part1.cs", @"
+namespace Shop.Gauges;
+public partial class Gauge
+{
+    private int reading;
+}"),
+            ("Gauge.Part2.cs", @"
+namespace Shop.Gauges;
+public partial class Gauge
+{
+    public void Set(int value) => reading = value;
+}"));
+        MustHave(vs, "UnusedPrivateField");
+    }
+
+    [Fact]
+    public void UnusedPrivateField_SameNamedNonPartialClassInOtherFile_Fires()
+    {
+        var vs = AnalyzeFiles(
+            ("A/Gauge.cs", @"
+namespace Shop.Gauges;
+public class Gauge
+{
+    private int reading;
+}"),
+            ("B/Gauge.cs", @"
+namespace Shop.Gauges;
+public class Gauge
+{
+    public int Read() => reading;
+}"));
+        MustHave(vs, "UnusedPrivateField");
+    }
+
+    [Theory]
+    [InlineData("namespace Shop.Other;\npublic partial class Gauge", "different namespace")]
+    [InlineData("namespace Shop.Gauges;\npublic partial class Gauge<T>", "different arity")]
+    [InlineData("namespace Shop.Gauges;\npublic partial class Other { public partial class Gauge { public int Read() => reading; } }\npublic partial class Unused", "different containing type")]
+    public void UnusedPrivateField_UsedOnlyInDifferentPartialType_Fires(string otherType, string reason)
+    {
+        var vs = AnalyzeFiles(
+            ("Gauge.cs", @"
+namespace Shop.Gauges;
+public partial class Outer
+{
+    public partial class Gauge
+    {
+        private int reading;
+    }
+}
+public partial class Gauge
+{
+    private int reading;
+}"),
+            ("Other.cs", otherType + " { public int Read() => reading; }"));
+        Assert.True(
+            vs.Count(v => v.Rule.Name == "UnusedPrivateField") == 2,
+            $"Expected both 'reading' fields reported ({reason}).");
     }
 }
 

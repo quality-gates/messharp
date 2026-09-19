@@ -13,15 +13,23 @@ public sealed class RuleContext
     public SourceFile File { get; }
     public Properties Props { get; }
     public string CurrentPackage { get; set; }
+
+    /// <summary>
+    /// Parts of partial types across every analysed file, for rules whose
+    /// scope is a whole type rather than a single file.
+    /// </summary>
+    public PartialTypeIndex Partials { get; }
     private readonly IRule _rule;
 
-    public RuleContext(SourceFile file, IRule rule, Properties props, List<Violation> violations)
+    public RuleContext(SourceFile file, IRule rule, Properties props, List<Violation> violations,
+        PartialTypeIndex? partials = null)
     {
         File = file;
         _rule = rule;
         Props = props;
         _violations = violations;
         CurrentPackage = file.Namespace;
+        Partials = partials ?? PartialTypeIndex.Empty;
     }
 
     public void Report(int beginLine, int endLine, params object[] args) =>
