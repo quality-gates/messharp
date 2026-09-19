@@ -29,7 +29,7 @@ internal static class SarifDocumentBuilder
                 {
                     PhysicalLocation = new SarifPhysicalLocation
                     {
-                        ArtifactLocation = new SarifArtifactLocation { Uri = v.File },
+                        ArtifactLocation = new SarifArtifactLocation { Uri = ToUriReference(v.File) },
                         Region = new SarifRegion { StartLine = v.BeginLine, EndLine = v.EndLine },
                     },
                 },
@@ -47,11 +47,27 @@ internal static class SarifDocumentBuilder
                 {
                     PhysicalLocation = new SarifPhysicalLocation
                     {
-                        ArtifactLocation = new SarifArtifactLocation { Uri = e.File },
+                        ArtifactLocation = new SarifArtifactLocation { Uri = ToUriReference(e.File) },
                     },
                 },
             },
         };
+
+    internal static string ToUriReference(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return string.Empty;
+
+        var normalized = path.Replace('\\', '/');
+        var segments = normalized.Split('/');
+        var count = segments.Length;
+        for (var i = 0; i < count; i++)
+        {
+            segments[i] = Uri.EscapeDataString(segments[i]);
+        }
+
+        return string.Join("/", segments);
+    }
 
     private static string ViolationLevel(int priority) => priority <= 2 ? "error" : "warning";
 }
