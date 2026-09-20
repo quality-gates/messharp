@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.15] - 2026-09-20
+
 ### Fixed
 
 - Name the violated convention in the `CamelCasePropertyName` message: public fields and auto-properties report "is not named in PascalCase", private fields report "camelCase", and `static readonly` fields report "PascalCase or camelCase". The bundled message is now `The property {0} is not named in {1}.`; custom rulesets that keep the old message still work (#152).
