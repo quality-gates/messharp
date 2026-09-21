@@ -39,8 +39,7 @@ public static class Engine
 
     /// <summary>
     /// Analyzes a parsed SourceFile against a flat collection of rules,
-    /// applying suppression filtering unless strict. Encapsulates rule
-    /// container construction so callers need no XML-modelled RuleSet.
+    /// without needing an XML-modelled RuleSet container.
     /// </summary>
     public static List<Violation> Analyze(SourceFile file, IEnumerable<IRule> rules, bool strict = false,
         PartialTypeIndex? partials = null)
@@ -49,9 +48,8 @@ public static class Engine
     }
 
     /// <summary>
-    /// Analyzes C# source text against a flat collection of rules. Parses the
-    /// source via ModelBuilder, dispatches every rule kind, filters suppressed
-    /// violations (unless strict), and returns the processed violations.
+    /// Analyzes C# source text against a flat collection of rules,
+    /// parsing via ModelBuilder under a placeholder file name.
     /// </summary>
     public static List<Violation> Analyze(string source, IEnumerable<IRule> rules, bool strict = false,
         PartialTypeIndex? partials = null)

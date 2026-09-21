@@ -108,32 +108,43 @@ public class Foo {
     }
 
     [Fact]
-    public void Analyze_FromSource_RulePropertiesApply()
+    public void Analyze_FromSource_RulePropertiesReachTheRule()
     {
         const string source = @"
 public class Foo {
     public void Bar(bool flag) { }
 }";
-        var rule = new NamedMethodRule("BooleanArgumentFlag");
-        rule.RuleProps = new Properties(new Dictionary<string, string>());
+        var strictRule = new ParamCountRule("MinParamCount") { RuleProps = new Properties(new Dictionary<string, string> { ["min"] = "3" }) };
+        var laxRule = new ParamCountRule("MinParamCount") { RuleProps = new Properties(new Dictionary<string, string> { ["min"] = "0" }) };
 
-        var violations = Engine.Analyze(source, new IRule[] { rule });
-
-        Assert.NotEmpty(violations);
+        Assert.Empty(Engine.Analyze(source, new IRule[] { strictRule }));
+        Assert.Single(Engine.Analyze(source, new IRule[] { laxRule }));
     }
 
     // -------------------------------------------------------------------
     // Test doubles
     // -------------------------------------------------------------------
 
-    /// <summary>A minimal method rule that flags any method with parameters.</summary>
+    /// <summary>A method rule that flags methods with at least one parameter.</summary>
     private sealed class NamedMethodRule : BaseRule, IMethodRule
     {
         public NamedMethodRule(string name) => Name = name;
 
         public void Apply(RuleContext ctx, Model.MethodModel method)
         {
-            if (method.Parameters.Count > 0)
+            if (method.Parameters.Count >= 1)
+                ctx.ReportMethod(method, method.Name);
+        }
+    }
+
+    /// <summary>A method rule that flags methods with at least 'min' parameters.</summary>
+    private sealed class ParamCountRule : BaseRule, IMethodRule
+    {
+        public ParamCountRule(string name) => Name = name;
+
+        public void Apply(RuleContext ctx, Model.MethodModel method)
+        {
+            if (method.Parameters.Count >= ctx.Props.Int("min", 1))
                 ctx.ReportMethod(method, method.Name);
         }
     }

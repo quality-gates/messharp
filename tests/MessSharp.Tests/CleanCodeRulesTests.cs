@@ -35,7 +35,7 @@ public class CleanCodeRulesTests
     }
 
     // -------------------------------------------------------------------------
-    // Suppression (production pipeline behaviour the old ad-hoc dispatch skipped)
+    // Suppression
     // -------------------------------------------------------------------------
 
     [Fact]
