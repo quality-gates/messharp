@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Add deep `Engine` entry points, `Engine.Analyze(string source, IEnumerable<IRule> rules)` and `Engine.Analyze(SourceFile file, IEnumerable<IRule> rules)`, that encapsulate AST parsing, dispatch across file, class, interface, and method rules, and suppression filtering behind a single call. Callers no longer need to parse via `ModelBuilder` or construct XML-modelled `RuleSet` containers to analyze code with a flat collection of rules (#160).
+
+### Fixed
+
+- Route `CleanCodeRulesTests` through the production `Engine` dispatch instead of an ad-hoc in-test method-rule loop, so CleanCode test evidence now exercises production rule dispatch and suppression filtering (previously bypassed, making those results test-layer-only). A hand-rolled `.Apply(ctx, ...)` dispatch no longer remains anywhere in the test suite (#160).
+
 ## [0.2.15] - 2026-09-20
 
 ### Fixed

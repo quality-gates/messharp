@@ -37,6 +37,28 @@ public static class Engine
         return strict ? violations : SuppressionFilter.Filter(violations, file);
     }
 
+    /// <summary>
+    /// Analyzes a parsed SourceFile against a flat collection of rules,
+    /// applying suppression filtering unless strict. Encapsulates rule
+    /// container construction so callers need no XML-modelled RuleSet.
+    /// </summary>
+    public static List<Violation> Analyze(SourceFile file, IEnumerable<IRule> rules, bool strict = false,
+        PartialTypeIndex? partials = null)
+    {
+        return Analyze(file, new[] { new RuleSet { Rules = rules.ToList() } }, strict, partials);
+    }
+
+    /// <summary>
+    /// Analyzes C# source text against a flat collection of rules. Parses the
+    /// source via ModelBuilder, dispatches every rule kind, filters suppressed
+    /// violations (unless strict), and returns the processed violations.
+    /// </summary>
+    public static List<Violation> Analyze(string source, IEnumerable<IRule> rules, bool strict = false,
+        PartialTypeIndex? partials = null)
+    {
+        return Analyze(ModelBuilder.Parse("test.cs", source), rules, strict, partials);
+    }
+
     private static void ApplyRule(RuleContext ctx, IRule rule, SourceFile file)
     {
         if (rule is IFileRule fr)

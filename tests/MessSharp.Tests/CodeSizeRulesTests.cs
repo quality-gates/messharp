@@ -17,12 +17,8 @@ public class CodeSizeRulesTests
     // Helpers
     // -----------------------------------------------------------------------
 
-    private static List<Violation> Analyze(string source, params (string key, string val)[] overrides)
-    {
-        var sf = ModelBuilder.Parse("fixture.cs", source);
-        var set = BuildFullCodeSizeSet(overrides);
-        return Engine.Analyze(sf, new[] { set });
-    }
+    private static List<Violation> Analyze(string source, params (string key, string val)[] overrides) =>
+        Engine.Analyze(source, BuildFullCodeSizeSet(overrides).Rules);
 
     private static string SwitchExpressionSource()
     {

@@ -2,7 +2,6 @@ using MessSharp.Model;
 using MessSharp.Rule;
 using MessSharp.Rules.Naming;
 using Xunit;
-using RuleSetType = MessSharp.Rule.RuleSet;
 
 namespace MessSharp.Tests;
 
@@ -15,14 +14,8 @@ public class NamingRulesTests
 {
     // ------------------------------------------------------------------ helpers
 
-    private static RuleSetType MakeSet(params BaseRule[] rules) =>
-        new() { Name = "naming", Rules = rules.Cast<IRule>().ToList() };
-
-    private static List<Violation> Run(string source, params BaseRule[] rules)
-    {
-        var sf = ModelBuilder.Parse("test.cs", source);
-        return Engine.Analyze(sf, new[] { MakeSet(rules) });
-    }
+    private static List<Violation> Run(string source, params BaseRule[] rules) =>
+        Engine.Analyze(source, rules);
 
     private static BaseRule MakeRule<T>(string name, string message,
         Dictionary<string, string>? props = null) where T : BaseRule, new() =>
