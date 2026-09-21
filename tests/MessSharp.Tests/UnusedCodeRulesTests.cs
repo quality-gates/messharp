@@ -14,12 +14,8 @@ public class UnusedCodeRulesTests
 {
     // ─── helpers ────────────────────────────────────────────────────────────
 
-    private static List<Violation> Analyze(string source)
-    {
-        var sf = ModelBuilder.Parse("fixture.cs", source);
-        var set = MakeSet();
-        return Engine.Analyze(sf, new[] { set });
-    }
+    private static List<Violation> Analyze(string source) =>
+        Engine.Analyze(source, MakeSet().Rules);
 
     private static List<Violation> AnalyzeFiles(params (string Path, string Source)[] files)
     {

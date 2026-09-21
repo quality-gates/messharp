@@ -2,7 +2,6 @@ using MessSharp.Model;
 using MessSharp.Rule;
 using MessSharp.Rules.Design;
 using Xunit;
-using RuleSetType = MessSharp.Rule.RuleSet;
 
 namespace MessSharp.Tests;
 
@@ -16,12 +15,8 @@ public class DesignRulesTests
     // Helpers
     // -------------------------------------------------------------------------
 
-    private static List<Violation> Analyze(string source, params BaseRule[] rules)
-    {
-        var sf = ModelBuilder.Parse("fixture.cs", source);
-        var set = new RuleSetType { Name = "design", Rules = new(rules) };
-        return Engine.Analyze(sf, new[] { set });
-    }
+    private static List<Violation> Analyze(string source, params BaseRule[] rules) =>
+        Engine.Analyze(source, rules);
 
     private static bool Has(IEnumerable<Violation> vs, string ruleName) =>
         vs.Any(v => v.Rule.Name == ruleName);

@@ -19,21 +19,8 @@ public class CleanCodeRulesTests
     private static List<Violation> Analyze(string source, BaseRule rule,
         Dictionary<string, string>? props = null)
     {
-        var sf = ModelBuilder.Parse("test.cs", source);
         rule.RuleProps = new Properties(props);
-        var violations = new List<Violation>();
-        var ctx = new RuleContext(sf, rule, rule.RuleProps, violations);
-
-        if (rule is IMethodRule mr)
-        {
-            foreach (var m in sf.AllMethods)
-                mr.Apply(ctx, m);
-            foreach (var iface in sf.Interfaces)
-                foreach (var m in iface.Methods)
-                    mr.Apply(ctx, m);
-        }
-
-        return violations;
+        return Engine.Analyze(source, new IRule[] { rule });
     }
 
     private static void MustHave(List<Violation> violations, string ruleName)
@@ -45,6 +32,35 @@ public class CleanCodeRulesTests
     private static void MustNotHave(List<Violation> violations, string ruleName)
     {
         Assert.Empty(violations);
+    }
+
+    // -------------------------------------------------------------------------
+    // Suppression
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void SuppressMessageComment_OnViolatingMethod_SuppressesViolation()
+    {
+        var src = @"
+public class Foo {
+    // @SuppressWarnings(PHPMD.BooleanArgumentFlag)
+    public void Bar(bool flag) { }
+}";
+        var v = Analyze(src, MakeRule<BooleanArgumentFlagRule>("BooleanArgumentFlag"));
+        MustNotHave(v, "BooleanArgumentFlag");
+    }
+
+    [Fact]
+    public void SuppressMessageAttribute_OnViolatingMethod_SuppressesViolation()
+    {
+        var src = @"
+using System.Diagnostics.CodeAnalysis;
+public class Foo {
+    [SuppressMessage(""category"", ""BooleanArgumentFlag"")]
+    public void Bar(bool flag) { }
+}";
+        var v = Analyze(src, MakeRule<BooleanArgumentFlagRule>("BooleanArgumentFlag"));
+        MustNotHave(v, "BooleanArgumentFlag");
     }
 
     // -------------------------------------------------------------------------

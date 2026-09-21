@@ -17,9 +17,8 @@ public class ControversialRulesTests
     private static List<Violation> Analyze(string source,
         Dictionary<string, string>? props = null)
     {
-        var sf = ModelBuilder.Parse("fixture.cs", source);
         var set = MakeSet(props);
-        return Engine.Analyze(sf, new[] { set });
+        return Engine.Analyze(source, set.Rules);
     }
 
     private static RuleSetType MakeSet(Dictionary<string, string>? sharedProps = null)
