@@ -21,6 +21,104 @@ public class RuleSetLoaderTests
     }
 
     [Fact]
+    public void Load_WithInvalidPriority_DropsRuleAndWarns()
+    {
+        var xmlContent = @"<ruleset name=""Custom"">
+  <rule name=""CyclomaticComplexity"" class=""PHPMD\Rule\CyclomaticComplexity"">
+    <priority>garbage</priority>
+  </rule>
+</ruleset>";
+        var tmpFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(tmpFile, xmlContent);
+        try
+        {
+            var warnings = new List<string>();
+            var loader = new Loader { Warn = warnings.Add };
+
+            var sets = loader.Load(tmpFile);
+
+            var warning = Assert.Single(warnings);
+            Assert.Contains("CyclomaticComplexity", warning);
+            Assert.Contains("garbage", warning);
+            Assert.Empty(sets.Single().Rules);
+        }
+        finally { File.Delete(tmpFile); }
+    }
+
+    [Fact]
+    public void Load_WithInvalidPriority_WithoutFiltering_RetainsZeroPriority()
+    {
+        var xmlContent = @"<ruleset name=""Custom"">
+  <rule name=""CyclomaticComplexity"" class=""PHPMD\Rule\CyclomaticComplexity"">
+    <priority>garbage</priority>
+  </rule>
+</ruleset>";
+        var tmpFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(tmpFile, xmlContent);
+        try
+        {
+            var warnings = new List<string>();
+            var loader = new Loader { MaxPriority = 0, Warn = warnings.Add };
+
+            var rule = Assert.Single(loader.Load(tmpFile).Single().Rules);
+
+            Assert.Equal(0, rule.Priority);
+            var warning = Assert.Single(warnings);
+            Assert.Contains("CyclomaticComplexity", warning);
+            Assert.Contains("garbage", warning);
+        }
+        finally { File.Delete(tmpFile); }
+    }
+
+    [Fact]
+    public void Load_WithInvalidPriorityOnRuleOverride_DropsRuleAndWarns()
+    {
+        var xmlContent = $@"<ruleset name=""Custom"">
+  <rule ref=""{Path.Combine(RulesetsDir, "codesize.xml")}/CyclomaticComplexity"">
+    <priority>garbage</priority>
+  </rule>
+</ruleset>";
+        var tmpFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(tmpFile, xmlContent);
+        try
+        {
+            var warnings = new List<string>();
+            var loader = new Loader { Warn = warnings.Add };
+
+            var sets = loader.Load(tmpFile);
+
+            Assert.Empty(sets.Single().Rules);
+            var warning = Assert.Single(warnings);
+            Assert.Contains("CyclomaticComplexity", warning);
+            Assert.Contains("garbage", warning);
+        }
+        finally { File.Delete(tmpFile); }
+    }
+
+    [Fact]
+    public void Load_WithValidPriority_PreservesValueWithoutWarning()
+    {
+        var xmlContent = @"<ruleset name=""Custom"">
+  <rule name=""CyclomaticComplexity"" class=""PHPMD\Rule\CyclomaticComplexity"">
+    <priority>2</priority>
+  </rule>
+</ruleset>";
+        var tmpFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(tmpFile, xmlContent);
+        try
+        {
+            var warnings = new List<string>();
+            var loader = new Loader { MaxPriority = 0, Warn = warnings.Add };
+
+            var rule = Assert.Single(loader.Load(tmpFile).Single().Rules);
+
+            Assert.Equal(2, rule.Priority);
+            Assert.Empty(warnings);
+        }
+        finally { File.Delete(tmpFile); }
+    }
+
+    [Fact]
     public void Load_WithPropertyOverride_AppliesOverride()
     {
         // Create a custom ruleset XML that refs codesize/CyclomaticComplexity
@@ -308,4 +406,3 @@ public class RuleSetLoaderTests
         finally { File.Delete(tmpFile); }
     }
 }
-

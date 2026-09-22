@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Warn on malformed rule priorities and treat them as explicit priority 0, matching phpmd's filtering behavior instead of silently falling back to priority 3 (#170).
 - Include enum declarations and enum members in the type model so naming and code-size rules analyze enum names and values (#168).
 - Include executable property accessors, including expression-bodied accessors, operator overloads, conversion operators, and destructors in the method model so all rules can analyze their bodies (#167).
 - Count C# pattern combinators (`and`, `or`, `not`) as cyclomatic complexity decision points, including nested and mixed patterns; NPath complexity semantics remain unchanged (#166).

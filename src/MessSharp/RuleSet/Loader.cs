@@ -83,8 +83,16 @@ public sealed class Loader
         if (string.IsNullOrEmpty(def.Class)) return null;
         var rule = RuleFactory.Create(def.Class!);
         if (rule == null) { WarnMsg($"Skipping unimplemented rule {def.Name} ({def.Class})"); return null; }
+        WarnInvalidPriority(def, ov);
         XmlRuleHelpers.PopulateRule(rule, setName, def, ov);
         return rule;
+    }
+
+    private void WarnInvalidPriority(XmlRule def, XmlRule ov)
+    {
+        var raw = XmlRuleHelpers.EffectiveInvalidPriorityText(def, ov);
+        if (raw != null)
+            WarnMsg($"Invalid priority '{raw}' for rule '{def.Name ?? ov.Name ?? "(unnamed)"}'; using priority 0");
     }
 
     private void AppendIfNotNull(RuleSetType set, IRule? rule)
