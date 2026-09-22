@@ -524,6 +524,49 @@ public class RenderersTests
         Assert.Contains("::error file=src/with%25percent%3Acolon%2Ccomma%0D%0Afile.cs::parse error", out_);
     }
 
+    [Fact]
+    public void GitHub_EscapesWorkflowCommandData()
+    {
+        var rule = new FakeRule { Name = "Rule%Name\r\n", SetName = "s", Priority = 3 };
+        var report = new ViolationReport
+        {
+            Violations = new List<Violation>
+            {
+                new Violation
+                {
+                    Rule = rule,
+                    File = "src/file.cs",
+                    BeginLine = 7,
+                    EndLine = 7,
+                    Description = "description%value\r\n::error file=evil.cs::injected",
+                    RuleSetName = "s",
+                    Priority = 3,
+                },
+            },
+            Errors = new List<ProcessingError>
+            {
+                new ProcessingError
+                {
+                    File = "src/bad.cs",
+                    Message = "error%message\r\n::error file=evil.cs::injected",
+                },
+            },
+        };
+
+        var out_ = Render(new GitHubRenderer(), report);
+
+        Assert.Contains(
+            "::warning file=src/file.cs,line=7,col=1::description%25value%0D%0A::error file=evil.cs::injected (Rule%25Name%0D%0A)",
+            out_);
+        Assert.Contains(
+            "::error file=src/bad.cs::error%25message%0D%0A::error file=evil.cs::injected",
+            out_);
+        var lines = out_.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(2, lines.Length);
+        Assert.Equal(1, lines.Count(line => line.StartsWith("::warning ", StringComparison.Ordinal)));
+        Assert.Equal(1, lines.Count(line => line.StartsWith("::error ", StringComparison.Ordinal)));
+    }
+
     // -------------------------------------------------------------------------
     // GitLab renderer
     // -------------------------------------------------------------------------
