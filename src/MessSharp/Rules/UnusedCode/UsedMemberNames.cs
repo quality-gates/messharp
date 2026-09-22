@@ -48,7 +48,8 @@ internal static class UsedMemberNames
 
     private static bool TryCollectMemberAccess(SyntaxNode node, HashSet<string> used)
     {
-        if (node is not MemberAccessExpressionSyntax mae) return false;
+        var mae = node as MemberAccessExpressionSyntax;
+        if (mae is null) return false;
 
         if (!IsWriteOnlyAssignmentTarget(mae))
             used.Add(mae.Name.Identifier.Text);
@@ -57,9 +58,11 @@ internal static class UsedMemberNames
 
     private static bool TryCollectInitializerAssignment(SyntaxNode node, HashSet<string> used)
     {
-        if (node is not AssignmentExpressionSyntax aes
-            || aes.Parent is not InitializerExpressionSyntax)
-            return false;
+        var aes = node as AssignmentExpressionSyntax;
+        if (aes is null) return false;
+
+        var initializer = aes.Parent as InitializerExpressionSyntax;
+        if (initializer is null) return false;
 
         if (aes.Left is IdentifierNameSyntax lhs)
             used.Add(lhs.Identifier.Text);
@@ -68,7 +71,8 @@ internal static class UsedMemberNames
 
     private static void CollectBareIdentifier(SyntaxNode node, ShadowMap shadowed, HashSet<string> used)
     {
-        if (node is not IdentifierNameSyntax id) return;
+        var id = node as IdentifierNameSyntax;
+        if (id is null) return;
         if (IsDeclarationContext(id)) return;
         if (IsWriteOnlyAssignmentTarget(id)) return;
         if (shadowed.IsShadowed(id)) return;
@@ -100,8 +104,11 @@ internal static class UsedMemberNames
     /// </summary>
     private static bool IsTupleDeconstructionTarget(SyntaxNode node)
     {
-        if (node.Parent is not ArgumentSyntax arg) return false;
-        if (arg.Parent is not TupleExpressionSyntax tuple) return false;
+        var arg = node.Parent as ArgumentSyntax;
+        if (arg is null) return false;
+
+        var tuple = arg.Parent as TupleExpressionSyntax;
+        if (tuple is null) return false;
         return IsSimpleAssignmentTargetTuple(tuple);
     }
 
@@ -122,15 +129,19 @@ internal static class UsedMemberNames
         SyntaxNode target,
         AssignmentExpressionSyntax assignment)
     {
+        var isInitializer = assignment.Parent is InitializerExpressionSyntax;
         return assignment.IsKind(SyntaxKind.SimpleAssignmentExpression)
-            && assignment.Parent is not InitializerExpressionSyntax
+            && !isInitializer
             && ReferenceEquals(assignment.Left, target);
     }
 
     private static bool TryCollectNameof(SyntaxNode node, HashSet<string> used)
     {
-        if (node is not InvocationExpressionSyntax inv) return false;
-        if (inv.Expression is not IdentifierNameSyntax id2) return false;
+        var inv = node as InvocationExpressionSyntax;
+        if (inv is null) return false;
+
+        var id2 = inv.Expression as IdentifierNameSyntax;
+        if (id2 is null) return false;
         if (id2.Identifier.Text != "nameof") return false;
         if (inv.ArgumentList.Arguments.Count != 1) return false;
 

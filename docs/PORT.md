@@ -105,8 +105,10 @@ Models keep a reference to their Roslyn node so rules can walk syntax.
 
 Port `internal/metrics/metrics.go` semantics to Roslyn: cyclomatic
 complexity (+1 per `if`, `case` label (not default), `for`, `foreach`,
-`while`, `do`, `catch`, `&&`, `||`, `??`, ternary `?:`), NPath complexity
-per phpmd's algorithm, LOC with optional whitespace/comment exclusion.
+`while`, `do`, `catch`, `&&`, `||`, `??`, `and`/`or`/`not` pattern
+combinators, ternary `?:`), NPath complexity per phpmd's algorithm, LOC with
+optional whitespace/comment exclusion. NPath pattern-combinator semantics are
+unchanged and remain a separate parity decision.
 Keep the test pinned to real phpmd 2.15.0 numbers: port messgo's reference
 function (`metrics_test.go`) to an equivalent C# fixture — cyclomatic 12,
 NPath 324.

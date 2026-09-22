@@ -8,6 +8,7 @@ namespace MessSharp.Metrics;
 /// Cyclomatic complexity metric. Base 1 + 1 per decision point.
 /// Decision points: if, case label (not default), for, foreach, while,
 /// do, catch, switch expression arm (not discard), &amp;&amp;, ||, ??, ternary ?:.
+/// Pattern combinators (and, or, not) are also decision points.
 /// Mirrors messgo's metrics package, values pinned to phpmd 2.15.0 output.
 /// </summary>
 internal static class CyclomaticMetrics
@@ -22,6 +23,13 @@ internal static class CyclomaticMetrics
         typeof(DoStatementSyntax),
         typeof(CatchClauseSyntax),
         typeof(ConditionalExpressionSyntax),
+    };
+
+    private static readonly HashSet<SyntaxKind> PatternCombinatorKinds = new()
+    {
+        SyntaxKind.AndPattern,
+        SyntaxKind.OrPattern,
+        SyntaxKind.NotPattern,
     };
 
     internal static int Compute(SyntaxNode? body)
@@ -43,6 +51,9 @@ internal static class CyclomaticMetrics
 
         if (node is SwitchExpressionArmSyntax arm)
             return arm.Pattern is DiscardPatternSyntax ? 0 : 1;
+
+        if (PatternCombinatorKinds.Contains(node.Kind()))
+            return 1;
 
         if (node is BinaryExpressionSyntax bin)
             return IsBooleanOp(bin) ? 1 : 0;

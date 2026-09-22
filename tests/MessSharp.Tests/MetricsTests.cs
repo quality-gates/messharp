@@ -95,6 +95,34 @@ class C {
     }
 
     [Fact]
+    public void CyclomaticComplexity_PatternAnd_CountsDecision()
+    {
+        var src = "class C { bool F(object value) { if (value is int and > 0) return true; return false; } }";
+        Assert.Equal(3, MetricsCalc.CyclomaticComplexity(GetMethodBody(src)));
+    }
+
+    [Fact]
+    public void CyclomaticComplexity_PatternOr_CountsDecision()
+    {
+        var src = "class C { bool F(object value) { if (value is int or string) return true; return false; } }";
+        Assert.Equal(3, MetricsCalc.CyclomaticComplexity(GetMethodBody(src)));
+    }
+
+    [Fact]
+    public void CyclomaticComplexity_PatternNot_CountsDecision()
+    {
+        var src = "class C { bool F(object value) { if (value is not null) return true; return false; } }";
+        Assert.Equal(3, MetricsCalc.CyclomaticComplexity(GetMethodBody(src)));
+    }
+
+    [Fact]
+    public void CyclomaticComplexity_NestedPatternCombinators_CountEachDecision()
+    {
+        var src = "class C { bool F(object value) { if (value is not (int and > 0) or string) return true; return false; } }";
+        Assert.Equal(5, MetricsCalc.CyclomaticComplexity(GetMethodBody(src)));
+    }
+
+    [Fact]
     public void NPathComplexity_Linear_Returns1()
     {
         var body = GetMethodBody("class C { void F() { int a = 1; int b = 2; } }");

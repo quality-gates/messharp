@@ -19,7 +19,8 @@ The Code Size Ruleset contains a collection of rules that find code size related
             <![CDATA[
 Complexity is determined by the number of decision points in a method plus one for the
 method entry. The decision points are 'if', 'while', 'for', 'foreach', 'catch',
-'case labels', '&&', '||', '??', and ternary '?:'. Generally, 1-4 is low complexity,
+'case labels', '&&', '||', '??', pattern combinators 'and', 'or', 'not', and
+ternary '?:'. Generally, 1-4 is low complexity,
 5-7 indicates moderate complexity, 8-10 is high complexity, and 11+ is very high complexity.
             ]]>
         </description>
