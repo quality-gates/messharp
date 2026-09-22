@@ -23,6 +23,7 @@ internal sealed class XmlRule
     public string? Since;
     public string? Description;
     public int? Priority;
+    public string? InvalidPriorityText;
     public XmlProperties? Properties;
     public List<XmlExclude>? Exclude;
 }
@@ -77,6 +78,9 @@ internal static class XmlRuleHelpers
         rule.RuleProps = MergeProps(def.Properties, ov.Properties);
     }
 
+    internal static string? EffectiveInvalidPriorityText(XmlRule def, XmlRule ov) =>
+        ov.Priority.HasValue ? ov.InvalidPriorityText : def.InvalidPriorityText;
+
     private static void CopyProps(XmlProperties? src, Dictionary<string, string> dest)
     {
         if (src?.Property == null) return;
@@ -102,6 +106,9 @@ internal static class XmlRuleHelpers
             Since = Fallback(parent.Since, child.Since),
             Description = Fallback(parent.Description, child.Description),
             Priority = parent.Priority ?? child.Priority,
+            InvalidPriorityText = parent.Priority.HasValue
+                ? parent.InvalidPriorityText
+                : child.InvalidPriorityText,
             Properties = MergeXmlProperties(child.Properties, parent.Properties),
             Exclude = CombineExcludes(child.Exclude, parent.Exclude),
         };
@@ -199,8 +206,17 @@ internal static class XmlRulesetParser
                 rule.Description = r.ReadElementContentAsString().Trim();
                 break;
             case "priority":
-                if (int.TryParse(r.ReadElementContentAsString(), out var p))
+                var raw = r.ReadElementContentAsString();
+                if (int.TryParse(raw, out var p))
+                {
                     rule.Priority = p;
+                    rule.InvalidPriorityText = null;
+                }
+                else
+                {
+                    rule.Priority = 0;
+                    rule.InvalidPriorityText = raw;
+                }
                 break;
             case "properties":
                 rule.Properties = ParseProperties(r);

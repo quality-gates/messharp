@@ -212,6 +212,37 @@ public class CliTests
     }
 
     [Fact]
+    public void RulesetWithInvalidPriority_EmitsVerboseWarningAndDropsRule()
+    {
+        var srcFile = Path.GetTempFileName() + ".cs";
+        var rulesetFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(srcFile, "public class Sample { public void DoWork(bool flag) { if (flag) { } } }");
+        File.WriteAllText(rulesetFile, @"<ruleset name=""Custom"">
+  <rule name=""CyclomaticComplexity"" message=""BADPRIO"" class=""PHPMD\Rule\CyclomaticComplexity"">
+    <priority>garbage</priority>
+    <properties>
+      <property name=""reportLevel"" value=""1""/>
+    </properties>
+  </rule>
+</ruleset>");
+        try
+        {
+            var (code, stdout, stderr) = RunCli(srcFile, "text", rulesetFile, "--verbose");
+
+            Assert.Equal(0, code);
+            Assert.Empty(stdout);
+            Assert.Contains("warning:", stderr);
+            Assert.Contains("CyclomaticComplexity", stderr);
+            Assert.Contains("garbage", stderr);
+        }
+        finally
+        {
+            File.Delete(srcFile);
+            File.Delete(rulesetFile);
+        }
+    }
+
+    [Fact]
     public void RulesetWithQualifiedRuleOverride_HonorsOverriddenProperties()
     {
         var srcFile = Path.GetTempFileName() + ".cs";
