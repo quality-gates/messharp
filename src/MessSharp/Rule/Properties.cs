@@ -6,6 +6,22 @@ namespace MessSharp.Rule;
 /// </summary>
 public sealed class Properties
 {
+    private static readonly HashSet<string> TrueValues = new(StringComparer.Ordinal)
+    {
+        "true",
+        "1",
+        "yes",
+        "on",
+    };
+
+    private static readonly HashSet<string> FalseValues = new(StringComparer.Ordinal)
+    {
+        "false",
+        "0",
+        "no",
+        "off",
+    };
+
     private readonly Dictionary<string, string> _map;
 
     public Properties(Dictionary<string, string>? map = null)
@@ -32,12 +48,9 @@ public sealed class Properties
     public bool Bool(string key, bool def)
     {
         if (!_map.TryGetValue(key, out var v)) return def;
-        return v switch
-        {
-            "true" or "1" or "yes" or "on" => true,
-            "false" or "0" or "no" or "off" => false,
-            _ => def,
-        };
+        if (TrueValues.Contains(v)) return true;
+        if (FalseValues.Contains(v)) return false;
+        return def;
     }
 
     public string Str(string key, string def)
