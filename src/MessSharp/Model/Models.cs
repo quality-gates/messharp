@@ -32,7 +32,7 @@ public sealed class SourceFile
 public sealed class ClassModel
 {
     public string Name { get; init; } = "";
-    /// <summary>"class", "struct", or "record".</summary>
+    /// <summary>"class", "struct", "record", or "enum".</summary>
     public string NodeType { get; init; } = "class";
     public int Line { get; init; }
     public int EndLine { get; init; }
@@ -42,7 +42,7 @@ public sealed class ClassModel
     public List<FieldModel> Constants { get; init; } = new();
     public List<string> BaseTypes { get; init; } = new();
     public List<MethodModel> Methods { get; init; } = new();
-    public TypeDeclarationSyntax Node { get; init; } = null!;
+    public BaseTypeDeclarationSyntax Node { get; init; } = null!;
     public SourceFile File { get; init; } = null!;
 }
 

@@ -93,7 +93,7 @@ internal static class StaticAccessReceiverClassifier
     private static void AddClassMembers(HashSet<string> names, ClassModel? classModel)
     {
         if (classModel?.Node == null) return;
-        foreach (var member in classModel.Node.Members)
+        foreach (var member in ModelBuilderHelpers.MembersOf(classModel.Node))
         {
             switch (member)
             {

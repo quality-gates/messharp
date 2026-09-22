@@ -10,10 +10,40 @@ namespace MessSharp.Model;
 /// </summary>
 internal static class ModelBuilderHelpers
 {
-    internal static void CollectFields(TypeDeclarationSyntax node,
+    internal static IEnumerable<MemberDeclarationSyntax> MembersOf(BaseTypeDeclarationSyntax node) =>
+        node switch
+        {
+            TypeDeclarationSyntax type => type.Members,
+            EnumDeclarationSyntax enumNode => enumNode.Members,
+            _ => Enumerable.Empty<MemberDeclarationSyntax>(),
+        };
+
+    internal static void CollectFields(BaseTypeDeclarationSyntax node,
         List<FieldModel> fields, List<FieldModel> constants)
     {
-        foreach (var member in node.Members)
+        if (node is EnumDeclarationSyntax enumNode)
+        {
+            foreach (var member in enumNode.Members)
+            {
+                var span = member.SyntaxTree.GetLineSpan(member.Identifier.Span);
+                var enumMember = new FieldModel
+                {
+                    Name = member.Identifier.Text,
+                    Type = enumNode.Identifier.Text,
+                    Line = span.StartLinePosition.Line + 1,
+                    EndLine = span.EndLinePosition.Line + 1,
+                    Exported = true,
+                    IsStatic = true,
+                    IsReadonly = true,
+                    Node = member,
+                };
+                fields.Add(enumMember);
+                constants.Add(enumMember);
+            }
+            return;
+        }
+
+        foreach (var member in MembersOf(node))
         {
             switch (member)
             {
@@ -131,4 +161,3 @@ internal static class ModelBuilderHelpers
         return string.Join(".", names);
     }
 }
-

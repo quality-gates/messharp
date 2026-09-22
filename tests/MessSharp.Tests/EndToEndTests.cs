@@ -1,6 +1,7 @@
 using MessSharp.Model;
 using MessSharp.Rule;
 using MessSharp.Rules.CodeSize;
+using MessSharp.Rules.Naming;
 using Xunit;
 using RuleSetType = MessSharp.Rule.RuleSet;
 
@@ -86,5 +87,56 @@ public class SimpleClass {
         // "The {0} {1}() has a Cyclomatic Complexity of {2}. The configured cyclomatic complexity threshold is {3}."
         Assert.Matches(@"^The method HeavyMethod\(\) has a Cyclomatic Complexity of \d+\. The configured cyclomatic complexity threshold is 10\.$",
             v.Description);
+    }
+
+    [Fact]
+    public void Engine_EnumDeclarationAndMembers_AreVisibleToClassRules()
+    {
+        var src = "enum E { field_one = 1, field_two = 2, field_three = 3 }";
+        var sf = ModelBuilder.Parse("enum.cs", src);
+        var sets = new[]
+        {
+            new RuleSetType
+            {
+                Rules =
+                {
+                    new ShortClassNameRule
+                    {
+                        Name = "ShortClassName",
+                        RuleProps = new Properties(new Dictionary<string, string> { ["minimum"] = "2" }),
+                    },
+                },
+            },
+            new RuleSetType
+            {
+                Rules =
+                {
+                    new ConstantNamingConventionsRule { Name = "ConstantNamingConventions" },
+                },
+            },
+            new RuleSetType
+            {
+                Rules =
+                {
+                    new ExcessiveClassLengthRule
+                    {
+                        Name = "ExcessiveClassLength",
+                        RuleProps = new Properties(new Dictionary<string, string> { ["minimum"] = "1" }),
+                    },
+                    new TooManyFieldsRule
+                    {
+                        Name = "TooManyFields",
+                        RuleProps = new Properties(new Dictionary<string, string> { ["maxfields"] = "2" }),
+                    },
+                },
+            },
+        };
+
+        var violations = Engine.Analyze(sf, sets);
+
+        Assert.Single(violations, v => v.Rule.Name == "ShortClassName");
+        Assert.Equal(3, violations.Count(v => v.Rule.Name == "ConstantNamingConventions"));
+        Assert.Single(violations, v => v.Rule.Name == "ExcessiveClassLength");
+        Assert.Single(violations, v => v.Rule.Name == "TooManyFields");
     }
 }

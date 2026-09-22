@@ -49,6 +49,9 @@ public static class ModelBuilder
                 case InterfaceDeclarationSyntax iface:
                     file.Interfaces.Add(BuildInterface(file, iface, ModelBuilderHelpers.EnclosingNamespace(iface)));
                     break;
+                case EnumDeclarationSyntax enumNode:
+                    file.Classes.Add(BuildClass(file, enumNode, ModelBuilderHelpers.EnclosingNamespace(enumNode)));
+                    break;
                 case TypeDeclarationSyntax type
                     when type is ClassDeclarationSyntax
                       || type is StructDeclarationSyntax
@@ -62,11 +65,12 @@ public static class ModelBuilder
             file.AllMethods.AddRange(cls.Methods);
     }
 
-    private static ClassModel BuildClass(SourceFile file, TypeDeclarationSyntax node, string ns)
+    private static ClassModel BuildClass(SourceFile file, BaseTypeDeclarationSyntax node, string ns)
     {
         var span = node.SyntaxTree.GetLineSpan(node.Span);
         var nodeType = node switch
         {
+            EnumDeclarationSyntax => "enum",
             StructDeclarationSyntax => "struct",
             RecordDeclarationSyntax => "record",
             _ => "class",
@@ -92,12 +96,12 @@ public static class ModelBuilder
             File = file,
         };
 
-        if (node.ParameterList != null)
+        if (node is TypeDeclarationSyntax type && type.ParameterList != null)
         {
-            cls.Methods.Add(BuildPrimaryConstructor(file, cls, node, node.ParameterList));
+            cls.Methods.Add(BuildPrimaryConstructor(file, cls, type, type.ParameterList));
         }
 
-        foreach (var member in node.Members)
+        foreach (var member in ModelBuilderHelpers.MembersOf(node))
         {
             cls.Methods.AddRange(MethodModelBuilder.Build(file, cls, member));
         }

@@ -228,6 +228,68 @@ public class Outer
     }
 
     [Fact]
+    public void ParsesEnum_ExtractsMembersUnderlyingTypeAndLocation()
+    {
+        var src = @"
+namespace Foo;
+public enum Status : byte
+{
+    pending = 1,
+    Complete
+}";
+        var sf = ModelBuilder.Parse("enum.cs", src);
+        var enumModel = Assert.Single(sf.Classes);
+
+        Assert.Equal("Status", enumModel.Name);
+        Assert.Equal("enum", enumModel.NodeType);
+        Assert.True(enumModel.Exported);
+        Assert.Equal("Foo", enumModel.Namespace);
+        Assert.Equal(new[] { "byte" }, enumModel.BaseTypes);
+        Assert.IsType<EnumDeclarationSyntax>(enumModel.Node);
+        Assert.Same(sf, enumModel.File);
+        Assert.Equal(3, enumModel.Line);
+        Assert.Equal(7, enumModel.EndLine);
+        Assert.Empty(enumModel.Methods);
+        Assert.Empty(sf.AllMethods);
+
+        Assert.Equal(new[] { "pending", "Complete" }, enumModel.Fields.Select(f => f.Name));
+        Assert.Equal(new[] { "pending", "Complete" }, enumModel.Constants.Select(c => c.Name));
+        Assert.All(enumModel.Fields, field =>
+        {
+            Assert.True(field.Exported);
+            Assert.True(field.IsStatic);
+            Assert.True(field.IsReadonly);
+        });
+        Assert.Equal(5, enumModel.Fields[0].Line);
+        Assert.Equal(6, enumModel.Fields[1].Line);
+    }
+
+    [Fact]
+    public void ParsesNestedEnum_AsSeparateTypeArtifact()
+    {
+        var src = @"
+namespace Foo;
+public class Container
+{
+    private enum State : short
+    {
+        Ready,
+        Done
+    }
+}";
+        var sf = ModelBuilder.Parse("nested-enum.cs", src);
+        var outer = Assert.Single(sf.Classes, c => c.Name == "Container");
+        var enumModel = Assert.Single(sf.Classes, c => c.Name == "State");
+
+        Assert.Equal("Foo", enumModel.Namespace);
+        Assert.Equal("enum", enumModel.NodeType);
+        Assert.False(enumModel.Exported);
+        Assert.Equal(new[] { "short" }, enumModel.BaseTypes);
+        Assert.Equal(new[] { "Ready", "Done" }, enumModel.Fields.Select(f => f.Name));
+        Assert.Empty(outer.Fields);
+    }
+
+    [Fact]
     public void ParsesNestedInterface()
     {
         var src = @"
