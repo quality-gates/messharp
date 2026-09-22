@@ -1,4 +1,5 @@
 using MessSharp.Model;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Xunit;
 
 namespace MessSharp.Tests;
@@ -526,5 +527,84 @@ public class Worker(int id)
         Assert.True(cls.Methods[1].IsConstructor);
         Assert.Equal(2, cls.Methods[1].Parameters.Count);
     }
-}
 
+    [Fact]
+    public void ParsesExecutablePropertyAccessorsOperatorsConversionsAndDestructor()
+    {
+        var src = @"
+public class Widget
+{
+    public int Value
+    {
+        get { if (true) { return 1; } return 0; }
+        set => _ = value;
+    }
+
+    public static Widget operator +(Widget left, Widget right)
+    {
+        if (left is null) { return right; }
+        return left;
+    }
+
+    public static explicit operator int(Widget value) => 0;
+
+    ~Widget()
+    {
+        if (true) { }
+    }
+
+    public void Ordinary() { }
+}";
+
+        var sf = ModelBuilder.Parse("issue-167.cs", src);
+        var cls = Assert.Single(sf.Classes);
+
+        Assert.Equal(6, cls.Methods.Count);
+        Assert.Equal(6, sf.AllMethods.Count);
+        Assert.All(cls.Methods, method => Assert.Same(cls, method.Class));
+
+        var getter = Assert.Single(cls.Methods, method => method.Name == "get_Value");
+        Assert.IsType<AccessorDeclarationSyntax>(getter.Node);
+        Assert.NotNull(getter.Body);
+        Assert.Equal("int", getter.ReturnType);
+        Assert.Equal(6, getter.Line);
+        Assert.Equal(6, getter.EndLine);
+
+        var setter = Assert.Single(cls.Methods, method => method.Name == "set_Value");
+        Assert.IsType<AccessorDeclarationSyntax>(setter.Node);
+        Assert.Null(setter.Body);
+        Assert.NotNull(setter.EffectiveBody);
+        Assert.Equal("void", setter.ReturnType);
+        Assert.Single(setter.Parameters);
+        Assert.Equal("value", setter.Parameters[0].Name);
+
+        var addition = Assert.Single(cls.Methods, method => method.Name == "operator +");
+        Assert.IsType<OperatorDeclarationSyntax>(addition.Node);
+        Assert.NotNull(addition.Body);
+        Assert.Equal("Widget", addition.ReturnType);
+        Assert.Equal(new[] { "left", "right" }, addition.Parameters.Select(p => p.Name));
+        Assert.Equal(10, addition.Line);
+        Assert.Equal(14, addition.EndLine);
+
+        var conversion = Assert.Single(cls.Methods, method => method.Name == "operator explicit int");
+        Assert.IsType<ConversionOperatorDeclarationSyntax>(conversion.Node);
+        Assert.NotNull(conversion.EffectiveBody);
+        Assert.Equal("int", conversion.ReturnType);
+        Assert.Single(conversion.Parameters);
+        Assert.Equal("value", conversion.Parameters[0].Name);
+        Assert.Equal(16, conversion.Line);
+        Assert.Equal(16, conversion.EndLine);
+
+        var destructor = Assert.Single(cls.Methods, method => method.Name == "~Widget");
+        Assert.IsType<DestructorDeclarationSyntax>(destructor.Node);
+        Assert.NotNull(destructor.Body);
+        Assert.False(destructor.IsPrivate);
+        Assert.Empty(destructor.ReturnType);
+        Assert.Empty(destructor.Parameters);
+        Assert.Equal(18, destructor.Line);
+        Assert.Equal(21, destructor.EndLine);
+
+        var ordinary = Assert.Single(cls.Methods, method => method.Name == "Ordinary");
+        Assert.IsType<MethodDeclarationSyntax>(ordinary.Node);
+    }
+}

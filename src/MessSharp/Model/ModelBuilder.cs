@@ -1,3 +1,4 @@
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -98,63 +99,10 @@ public static class ModelBuilder
 
         foreach (var member in node.Members)
         {
-            var method = TryBuildMethod(file, cls, member);
-            if (method != null)
-                cls.Methods.Add(method);
+            cls.Methods.AddRange(MethodModelBuilder.Build(file, cls, member));
         }
 
         return cls;
-    }
-
-    private static MethodModel? TryBuildMethod(SourceFile file, ClassModel cls, MemberDeclarationSyntax member)
-    {
-        return member switch
-        {
-            MethodDeclarationSyntax m => BuildMethod(file, cls, m),
-            ConstructorDeclarationSyntax c => BuildConstructor(file, cls, c),
-            _ => null,
-        };
-    }
-
-    private static MethodModel BuildMethod(SourceFile file, ClassModel cls, MethodDeclarationSyntax node)
-    {
-        var span = node.SyntaxTree.GetLineSpan(node.Span);
-        return new MethodModel
-        {
-            Name = node.Identifier.Text,
-            IsConstructor = false,
-            Line = span.StartLinePosition.Line + 1,
-            EndLine = span.EndLinePosition.Line + 1,
-            Exported = ModelBuilderHelpers.IsExported(node.Modifiers),
-            IsPrivate = ModelBuilderHelpers.IsPrivate(node.Modifiers),
-            IsExplicitInterfaceImplementation = node.ExplicitInterfaceSpecifier is not null,
-            Parameters = ModelBuilderHelpers.BuildParameters(node.ParameterList),
-            ReturnType = node.ReturnType.ToString(),
-            Class = cls,
-            Node = node,
-            Body = node.Body,
-            File = file,
-        };
-    }
-
-    private static MethodModel BuildConstructor(SourceFile file, ClassModel cls, ConstructorDeclarationSyntax node)
-    {
-        var span = node.SyntaxTree.GetLineSpan(node.Span);
-        return new MethodModel
-        {
-            Name = node.Identifier.Text,
-            IsConstructor = true,
-            Line = span.StartLinePosition.Line + 1,
-            EndLine = span.EndLinePosition.Line + 1,
-            Exported = ModelBuilderHelpers.IsExported(node.Modifiers),
-            IsPrivate = ModelBuilderHelpers.IsPrivate(node.Modifiers),
-            Parameters = ModelBuilderHelpers.BuildParameters(node.ParameterList),
-            ReturnType = "",
-            Class = cls,
-            Node = node,
-            Body = node.Body,
-            File = file,
-        };
     }
 
     private static MethodModel BuildPrimaryConstructor(SourceFile file, ClassModel cls, TypeDeclarationSyntax node, ParameterListSyntax parameterList)
