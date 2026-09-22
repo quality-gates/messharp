@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Include executable property accessors, including expression-bodied accessors, operator overloads, conversion operators, and destructors in the method model so all rules can analyze their bodies (#167).
 - Count C# pattern combinators (`and`, `or`, `not`) as cyclomatic complexity decision points, including nested and mixed patterns; NPath complexity semantics remain unchanged (#166).
 - Route `CleanCodeRulesTests` through the production `Engine` dispatch instead of an ad-hoc in-test method-rule loop, so CleanCode test evidence now exercises production rule dispatch and suppression filtering (previously bypassed, making those results test-layer-only). A hand-rolled `.Apply(ctx, ...)` dispatch no longer remains anywhere in the test suite (#160).
 

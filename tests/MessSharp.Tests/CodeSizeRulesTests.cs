@@ -263,6 +263,45 @@ public class Foo {
     }
 
     [Fact]
+    public void CyclomaticComplexity_ReportsExecutablePropertyAccessorsOperatorsConversionsAndDestructor()
+    {
+        var src = @"
+public class Widget
+{
+    public int Value
+    {
+        get { if (true) { return 1; } return 0; }
+        set => _ = value;
+    }
+
+    public static Widget operator +(Widget left, Widget right)
+    {
+        if (left is null) { return right; }
+        return left;
+    }
+
+    public static explicit operator int(Widget value) => 0;
+
+    ~Widget()
+    {
+        if (true) { }
+    }
+
+    public void Ordinary() { }
+}";
+        var sf = ModelBuilder.Parse("issue-167.cs", src);
+        var set = BuildSingleRule<CyclomaticComplexityRule>(
+            new Dictionary<string, string> { ["reportLevel"] = "1" });
+
+        var vs = Engine.Analyze(sf, new[] { set });
+
+        Assert.Equal(new[]
+        {
+            "get_Value", "set_Value", "operator +", "operator explicit int", "~Widget", "Ordinary",
+        }, vs.Select(v => v.Method));
+    }
+
+    [Fact]
     public void NPathComplexity_FiresOnSwitchExpressionArms()
     {
         var sf = ModelBuilder.Parse("fixture.cs", SwitchExpressionSource());
