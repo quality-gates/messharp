@@ -37,7 +37,7 @@ public sealed class GlobalVariableRule : BaseRule, IClassRule
     private static List<(string Name, int Line)> CollectMutableStaticFields(ClassModel cls)
     {
         var result = new List<(string, int)>();
-        foreach (var member in cls.Node.Members.OfType<FieldDeclarationSyntax>())
+        foreach (var member in ModelBuilderHelpers.MembersOf(cls.Node).OfType<FieldDeclarationSyntax>())
         {
             var mods = member.Modifiers;
             bool isStatic = mods.Any(SyntaxKind.StaticKeyword);

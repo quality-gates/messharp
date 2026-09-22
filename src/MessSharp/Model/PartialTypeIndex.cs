@@ -38,8 +38,9 @@ public sealed class PartialTypeIndex
         return parts.Where(p => !ReferenceEquals(p.File, cls.File));
     }
 
-    private static bool IsPartial(TypeDeclarationSyntax node) =>
-        node.Modifiers.Any(SyntaxKind.PartialKeyword);
+    private static bool IsPartial(BaseTypeDeclarationSyntax node) =>
+        node is TypeDeclarationSyntax type
+        && type.Modifiers.Any(SyntaxKind.PartialKeyword);
 
     private static string KeyOf(ClassModel cls)
     {

@@ -88,7 +88,7 @@ of `ClassModel`, `InterfaceModel`, methods. Mapping:
 
 | phpmd/messgo | C# (Roslyn syntax node) |
 | :--- | :--- |
-| Class | `class`, `struct`, `record` declarations (NodeType "class") |
+| Class | `class`, `struct`, `record`, and `enum` declarations (NodeType "class", "struct", "record", or "enum") |
 | Interface | `interface` declarations |
 | Method | methods, constructors, local functions are *not* methods (treat as part of body); property accessors are not methods |
 | Field (property in PHP) | field declarations *and* auto-properties |
@@ -98,8 +98,9 @@ of `ClassModel`, `InterfaceModel`, methods. Mapping:
 Brief descriptions:
 Models keep a reference to their Roslyn node so rules can walk syntax.
 `ClassModel` records base types (`Embeds` analog), constants
-(`const` members), Exported = public, Line/EndLine from the tree's
-`GetLineSpan` (1-based).
+(`const` members and enum members), Exported = public, Line/EndLine from the
+tree's `GetLineSpan` (1-based). Enum members are also represented as fields so
+field-count and member-naming rules can analyze them.
 
 ### Metrics
 
