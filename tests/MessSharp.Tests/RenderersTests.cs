@@ -233,6 +233,70 @@ public class RenderersTests
         Assert.Contains("&gt;", out_);
     }
 
+    [Fact]
+    public void Xml_StripsControlCharactersFromFileName()
+    {
+        var rule = new FakeRule { Name = "R", SetName = "s", Priority = 3 };
+        var report = new ViolationReport
+        {
+            Violations = new List<Violation>
+            {
+                new Violation
+                {
+                    Rule = rule,
+                    File = "/src/bad\x01.cs",
+                    BeginLine = 1,
+                    EndLine = 1,
+                    Description = "problem",
+                    RuleSetName = "s",
+                    Priority = 3,
+                },
+            },
+            Errors = new List<ProcessingError>
+            {
+                new ProcessingError { File = "/src/bad\x1F.cs", Message = "msg \x0B with control" },
+            },
+        };
+        var out_ = Render(new XmlRenderer(), report);
+
+        var doc = new XmlDocument();
+        doc.LoadXml(out_);  // throws on XML 1.0-illegal characters
+
+        // Ordinal: culture-aware IndexOf treats control characters as ignorable.
+        Assert.True(out_.IndexOf('\u0001') < 0, "U+0001 must be stripped");
+        Assert.True(out_.IndexOf('\u001F') < 0, "U+001F must be stripped");
+        Assert.True(out_.IndexOf('\u000B') < 0, "U+000B must be stripped");
+        Assert.Contains("bad.cs", out_);
+    }
+
+    [Fact]
+    public void Xml_XmlEscape_PreservesLegalWhitespaceAndUnicode()
+    {
+        var rule = new FakeRule { Name = "R", SetName = "s", Priority = 3 };
+        var report = new ViolationReport
+        {
+            Violations = new List<Violation>
+            {
+                new Violation
+                {
+                    Rule = rule,
+                    File = "a\tb\nc\rd é\u00E9.cs",
+                    BeginLine = 1,
+                    EndLine = 1,
+                    Description = "'quoted'?",
+                    RuleSetName = "s",
+                    Priority = 3,
+                },
+            },
+        };
+        var out_ = Render(new XmlRenderer(), report);
+
+        var doc = new XmlDocument();
+        doc.LoadXml(out_);
+        Assert.Contains("&#039;quoted&#039;?", out_);
+        Assert.Contains("a\tb\nc\rd é\u00E9.cs", out_);
+    }
+
     // -------------------------------------------------------------------------
     // JSON renderer
     // -------------------------------------------------------------------------
@@ -358,6 +422,35 @@ public class RenderersTests
         Assert.Contains("&lt;", out_);
         Assert.Contains("&amp;", out_);
         Assert.Contains("&gt;", out_);
+    }
+
+    [Fact]
+    public void Html_StripsControlCharacters()
+    {
+        var rule = new FakeRule { Name = "R", SetName = "s", Priority = 3 };
+        var report = new ViolationReport
+        {
+            Violations = new List<Violation>
+            {
+                new Violation
+                {
+                    Rule = rule,
+                    File = "/src/bad\x01.cs",
+                    BeginLine = 1,
+                    EndLine = 1,
+                    Description = "problem \x0C text",
+                    RuleSetName = "s",
+                    Priority = 3,
+                },
+            },
+        };
+        var out_ = Render(new HtmlRenderer(), report);
+
+        // Ordinal: culture-aware IndexOf treats control characters as ignorable.
+        Assert.True(out_.IndexOf('\u0001') < 0, "U+0001 must be stripped");
+        Assert.True(out_.IndexOf('\u000C') < 0, "U+000C must be stripped");
+        Assert.Contains("bad.cs", out_);
+        Assert.Contains("problem  text", out_);
     }
 
     [Fact]
@@ -611,6 +704,36 @@ public class RenderersTests
         Assert.Equal("error", error.GetAttribute("severity"));
         Assert.Equal("Syntax error on line 1.", error.GetAttribute("message"));
         Assert.Equal("messharp/parse-error", error.GetAttribute("source"));
+    }
+
+    [Fact]
+    public void Checkstyle_StripsControlCharactersFromFileName()
+    {
+        var rule = new FakeRule { Name = "R", SetName = "s", Priority = 3 };
+        var report = new ViolationReport
+        {
+            Violations = new List<Violation>
+            {
+                new Violation
+                {
+                    Rule = rule,
+                    File = "/src/bad\x01.cs",
+                    BeginLine = 1,
+                    EndLine = 1,
+                    Description = "problem",
+                    RuleSetName = "s",
+                    Priority = 3,
+                },
+            },
+        };
+        var out_ = Render(new CheckstyleRenderer(), report);
+
+        var doc = new XmlDocument();
+        doc.LoadXml(out_);  // throws on XML 1.0-illegal characters
+
+        // Ordinal: culture-aware IndexOf treats control characters as ignorable.
+        Assert.True(out_.IndexOf('\u0001') < 0, "U+0001 must be stripped");
+        Assert.Contains("bad.cs", out_);
     }
 
     // -------------------------------------------------------------------------

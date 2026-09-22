@@ -60,10 +60,5 @@ public sealed class XmlRenderer : IRenderer
         sb.Append($" {name}=\"{XmlEscape(val)}\"");
     }
 
-    internal static string XmlEscape(string s) =>
-        s.Replace("&", "&amp;")
-         .Replace("<", "&lt;")
-         .Replace(">", "&gt;")
-         .Replace("\"", "&quot;")
-         .Replace("'", "&#039;");
+    internal static string XmlEscape(string s) => Escape.Xml(s);
 }

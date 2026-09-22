@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Strip characters that are illegal in XML 1.0 (U+0001–U+0008, U+000B, U+000C, U+000E–U+001F, U+FFFE, U+FFFF) from XML, Checkstyle, and HTML output via the shared escape path, so reports for files whose names contain control characters remain well-formed for strict XML consumers; legal tab, line feed, carriage return, and all other Unicode characters pass through unchanged (#171).
 - Warn on malformed rule priorities and treat them as explicit priority 0, matching phpmd's filtering behavior instead of silently falling back to priority 3 (#170).
 - Include enum declarations and enum members in the type model so naming and code-size rules analyze enum names and values (#168).
 - Include executable property accessors, including expression-bodied accessors, operator overloads, conversion operators, and destructors in the method model so all rules can analyze their bodies (#167).

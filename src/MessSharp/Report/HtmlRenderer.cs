@@ -37,5 +37,5 @@ public sealed class HtmlRenderer : IRenderer
         w.WriteLine("</body></html>");
     }
 
-    private static string HtmlEscape(string s) => XmlRenderer.XmlEscape(s);
+    private static string HtmlEscape(string s) => Escape.Xml(s);
 }
