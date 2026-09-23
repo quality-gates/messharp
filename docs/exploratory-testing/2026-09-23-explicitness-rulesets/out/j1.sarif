@@ -1,0 +1,174 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "messharp",
+          "version": "0.0.0-dev",
+          "rules": [
+            {
+              "id": "ImplicitInput",
+              "name": "ImplicitInput",
+              "helpUri": "https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness",
+              "shortDescription": {
+                "text": "Data enters the method other than through its arguments. This rule flags:\nreads of the class's own mutable static fields and static auto-properties\n(constants and static readonly fields are fixed, so they are not inputs);\nthe clock (DateTime.Now, Stopwatch), the environment, console input, file\nand directory reads, Guid.NewGuid() and unseeded random numbers. Pass the\nvalue in as an argument instead. Static constructors are exempt."
+              }
+            },
+            {
+              "id": "ImplicitOutput",
+              "name": "ImplicitOutput",
+              "helpUri": "https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness",
+              "shortDescription": {
+                "text": "Data leaves the method other than through its return value. This rule flags:\nwrites to the class's own static state and changes to the objects that it\nholds; changes to an argument's object (member or element writes, and calls\nwhose result is discarded, such as list.Add(x)); writes to ref and out\nparameters; console, debug and trace output; file and directory writes;\nenvironment changes, process exit and process start. Return the new value\ninstead. Assigning a new value to a by-value parameter stays in the method,\nso it is not flagged. Static constructors are exempt."
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "ImplicitInput",
+          "level": "warning",
+          "message": {
+            "text": "The method NextInvoiceId() has an implicit input: reads static member '_invoiceCounter'."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs"
+                },
+                "region": {
+                  "startLine": 21,
+                  "endLine": 21
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "ImplicitOutput",
+          "level": "warning",
+          "message": {
+            "text": "The method NextInvoiceId() has an implicit output: writes static member '_invoiceCounter'."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs"
+                },
+                "region": {
+                  "startLine": 21,
+                  "endLine": 21
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "ImplicitInput",
+          "level": "warning",
+          "message": {
+            "text": "The method IsOverdue() has an implicit input: uses DateTime.Now."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs"
+                },
+                "region": {
+                  "startLine": 24,
+                  "endLine": 24
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "ImplicitOutput",
+          "level": "warning",
+          "message": {
+            "text": "The method Log() has an implicit output: uses Console.WriteLine."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs"
+                },
+                "region": {
+                  "startLine": 32,
+                  "endLine": 32
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "ImplicitOutput",
+          "level": "warning",
+          "message": {
+            "text": "The method Log() has an implicit output: changes the object in static member 'Audit'."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs"
+                },
+                "region": {
+                  "startLine": 33,
+                  "endLine": 33
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "ImplicitOutput",
+          "level": "warning",
+          "message": {
+            "text": "The method Save() has an implicit output: uses File.WriteAllText."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs"
+                },
+                "region": {
+                  "startLine": 37,
+                  "endLine": 37
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "ImplicitOutput",
+          "level": "warning",
+          "message": {
+            "text": "The method TryParse() has an implicit output: writes out parameter 'value'."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs"
+                },
+                "region": {
+                  "startLine": 40,
+                  "endLine": 40
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

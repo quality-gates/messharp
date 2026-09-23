@@ -1,0 +1,83 @@
+<?xml version="1.0"?>
+
+<ruleset name="Explicitness Rules"
+         xmlns="http://pmd.sf.net/ruleset/1.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sf.net/ruleset/1.0.0 http://pmd.sf.net/ruleset_xml_schema.xsd"
+         xsi:noNamespaceSchemaLocation="http://pmd.sf.net/ruleset_xml_schema.xsd">
+
+    <description>
+The Explicitness Ruleset finds implicit inputs and outputs, as defined in
+"Grokking Simplicity" by Eric Normand. A method's explicit inputs are its
+arguments and its explicit output is its return value. Any other way that
+data enters or leaves the method is implicit, and makes the method an action
+rather than a calculation. It is opt-in and is not part of the csharp ruleset.
+    </description>
+
+    <rule name="ImplicitInput"
+          since="0.2.17"
+          message="The {0} {1}() has an implicit input: {2}."
+          class="MessSharp\Rule\Explicitness\ImplicitInput"
+          externalInfoUrl="https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness">
+        <description>
+            <![CDATA[
+Data enters the method other than through its arguments. This rule flags:
+reads of the class's own mutable static fields and static auto-properties
+(constants and static readonly fields are fixed, so they are not inputs);
+the clock (DateTime.Now, Stopwatch), the environment, console input, file
+and directory reads, Guid.NewGuid() and unseeded random numbers. Pass the
+value in as an argument instead. Static constructors are exempt.
+            ]]>
+        </description>
+        <priority>3</priority>
+        <properties />
+        <example>
+            <![CDATA[
+class Cart {
+    private static decimal total;
+    public static decimal AddToTotal(decimal amount) {
+        return total + amount;        // implicit input: static state
+    }
+    public static bool IsLate() {
+        return DateTime.Now.Hour > 17; // implicit input: the clock
+    }
+}
+            ]]>
+        </example>
+    </rule>
+
+    <rule name="ImplicitOutput"
+          since="0.2.17"
+          message="The {0} {1}() has an implicit output: {2}."
+          class="MessSharp\Rule\Explicitness\ImplicitOutput"
+          externalInfoUrl="https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness">
+        <description>
+            <![CDATA[
+Data leaves the method other than through its return value. This rule flags:
+writes to the class's own static state and changes to the objects that it
+holds; changes to an argument's object (member or element writes, and calls
+whose result is discarded, such as list.Add(x)); writes to ref and out
+parameters; console, debug and trace output; file and directory writes;
+environment changes, process exit and process start. Return the new value
+instead. Assigning a new value to a by-value parameter stays in the method,
+so it is not flagged. Static constructors are exempt.
+            ]]>
+        </description>
+        <priority>3</priority>
+        <properties />
+        <example>
+            <![CDATA[
+class Cart {
+    private static decimal total;
+    public static void AddToTotal(decimal amount) {
+        Console.WriteLine(total);  // implicit output: console
+        total += amount;           // implicit output: static state
+    }
+    public static void AddItem(List<string> cart, string item) {
+        cart.Add(item);            // implicit output: changes the argument
+    }
+}
+            ]]>
+        </example>
+    </rule>
+</ruleset>

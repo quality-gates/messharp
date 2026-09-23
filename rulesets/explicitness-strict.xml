@@ -1,0 +1,71 @@
+<?xml version="1.0"?>
+
+<ruleset name="Strict Explicitness Rules"
+         xmlns="http://pmd.sf.net/ruleset/1.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sf.net/ruleset/1.0.0 http://pmd.sf.net/ruleset_xml_schema.xsd"
+         xsi:noNamespaceSchemaLocation="http://pmd.sf.net/ruleset_xml_schema.xsd">
+
+    <description>
+The explicitness ruleset plus two stricter rules that also treat an instance
+method's own object as implicit: reading its fields and properties is an
+implicit input, and changing them is an implicit output. Constructors and
+static methods are exempt.
+    </description>
+
+    <rule ref="explicitness" />
+
+    <rule name="ImplicitInstanceInput"
+          since="0.2.17"
+          message="The {0} {1}() has an implicit input: {2}."
+          class="MessSharp\Rule\Explicitness\ImplicitInstanceInput"
+          externalInfoUrl="https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness">
+        <description>
+            <![CDATA[
+An instance method reads a field, property or primary constructor parameter
+of its own instance (bare or through this/base). The data comes from the
+object rather than the argument list. Pass it in, or make the method static.
+            ]]>
+        </description>
+        <priority>4</priority>
+        <properties />
+        <example>
+            <![CDATA[
+class Account {
+    private decimal _balance;
+    public decimal WithInterest(decimal rate) {
+        return _balance * (1 + rate);  // implicit input: member _balance
+    }
+}
+            ]]>
+        </example>
+    </rule>
+
+    <rule name="ImplicitInstanceOutput"
+          since="0.2.17"
+          message="The {0} {1}() has an implicit output: {2}."
+          class="MessSharp\Rule\Explicitness\ImplicitInstanceOutput"
+          externalInfoUrl="https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness">
+        <description>
+            <![CDATA[
+An instance method writes a field or property of its own instance, or changes
+the object that one holds. The result leaves through the object rather than
+the return value. Return a new value instead.
+            ]]>
+        </description>
+        <priority>4</priority>
+        <properties />
+        <example>
+            <![CDATA[
+class Account {
+    private decimal _balance;
+    private readonly List<decimal> _history = new();
+    public void Deposit(decimal amount) {
+        _balance += amount;     // implicit output: member _balance
+        _history.Add(amount);   // implicit output: member _history
+    }
+}
+            ]]>
+        </example>
+    </rule>
+</ruleset>

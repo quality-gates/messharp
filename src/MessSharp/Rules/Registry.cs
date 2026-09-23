@@ -3,6 +3,7 @@ using MessSharp.Rules.CleanCode;
 using MessSharp.Rules.CodeSize;
 using MessSharp.Rules.Controversial;
 using MessSharp.Rules.Design;
+using MessSharp.Rules.Explicitness;
 using MessSharp.Rules.Naming;
 using MessSharp.Rules.UnusedCode;
 
@@ -22,6 +23,7 @@ public static class Registry
             ["codesize"] = () => CodeSizeRules.All,
             ["controversial"] = () => ControvRules.All,
             ["design"] = () => DesignRules.All,
+            ["explicitness"] = () => ExplicitnessRules.All,
             ["naming"] = () => NamingRules.All,
             ["unusedcode"] = () => UnusedCodeRules.All,
         };

@@ -1,0 +1,3 @@
+Scope.cs:10  ImplicitOutput  The method AsyncValue() has an implicit output: changes argument 'db'.
+Scope.cs:11  ImplicitInput   The method set_Prop() has an implicit input: reads static member '_log'.
+Scope.cs:12  ImplicitInput   The constructor Scope() has an implicit input: reads static member '_log'.

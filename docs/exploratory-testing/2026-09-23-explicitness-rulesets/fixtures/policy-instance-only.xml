@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<ruleset name="instance-only" xmlns="http://pmd.sf.net/ruleset/1.0.0">
+  <description>only the strict class-state rules</description>
+  <rule ref="explicitness-strict"><exclude name="ImplicitInput"/><exclude name="ImplicitOutput"/></rule>
+</ruleset>

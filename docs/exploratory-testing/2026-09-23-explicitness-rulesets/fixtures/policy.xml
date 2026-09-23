@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<ruleset name="team" xmlns="http://pmd.sf.net/ruleset/1.0.0">
+  <description>team</description>
+  <rule ref="explicitness"><exclude name="ImplicitOutput"/></rule>
+  <rule ref="explicitness-strict/ImplicitInstanceInput"><priority>1</priority></rule>
+</ruleset>

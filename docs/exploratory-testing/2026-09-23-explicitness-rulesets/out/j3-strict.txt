@@ -1,0 +1,10 @@
+Cart.cs:9   ImplicitInstanceInput   The method get_Count() has an implicit input: reads member '_items'.
+Cart.cs:10  ImplicitInstanceInput   The method get_Total() has an implicit input: reads member '_total'.
+Cart.cs:10  ImplicitInstanceOutput  The method set_Total() has an implicit output: writes member '_total'.
+Cart.cs:11  ImplicitInstanceInput   The method Owner() has an implicit input: reads member 'owner'.
+Cart.cs:12  ImplicitInstanceInput   The method Add() has an implicit input: reads member '_items'.
+Cart.cs:12  ImplicitInstanceInput   The method Add() has an implicit input: reads member '_total'.
+Cart.cs:12  ImplicitInstanceOutput  The method Add() has an implicit output: changes the object in member '_items'.
+Cart.cs:12  ImplicitInstanceOutput  The method Add() has an implicit output: writes member '_total'.
+Cart.cs:13  ImplicitInstanceInput   The method IsRed() has an implicit input: reads member 'Color'.
+Cart.cs:15  ImplicitInstanceInput   The method Reset() has an implicit input: reads member '_items'.

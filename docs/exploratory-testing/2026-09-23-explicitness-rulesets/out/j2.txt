@@ -1,0 +1,61 @@
+== docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app text explicitness-strict
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:21  ImplicitInput          The method NextInvoiceId() has an implicit input: reads static member '_invoiceCounter'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:21  ImplicitOutput         The method NextInvoiceId() has an implicit output: writes static member '_invoiceCounter'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:24  ImplicitInput          The method IsOverdue() has an implicit input: uses DateTime.Now.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:32  ImplicitOutput         The method Log() has an implicit output: uses Console.WriteLine.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:33  ImplicitOutput         The method Log() has an implicit output: changes the object in static member 'Audit'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:37  ImplicitOutput         The method Save() has an implicit output: uses File.WriteAllText.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:40  ImplicitOutput         The method TryParse() has an implicit output: writes out parameter 'value'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:43  ImplicitInstanceInput  The method Apply() has an implicit input: reads member '_discount'.
+exit 2
+== docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app text explicitness,explicitness-strict
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:21  ImplicitInput          The method NextInvoiceId() has an implicit input: reads static member '_invoiceCounter'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:21  ImplicitOutput         The method NextInvoiceId() has an implicit output: writes static member '_invoiceCounter'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:24  ImplicitInput          The method IsOverdue() has an implicit input: uses DateTime.Now.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:32  ImplicitOutput         The method Log() has an implicit output: uses Console.WriteLine.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:33  ImplicitOutput         The method Log() has an implicit output: changes the object in static member 'Audit'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:37  ImplicitOutput         The method Save() has an implicit output: uses File.WriteAllText.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:40  ImplicitOutput         The method TryParse() has an implicit output: writes out parameter 'value'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:43  ImplicitInstanceInput  The method Apply() has an implicit input: reads member '_discount'.
+exit 2
+== docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app text EXPLICITNESS
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:21  ImplicitInput   The method NextInvoiceId() has an implicit input: reads static member '_invoiceCounter'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:21  ImplicitOutput  The method NextInvoiceId() has an implicit output: writes static member '_invoiceCounter'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:24  ImplicitInput   The method IsOverdue() has an implicit input: uses DateTime.Now.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:32  ImplicitOutput  The method Log() has an implicit output: uses Console.WriteLine.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:33  ImplicitOutput  The method Log() has an implicit output: changes the object in static member 'Audit'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:37  ImplicitOutput  The method Save() has an implicit output: uses File.WriteAllText.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:40  ImplicitOutput  The method TryParse() has an implicit output: writes out parameter 'value'.
+exit 2
+== docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app text rulesets/explicitness.xml
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:21  ImplicitInput   The method NextInvoiceId() has an implicit input: reads static member '_invoiceCounter'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:21  ImplicitOutput  The method NextInvoiceId() has an implicit output: writes static member '_invoiceCounter'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:24  ImplicitInput   The method IsOverdue() has an implicit input: uses DateTime.Now.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:32  ImplicitOutput  The method Log() has an implicit output: uses Console.WriteLine.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:33  ImplicitOutput  The method Log() has an implicit output: changes the object in static member 'Audit'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:37  ImplicitOutput  The method Save() has an implicit output: uses File.WriteAllText.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:40  ImplicitOutput  The method TryParse() has an implicit output: writes out parameter 'value'.
+exit 2
+== docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app text csharp,explicitness --minimumpriority 3
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:8   LackOfCohesionOfMethods  The Billing has a Lack of Cohesion Of Methods (LCOM4) value of 3. Consider to split this class into 3 smaller classes.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:10  GlobalVariable           Avoid using static mutable state: _invoiceCounter.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:21  ImplicitInput            The method NextInvoiceId() has an implicit input: reads static member '_invoiceCounter'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:21  ImplicitOutput           The method NextInvoiceId() has an implicit output: writes static member '_invoiceCounter'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:24  ImplicitInput            The method IsOverdue() has an implicit input: uses DateTime.Now.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:32  DevelopmentCodeFragment  The method Log() calls the typical debug function Console.WriteLine() which is mostly only used during development.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:32  ImplicitOutput           The method Log() has an implicit output: uses Console.WriteLine.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:33  ImplicitOutput           The method Log() has an implicit output: changes the object in static member 'Audit'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:37  ImplicitOutput           The method Save() has an implicit output: uses File.WriteAllText.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:40  ImplicitOutput           The method TryParse() has an implicit output: writes out parameter 'value'.
+exit 2
+== docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app text docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/policy.xml
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:21  ImplicitInput          The method NextInvoiceId() has an implicit input: reads static member '_invoiceCounter'.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:24  ImplicitInput          The method IsOverdue() has an implicit input: uses DateTime.Now.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:43  ImplicitInstanceInput  The method Apply() has an implicit input: reads member '_discount'.
+exit 2
+== docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app text docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/policy.xml --minimumpriority 1
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:43  ImplicitInstanceInput  The method Apply() has an implicit input: reads member '_discount'.
+exit 2
+== docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app text docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/policy2.xml
+error: Cannot resolve ref: explicitness-strict.xml
+exit 1

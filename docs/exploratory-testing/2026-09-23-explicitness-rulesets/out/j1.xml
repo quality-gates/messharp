@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<pmd version="0.0.0-dev" tool="messharp" timestamp="2026-09-23T08:52:08.7505784+00:00">
+  <file name="docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs">
+    <violation beginline="21" endline="21" rule="ImplicitInput" ruleset="Explicitness Rules" package="Shop" externalInfoUrl="https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness" priority="3">
+      The method NextInvoiceId() has an implicit input: reads static member &#039;_invoiceCounter&#039;.
+    </violation>
+    <violation beginline="21" endline="21" rule="ImplicitOutput" ruleset="Explicitness Rules" package="Shop" externalInfoUrl="https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness" priority="3">
+      The method NextInvoiceId() has an implicit output: writes static member &#039;_invoiceCounter&#039;.
+    </violation>
+    <violation beginline="24" endline="24" rule="ImplicitInput" ruleset="Explicitness Rules" package="Shop" externalInfoUrl="https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness" priority="3">
+      The method IsOverdue() has an implicit input: uses DateTime.Now.
+    </violation>
+    <violation beginline="32" endline="32" rule="ImplicitOutput" ruleset="Explicitness Rules" package="Shop" externalInfoUrl="https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness" priority="3">
+      The method Log() has an implicit output: uses Console.WriteLine.
+    </violation>
+    <violation beginline="33" endline="33" rule="ImplicitOutput" ruleset="Explicitness Rules" package="Shop" externalInfoUrl="https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness" priority="3">
+      The method Log() has an implicit output: changes the object in static member &#039;Audit&#039;.
+    </violation>
+    <violation beginline="37" endline="37" rule="ImplicitOutput" ruleset="Explicitness Rules" package="Shop" externalInfoUrl="https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness" priority="3">
+      The method Save() has an implicit output: uses File.WriteAllText.
+    </violation>
+    <violation beginline="40" endline="40" rule="ImplicitOutput" ruleset="Explicitness Rules" package="Shop" externalInfoUrl="https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness" priority="3">
+      The method TryParse() has an implicit output: writes out parameter &#039;value&#039;.
+    </violation>
+  </file>
+</pmd>
