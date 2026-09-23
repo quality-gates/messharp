@@ -3,6 +3,7 @@ using MessSharp.Rules.CleanCode;
 using MessSharp.Rules.CodeSize;
 using MessSharp.Rules.Controversial;
 using MessSharp.Rules.Design;
+using MessSharp.Rules.Explicitness;
 using MessSharp.Rules.Naming;
 using MessSharp.Rules.UnusedCode;
 
@@ -25,6 +26,7 @@ public static class RuleFactory
             CodeSizeRules.Factories,
             ControvRules.Factories,
             DesignRules.Factories,
+            ExplicitnessRules.Factories,
             NamingRules.Factories,
             UnusedCodeRules.Factories,
         };

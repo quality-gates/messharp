@@ -1,0 +1,12 @@
+  <rule ref="cleancode.xml"></rule>
+error: Cannot resolve ref: cleancode.xml
+  <rule ref="rulesets/cleancode.xml"></rule>
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:21  ImplicitInput  The method NextInvoiceId() has an implicit input: reads st
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:24  ImplicitInput  The method IsOverdue() has an implicit input: uses DateTim
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:32  StaticAccess   Avoid using static access to class 'Console' in method 'Lo
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:37  StaticAccess   Avoid using static access to class 'File' in method 'Save'
+  <rule ref="rulesets/explicitness-strict.xml"></rule>
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:21  ImplicitInput          The method NextInvoiceId() has an implicit input: 
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:21  ImplicitOutput         The method NextInvoiceId() has an implicit output:
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:24  ImplicitInput          The method IsOverdue() has an implicit input: uses
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs:32  ImplicitOutput         The method Log() has an implicit output: uses Cons

@@ -1,0 +1,19 @@
+Counter.B.cs:10  ImplicitInput   The method A1() has an implicit input: reads static member '_hits'.
+Counter.B.cs:11  ImplicitInput   The method A2() has an implicit input: reads static member '_hits'.
+Counter.B.cs:11  ImplicitOutput  The method A2() has an implicit output: writes static member '_hits'.
+Counter.B.cs:16  ImplicitInput   The method A7() has an implicit input: reads static member 'Limit'.
+Counter.B.cs:18  ImplicitInput   The method A9() has an implicit input: reads static member '_hits'.
+Counter.B.cs:18  ImplicitOutput  The method A9() has an implicit output: writes static member '_hits'.
+Counter.B.cs:20  ImplicitOutput  The method A11() has an implicit output: changes argument 'a'.
+Counter.B.cs:22  ImplicitOutput  The method A13() has an implicit output: writes ref parameter 'x'.
+Counter.B.cs:23  ImplicitOutput  The method A14() has an implicit output: uses File.WriteAllTextAsync.
+Counter.B.cs:24  ImplicitOutput  The method A15() has an implicit output: uses Console.Out.
+Counter.B.cs:26  ImplicitOutput  The method A17() has an implicit output: changes argument 'o'.
+Counter.B.cs:27  ImplicitOutput  The method A18() has an implicit output: changes argument 'o'.
+Counter.B.cs:28  ImplicitOutput  The method A19() has an implicit output: writes static member '_hits'.
+Counter.B.cs:28  ImplicitOutput  The method A19() has an implicit output: writes static member 'Limit'.
+Counter.B.cs:30  ImplicitOutput  The method A21() has an implicit output: changes argument 'xs'.
+Counter.B.cs:31  ImplicitOutput  The method A22() has an implicit output: changes argument 'sink'.
+Counter.B.cs:33  ImplicitInput   The method A24() has an implicit input: uses new Random().
+Counter.B.cs:34  ImplicitInput   The method A25() has an implicit input: reads static member '_hits'.
+Counter.B.cs:34  ImplicitOutput  The method A25() has an implicit output: writes static member 'Limit'.

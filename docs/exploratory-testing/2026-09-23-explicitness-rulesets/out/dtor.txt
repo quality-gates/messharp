@@ -1,0 +1,2 @@
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/dtor/Dtor.cs:7  DevelopmentCodeFragment  The method ~DtorBlock() calls the typical debug function System.Console.WriteLine() which is mostly only used during development.
+docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/dtor/Dtor.cs:7  ImplicitOutput           The method ~DtorBlock() has an implicit output: uses Console.WriteLine.

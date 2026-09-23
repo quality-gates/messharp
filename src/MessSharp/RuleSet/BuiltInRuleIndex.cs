@@ -23,6 +23,8 @@ internal static class BuiltInRuleIndex
             "design",
             "naming",
             "unusedcode",
+            "explicitness",
+            "explicitness-strict",
         };
 
         foreach (var ruleset in baseRulesets)

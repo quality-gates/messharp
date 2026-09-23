@@ -1,0 +1,7 @@
+::warning file=docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs,line=21,col=1::The method NextInvoiceId() has an implicit input: reads static member '_invoiceCounter'. (ImplicitInput)
+::warning file=docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs,line=21,col=1::The method NextInvoiceId() has an implicit output: writes static member '_invoiceCounter'. (ImplicitOutput)
+::warning file=docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs,line=24,col=1::The method IsOverdue() has an implicit input: uses DateTime.Now. (ImplicitInput)
+::warning file=docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs,line=32,col=1::The method Log() has an implicit output: uses Console.WriteLine. (ImplicitOutput)
+::warning file=docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs,line=33,col=1::The method Log() has an implicit output: changes the object in static member 'Audit'. (ImplicitOutput)
+::warning file=docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs,line=37,col=1::The method Save() has an implicit output: uses File.WriteAllText. (ImplicitOutput)
+::warning file=docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs,line=40,col=1::The method TryParse() has an implicit output: writes out parameter 'value'. (ImplicitOutput)

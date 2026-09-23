@@ -1,0 +1,103 @@
+{
+  "version": "0.0.0-dev",
+  "package": "messharp",
+  "timestamp": "2026-09-23T08:52:07.7525332+00:00",
+  "files": [
+    {
+      "file": "docs/exploratory-testing/2026-09-23-explicitness-rulesets/fixtures/app/Billing.cs",
+      "violations": [
+        {
+          "beginLine": 21,
+          "endLine": 21,
+          "package": "Shop",
+          "function": "",
+          "class": "",
+          "method": "",
+          "description": "The method NextInvoiceId() has an implicit input: reads static member '_invoiceCounter'.",
+          "rule": "ImplicitInput",
+          "ruleSet": "Explicitness Rules",
+          "externalInfoUrl": "https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness",
+          "priority": 3
+        },
+        {
+          "beginLine": 21,
+          "endLine": 21,
+          "package": "Shop",
+          "function": "",
+          "class": "",
+          "method": "",
+          "description": "The method NextInvoiceId() has an implicit output: writes static member '_invoiceCounter'.",
+          "rule": "ImplicitOutput",
+          "ruleSet": "Explicitness Rules",
+          "externalInfoUrl": "https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness",
+          "priority": 3
+        },
+        {
+          "beginLine": 24,
+          "endLine": 24,
+          "package": "Shop",
+          "function": "",
+          "class": "",
+          "method": "",
+          "description": "The method IsOverdue() has an implicit input: uses DateTime.Now.",
+          "rule": "ImplicitInput",
+          "ruleSet": "Explicitness Rules",
+          "externalInfoUrl": "https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness",
+          "priority": 3
+        },
+        {
+          "beginLine": 32,
+          "endLine": 32,
+          "package": "Shop",
+          "function": "",
+          "class": "",
+          "method": "",
+          "description": "The method Log() has an implicit output: uses Console.WriteLine.",
+          "rule": "ImplicitOutput",
+          "ruleSet": "Explicitness Rules",
+          "externalInfoUrl": "https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness",
+          "priority": 3
+        },
+        {
+          "beginLine": 33,
+          "endLine": 33,
+          "package": "Shop",
+          "function": "",
+          "class": "",
+          "method": "",
+          "description": "The method Log() has an implicit output: changes the object in static member 'Audit'.",
+          "rule": "ImplicitOutput",
+          "ruleSet": "Explicitness Rules",
+          "externalInfoUrl": "https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness",
+          "priority": 3
+        },
+        {
+          "beginLine": 37,
+          "endLine": 37,
+          "package": "Shop",
+          "function": "",
+          "class": "",
+          "method": "",
+          "description": "The method Save() has an implicit output: uses File.WriteAllText.",
+          "rule": "ImplicitOutput",
+          "ruleSet": "Explicitness Rules",
+          "externalInfoUrl": "https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness",
+          "priority": 3
+        },
+        {
+          "beginLine": 40,
+          "endLine": 40,
+          "package": "Shop",
+          "function": "",
+          "class": "",
+          "method": "",
+          "description": "The method TryParse() has an implicit output: writes out parameter 'value'.",
+          "rule": "ImplicitOutput",
+          "ruleSet": "Explicitness Rules",
+          "externalInfoUrl": "https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness",
+          "priority": 3
+        }
+      ]
+    }
+  ]
+}

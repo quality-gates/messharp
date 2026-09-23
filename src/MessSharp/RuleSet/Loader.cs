@@ -30,10 +30,13 @@ public sealed class Loader
             ["unusedcode"] = "unusedcode.xml",
             ["csharp"] = "csharp.xml",
             ["opinionated"] = "opinionated.xml",
+            ["explicitness"] = "explicitness.xml",
+            ["explicitness-strict"] = "explicitness-strict.xml",
         };
 
     public static IReadOnlyList<string> BuiltinRulesetNames =>
-        new[] { "cleancode", "codesize", "controversial", "design", "naming", "unusedcode", "csharp", "opinionated" };
+        new[] { "cleancode", "codesize", "controversial", "design", "naming", "unusedcode", "csharp", "opinionated",
+            "explicitness", "explicitness-strict" };
 
     /// <summary>Resolves a comma-separated spec of ruleset names or file paths.</summary>
     public List<RuleSetType> Load(string spec)

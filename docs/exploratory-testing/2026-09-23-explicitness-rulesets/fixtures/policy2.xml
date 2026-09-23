@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<ruleset name="team2" xmlns="http://pmd.sf.net/ruleset/1.0.0">
+  <description>team2</description>
+  <rule ref="rulesets/explicitness.xml/ImplicitInput"/>
+  <rule ref="explicitness-strict.xml"><exclude name="ImplicitInput"/><exclude name="ImplicitOutput"/></rule>
+</ruleset>
