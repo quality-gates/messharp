@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.18] - 2026-09-23
+
 ### Fixed
 
 - Expose expression bodies of expression-bodied destructors in `MethodModel.EffectiveBody`, making arrow-bodied destructors visible to body-based rules including `DevelopmentCodeFragment`, `CyclomaticComplexity`, `NPathComplexity`, and `StaticAccess` (#180).
