@@ -669,4 +669,26 @@ public class Widget
         var ordinary = Assert.Single(cls.Methods, method => method.Name == "Ordinary");
         Assert.IsType<MethodDeclarationSyntax>(ordinary.Node);
     }
+
+    [Fact]
+    public void ParsesExpressionBodiedDestructor()
+    {
+        var src = @"
+public class Widget
+{
+    ~Widget() => System.Console.WriteLine(""cleaned"");
+}";
+        var sf = ModelBuilder.Parse("issue-180.cs", src);
+        var cls = Assert.Single(sf.Classes);
+
+        var destructor = Assert.Single(cls.Methods, method => method.Name == "~Widget");
+        Assert.IsType<DestructorDeclarationSyntax>(destructor.Node);
+        Assert.Null(destructor.Body);
+        Assert.NotNull(destructor.EffectiveBody);
+        Assert.False(destructor.IsPrivate);
+        Assert.Empty(destructor.ReturnType);
+        Assert.Empty(destructor.Parameters);
+        Assert.Equal(4, destructor.Line);
+        Assert.Equal(4, destructor.EndLine);
+    }
 }

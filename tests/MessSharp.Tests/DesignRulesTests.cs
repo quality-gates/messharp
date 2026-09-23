@@ -353,6 +353,17 @@ public class Foo {
         MustHave(vs, "DevelopmentCodeFragment");
     }
 
+    [Fact]
+    public void DevCode_ExpressionBodiedDestructor_Flagged()
+    {
+        var src = @"
+public class Foo {
+    ~Foo() => System.Console.WriteLine(""arrow"");
+}";
+        var vs = Analyze(src, MakeDevCodeRule());
+        MustHave(vs, "DevelopmentCodeFragment");
+    }
+
     // -------------------------------------------------------------------------
     // EmptyCatchBlock
     // -------------------------------------------------------------------------

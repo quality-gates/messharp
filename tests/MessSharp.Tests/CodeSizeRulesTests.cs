@@ -302,6 +302,24 @@ public class Widget
     }
 
     [Fact]
+    public void CyclomaticComplexity_ReportsExpressionBodiedDestructor()
+    {
+        var src = @"
+public class Widget
+{
+    ~Widget() => System.Console.WriteLine(true ? ""a"" : ""b"");
+}";
+        var sf = ModelBuilder.Parse("issue-180.cs", src);
+        var set = BuildSingleRule<CyclomaticComplexityRule>(
+            new Dictionary<string, string> { ["reportLevel"] = "1" });
+
+        var vs = Engine.Analyze(sf, new[] { set });
+
+        var v = Assert.Single(vs);
+        Assert.Equal("~Widget", v.Method);
+    }
+
+    [Fact]
     public void NPathComplexity_FiresOnSwitchExpressionArms()
     {
         var sf = ModelBuilder.Parse("fixture.cs", SwitchExpressionSource());
