@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.17] - 2026-09-23
+
 ### Added
 
 - Add the opt-in `explicitness` ruleset, based on the implicit inputs and outputs of *Grokking Simplicity*. `ImplicitInput` reports data that enters a method other than through its arguments: reads of the class's own mutable static state, the clock, environment, console input, file reads, and random or GUID sources. `ImplicitOutput` reports data that leaves a method other than through its return value: writes to static state or its objects, changes to argument objects, `ref`/`out` writes, and console, trace, file, environment and process effects. The `explicitness-strict` ruleset adds `ImplicitInstanceInput` and `ImplicitInstanceOutput`, which also report an instance method's reads and writes of its own fields and properties.
