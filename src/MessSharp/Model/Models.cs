@@ -92,6 +92,7 @@ public sealed class MethodModel
         ConstructorDeclarationSyntax c => c.ExpressionBody?.Expression,
         OperatorDeclarationSyntax o => o.ExpressionBody?.Expression,
         ConversionOperatorDeclarationSyntax co => co.ExpressionBody?.Expression,
+        DestructorDeclarationSyntax d => d.ExpressionBody?.Expression,
         LocalFunctionStatementSyntax lf => lf.ExpressionBody?.Expression,
         AccessorDeclarationSyntax acc => acc.ExpressionBody?.Expression,
         _ => null,
