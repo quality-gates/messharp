@@ -1,0 +1,4 @@
+docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/DesignCases.cs:28  GlobalVariable         Avoid using static mutable state: NormalState.
+docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/DesignCases.cs:41  EmptyCatchBlock        Avoid using empty catch blocks in NormalEmptyCatch.
+docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/DesignCases.cs:46  EmptyCatchBlock        Avoid using empty catch blocks in CommentOnlyCatch.
+docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/DesignCases.cs:64  CountInLoopExpression  Avoid using Count in for loops.

@@ -1,0 +1,9 @@
+docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/UnusedCodeCases.cs:14  UnusedFormalParameter  Avoid unused parameters such as 'x'.
+docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/UnusedCodeCases.cs:14  UnusedFormalParameter  Avoid unused parameters such as 'y'.
+docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/UnusedCodeCases.cs:28  UnusedFormalParameter  Avoid unused parameters such as 'deadParam'.
+docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/UnusedCodeCases.cs:49  UnusedLocalVariable    Avoid unused local variables such as 'deadVar'.
+docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/UnusedCodeCases.cs:55  UnusedLocalVariable    Avoid unused local variables such as 'deadLocal'.
+docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/UnusedCodeCases.cs:62  UnusedLocalVariable    Avoid unused local variables such as 'deadPatternVar'.
+docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/UnusedCodeCases.cs:70  UnusedPrivateField     Avoid unused private fields such as '_deadField'.
+docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/UnusedCodeCases.cs:71  UnusedPrivateField     Avoid unused private fields such as '_deadAssignedOnly'.
+docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/UnusedCodeCases.cs:72  UnusedPrivateField     Avoid unused private fields such as '_deadTupleAssignedOnly'.

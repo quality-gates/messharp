@@ -1,0 +1,3 @@
+docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/ReproGlobalVariable.cs:13  GlobalVariable  Avoid using static mutable state: NormalCounter.
+docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/ReproGlobalVariable.cs:34  GlobalVariable  Avoid using static mutable state: StateA.
+docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/ReproGlobalVariable.cs:35  GlobalVariable  Avoid using static mutable state: StateB.
