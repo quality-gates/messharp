@@ -1063,6 +1063,37 @@ public class Foo
         MustHave(vs, "UnusedFormalParameter");
     }
 
+    [Fact]
+    public void UnusedFormalParameter_OutParametersAssignedByTupleDeconstruction_NoFire()
+    {
+        // Issue #188: (x, y) = (1, 2); assigns both out parameters.
+        var src = @"
+public class Foo
+{
+    public void Bar(out int x, out int y)
+    {
+        (x, y) = (1, 2);
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedFormalParameter");
+    }
+
+    [Fact]
+    public void UnusedFormalParameter_OutParameterAssignedByNestedTupleDeconstruction_NoFire()
+    {
+        var src = @"
+public class Foo
+{
+    public void Bar(out int x, out int y)
+    {
+        (x, (y, _)) = (1, (2, 3));
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedFormalParameter");
+    }
+
     // ─── combined fixture ────────────────────────────────────────────────────
 
     [Fact]

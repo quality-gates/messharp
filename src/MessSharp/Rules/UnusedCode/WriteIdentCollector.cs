@@ -47,21 +47,32 @@ internal static class WriteIdentCollector
 
     /// <summary>
     /// Recursively marks identifier targets inside a tuple deconstruction
-    /// assignment's LHS (e.g. `(x, (y, _)) = ...`) as pure writes. Nested
-    /// `var` declarations introduce new locals, not writes to existing ones,
-    /// so they are skipped.
+    /// assignment's LHS (e.g. `(x, (y, _)) = ...`) as pure writes.
     /// </summary>
     private static void CollectTupleWriteIdents(TupleExpressionSyntax tuple, HashSet<SyntaxNode> writes)
+    {
+        foreach (var id in TupleTargetIdents(tuple))
+            writes.Add(id);
+    }
+
+    /// <summary>
+    /// Yields the identifier targets inside a tuple deconstruction
+    /// assignment's LHS, recursing into nested tuples. Nested `var`
+    /// declarations introduce new locals, not writes to existing ones,
+    /// so they are skipped.
+    /// </summary>
+    internal static IEnumerable<IdentifierNameSyntax> TupleTargetIdents(TupleExpressionSyntax tuple)
     {
         foreach (var arg in tuple.Arguments)
         {
             switch (arg.Expression)
             {
                 case IdentifierNameSyntax id:
-                    writes.Add(id);
+                    yield return id;
                     break;
                 case TupleExpressionSyntax nested:
-                    CollectTupleWriteIdents(nested, writes);
+                    foreach (var inner in TupleTargetIdents(nested))
+                        yield return inner;
                     break;
             }
         }
