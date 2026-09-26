@@ -1,0 +1,66 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "messharp",
+          "version": "0.0.0-dev",
+          "rules": [
+            {
+              "id": "UnusedFormalParameter",
+              "name": "UnusedFormalParameter",
+              "helpUri": "https://phpmd.org/rules/unusedcode.html#unusedformalparameter",
+              "shortDescription": {
+                "text": "Avoid passing parameters to methods or constructors and then not using those parameters."
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "UnusedFormalParameter",
+          "level": "warning",
+          "message": {
+            "text": "Avoid unused parameters such as 'x'."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/ReproOutTuple.cs"
+                },
+                "region": {
+                  "startLine": 3,
+                  "endLine": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "UnusedFormalParameter",
+          "level": "warning",
+          "message": {
+            "text": "Avoid unused parameters such as 'y'."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/ReproOutTuple.cs"
+                },
+                "region": {
+                  "startLine": 3,
+                  "endLine": 3
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

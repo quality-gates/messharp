@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<pmd version="0.0.0-dev" tool="messharp" timestamp="2026-09-26T00:12:54.9409677+00:00">
+  <file name="docs/exploratory-testing/2026-09-26-unusedcode-and-design-edgecases/fixtures/ReproOutTuple.cs">
+    <violation beginline="3" endline="3" rule="UnusedFormalParameter" ruleset="Unused Code Rules" externalInfoUrl="https://phpmd.org/rules/unusedcode.html#unusedformalparameter" priority="3">
+      Avoid unused parameters such as &#039;x&#039;.
+    </violation>
+    <violation beginline="3" endline="3" rule="UnusedFormalParameter" ruleset="Unused Code Rules" externalInfoUrl="https://phpmd.org/rules/unusedcode.html#unusedformalparameter" priority="3">
+      Avoid unused parameters such as &#039;y&#039;.
+    </violation>
+  </file>
+</pmd>
