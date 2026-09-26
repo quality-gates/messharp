@@ -73,19 +73,35 @@ internal static class BodyAnalysis
 
     /// <summary>
     /// Collects the set of identifier names that are written to as assignment targets
-    /// or passed as `out` arguments in a syntax node.
+    /// (including tuple deconstruction targets) or passed as `out` arguments in a syntax node.
     /// </summary>
     internal static HashSet<string> IdentWrites(SyntaxNode body)
     {
         var writes = new HashSet<string>(StringComparer.Ordinal);
         foreach (var node in body.DescendantNodesAndSelf())
-        {
-            if (node is AssignmentExpressionSyntax aes && aes.Left is IdentifierNameSyntax lhsId)
-                writes.Add(lhsId.Identifier.Text);
-            else if (node is ArgumentSyntax arg && arg.RefOrOutKeyword.IsKind(SyntaxKind.OutKeyword) && arg.Expression is IdentifierNameSyntax outId)
-                writes.Add(outId.Identifier.Text);
-        }
+            CollectWrite(node, writes);
         return writes;
+    }
+
+    private static void CollectWrite(SyntaxNode node, HashSet<string> writes)
+    {
+        switch (node)
+        {
+            case AssignmentExpressionSyntax { Left: IdentifierNameSyntax lhsId }:
+                writes.Add(lhsId.Identifier.Text);
+                break;
+
+            // (x, y) = (1, 2); writes every identifier target in the tuple.
+            case AssignmentExpressionSyntax { Left: TupleExpressionSyntax tuple }:
+                foreach (var id in WriteIdentCollector.TupleTargetIdents(tuple))
+                    writes.Add(id.Identifier.Text);
+                break;
+
+            case ArgumentSyntax { Expression: IdentifierNameSyntax outId } arg
+                when arg.RefOrOutKeyword.IsKind(SyntaxKind.OutKeyword):
+                writes.Add(outId.Identifier.Text);
+                break;
+        }
     }
 
     /// <summary>
