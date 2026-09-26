@@ -64,17 +64,33 @@ public sealed class GlobalVariableRule : BaseRule, IClassRule
         var mutated = new HashSet<string>(StringComparer.Ordinal);
         foreach (var node in cls.Node.DescendantNodes())
         {
+            if (node is AssignmentExpressionSyntax assign)
+            {
+                mutated.UnionWith(AssignmentTargetNames(assign.Left, cls.Name));
+                continue;
+            }
             var name = ExtractMutationTarget(node, cls.Name);
             if (name != null) mutated.Add(name);
         }
         return mutated;
     }
 
+    /// <summary>
+    /// Yields the field names written by an assignment's LHS. A tuple
+    /// deconstruction (`(A, (Cls.B, _)) = ...`) writes every target it
+    /// contains, recursing into nested tuples.
+    /// </summary>
+    private static IEnumerable<string> AssignmentTargetNames(ExpressionSyntax left, string className)
+    {
+        if (left is TupleExpressionSyntax tuple)
+            return tuple.Arguments.SelectMany(a => AssignmentTargetNames(a.Expression, className));
+
+        var name = ExtractSimpleOrQualifiedName(left, className);
+        return name == null ? Enumerable.Empty<string>() : new[] { name };
+    }
+
     private static string? ExtractMutationTarget(SyntaxNode node, string className)
     {
-        if (node is AssignmentExpressionSyntax assign)
-            return ExtractSimpleOrQualifiedName(assign.Left, className);
-
         if (node is PostfixUnaryExpressionSyntax postfix && IsIncrDecr(postfix.Kind()))
             return ExtractSimpleOrQualifiedName(postfix.Operand, className);
 
@@ -96,7 +112,8 @@ public sealed class GlobalVariableRule : BaseRule, IClassRule
 
     /// <summary>
     /// Returns the field name if expr is a bare identifier (FieldName) or
-    /// a class-qualified access (ClassName.FieldName). Returns null otherwise.
+    /// a class-qualified access (ClassName.FieldName or ClassName&lt;T&gt;.FieldName).
+    /// Returns null otherwise.
     /// </summary>
     private static string? ExtractSimpleOrQualifiedName(ExpressionSyntax expr, string className)
     {
@@ -108,7 +125,7 @@ public sealed class GlobalVariableRule : BaseRule, IClassRule
                 : id.Identifier.Text;
 
         if (expr is MemberAccessExpressionSyntax ma &&
-            ma.Expression is IdentifierNameSyntax cls2 &&
+            ma.Expression is SimpleNameSyntax cls2 &&
             cls2.Identifier.Text == className)
             return ma.Name.Identifier.Text;
 

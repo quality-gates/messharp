@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - `UnusedFormalParameter` no longer reports `out` parameters assigned via tuple deconstruction, such as `(x, y) = (1, 2);` or nested `(x, (y, _)) = ...` (#188).
+- `GlobalVariable` now detects static fields mutated through a generic class qualifier (`Cache<T>.Counter++`) or assigned via tuple deconstruction (`(StateA, StateB) = (1, 2);`), including nested tuples (#189).
 
 ## [0.2.18] - 2026-09-23
 

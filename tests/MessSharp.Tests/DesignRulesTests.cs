@@ -770,6 +770,54 @@ public class QualifiedGlobal {
     }
 
     [Fact]
+    public void GlobalVariable_GenericClassQualifiedMutation_Flagged()
+    {
+        var src = @"
+public class GenericCache<T> {
+    public static int Counter;
+
+    public void Incr() {
+        GenericCache<T>.Counter++;
+    }
+}";
+        var vs = Analyze(src, MakeGlobalVarRule());
+        MustHave(vs, "GlobalVariable");
+    }
+
+    [Fact]
+    public void GlobalVariable_TupleDeconstructionMutation_FlagsEachTarget()
+    {
+        var src = @"
+public class TupleState {
+    public static int StateA;
+    public static int StateB;
+    public static int StateC;
+
+    public void Reset() {
+        (StateA, (TupleState.StateB, _)) = (1, (2, 3));
+    }
+}";
+        var vs = Analyze(src, MakeGlobalVarRule());
+        Assert.Equal(new[] { 3, 4 }, vs.Where(v => v.Rule.Name == "GlobalVariable").Select(v => v.BeginLine).OrderBy(l => l));
+    }
+
+    [Fact]
+    public void GlobalVariable_TupleDeconstructionIntoShadowingLocal_NotFlagged()
+    {
+        var src = @"
+public class TupleShadow {
+    public static int state;
+
+    public void Set() {
+        int state = 0;
+        (state, _) = (1, 2);
+    }
+}";
+        var vs = Analyze(src, MakeGlobalVarRule());
+        MustNotHave(vs, "GlobalVariable");
+    }
+
+    [Fact]
     public void GlobalVariable_InstanceField_NotFlagged()
     {
         var src = @"
