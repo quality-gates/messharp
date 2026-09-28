@@ -23,40 +23,40 @@ internal readonly record struct StateAccess(string Name, AccessKind Kind, Syntax
 /// Finds the reads, writes and changes of named state in a method body.
 /// The resolver gives the state name that an expression refers to, or null.
 /// </summary>
-internal static class StateAccessCollector
+internal sealed class StateAccessCollector(Func<ExpressionSyntax, string?> resolve) : IBodyVisitor
 {
-    public static List<StateAccess> Collect(SyntaxNode body, Func<ExpressionSyntax, string?> resolve)
-    {
-        var accesses = new List<StateAccess>();
-        var pureWrites = new HashSet<SyntaxNode>();
-        foreach (var node in body.DescendantNodesAndSelf())
-        {
-            foreach (var (target, isPureWrite) in MutationTargets(node))
-                AddMutation(target, isPureWrite, resolve, accesses, pureWrites);
-            if (DiscardedCallReceiver(node) is { } receiver && ResolveChain(receiver, resolve) is { } changed)
-                accesses.Add(new StateAccess(changed, AccessKind.Change, node));
-        }
+    private readonly List<StateAccess> _mutations = [];
+    private readonly List<StateAccess> _reads = [];
+    private readonly HashSet<SyntaxNode> _pureWrites = [];
 
-        foreach (var expr in body.DescendantNodesAndSelf().OfType<ExpressionSyntax>())
-        {
-            if (!pureWrites.Contains(expr) && resolve(expr) is { } name)
-                accesses.Add(new StateAccess(name, AccessKind.Read, expr));
-        }
-        return accesses;
+    /// <summary>The writes and changes in source order, then the reads in source order.</summary>
+    public List<StateAccess> Accesses() => [.. _mutations, .. _reads];
+
+    /// <summary>
+    /// Records what one node does to the state. A node comes before its
+    /// children, so a pure write is known before its target is seen as a read.
+    /// </summary>
+    public void Visit(SyntaxNode node)
+    {
+        foreach (var (target, isPureWrite) in MutationTargets(node))
+            AddMutation(target, isPureWrite);
+        if (DiscardedCallReceiver(node) is { } receiver && ResolveChain(receiver) is { } changed)
+            _mutations.Add(new StateAccess(changed, AccessKind.Change, node));
+        if (node is ExpressionSyntax expr && !_pureWrites.Contains(expr) && resolve(expr) is { } name)
+            _reads.Add(new StateAccess(name, AccessKind.Read, expr));
     }
 
-    private static void AddMutation(ExpressionSyntax target, bool isPureWrite,
-        Func<ExpressionSyntax, string?> resolve, List<StateAccess> accesses, HashSet<SyntaxNode> pureWrites)
+    private void AddMutation(ExpressionSyntax target, bool isPureWrite)
     {
         if (resolve(target) is { } written)
         {
-            accesses.Add(new StateAccess(written, AccessKind.Write, target));
-            if (isPureWrite) pureWrites.Add(target);
+            _mutations.Add(new StateAccess(written, AccessKind.Write, target));
+            if (isPureWrite) _pureWrites.Add(target);
             return;
         }
 
-        if (ReceiverOf(target) is { } receiver && ResolveChain(receiver, resolve) is { } changed)
-            accesses.Add(new StateAccess(changed, AccessKind.Change, target));
+        if (ReceiverOf(target) is { } receiver && ResolveChain(receiver) is { } changed)
+            _mutations.Add(new StateAccess(changed, AccessKind.Change, target));
     }
 
     /// <summary>
@@ -110,7 +110,7 @@ internal static class StateAccessCollector
     /// Walks from an expression down through member and element access to
     /// the first part that names state, e.g. <c>items</c> in <c>items[0].Name</c>.
     /// </summary>
-    private static string? ResolveChain(ExpressionSyntax start, Func<ExpressionSyntax, string?> resolve)
+    private string? ResolveChain(ExpressionSyntax start)
     {
         for (ExpressionSyntax? expr = start; expr != null; expr = ReceiverOf(expr))
         {

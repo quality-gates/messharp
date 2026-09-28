@@ -19,10 +19,19 @@ public sealed class RuleContext
     /// scope is a whole type rather than a single file.
     /// </summary>
     public PartialTypeIndex Partials { get; }
+
+    /// <summary>Facts shared by all rules of the current engine analysis.</summary>
+    internal AnalysisFacts Facts { get; }
     private readonly IRule _rule;
 
     public RuleContext(SourceFile file, IRule rule, Properties props, List<Violation> violations,
         PartialTypeIndex? partials = null)
+        : this(file, rule, props, violations, partials, new AnalysisFacts())
+    {
+    }
+
+    internal RuleContext(SourceFile file, IRule rule, Properties props, List<Violation> violations,
+        PartialTypeIndex? partials, AnalysisFacts facts)
     {
         File = file;
         _rule = rule;
@@ -30,6 +39,7 @@ public sealed class RuleContext
         _violations = violations;
         CurrentPackage = file.Namespace;
         Partials = partials ?? PartialTypeIndex.Empty;
+        Facts = facts;
     }
 
     public void Report(int beginLine, int endLine, params object[] args) =>

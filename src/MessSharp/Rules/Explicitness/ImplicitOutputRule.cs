@@ -15,30 +15,25 @@ public sealed class ImplicitOutputRule : BaseRule, IMethodRule
 {
     public void Apply(RuleContext ctx, MethodModel method)
     {
-        if (method.EffectiveBody is not { } body) return;
+        var effects = MethodEffects.For(ctx, method);
         Finding.ReportAll(ctx, method,
-            StaticWrites(ctx, method, body).Concat(ParameterWrites(method, body)).Concat(AmbientWrites(body)));
+            StaticWrites(effects).Concat(ParameterWrites(method, effects)).Concat(effects.AmbientOutputs));
     }
 
-    private static IEnumerable<Finding> StaticWrites(RuleContext ctx, MethodModel method, SyntaxNode body)
-    {
-        if (method.Class is not { } cls || method.IsStaticConstructor()) return [];
-        var names = StateNames.StaticMembers(ClassState.Gather(ctx, cls).Statics, cls.Name);
-        return StateAccessCollector.Collect(body, names.Resolve)
+    private static IEnumerable<Finding> StaticWrites(MethodEffects effects) =>
+        effects.Statics
             .Where(a => a.Kind != AccessKind.Read)
             .Select(a => Finding.FromAccess(a, "static member"));
-    }
 
     /// <summary>
     /// A new value for a by-value parameter stays in the method, so only
     /// changes to the argument object and writes through ref or out count.
     /// </summary>
-    private static IEnumerable<Finding> ParameterWrites(MethodModel method, SyntaxNode body)
+    private static IEnumerable<Finding> ParameterWrites(MethodModel method, MethodEffects effects)
     {
         var modes = method.Parameters.DistinctBy(p => p.Name)
             .ToDictionary(p => p.Name, PassingMode, StringComparer.Ordinal);
-        var names = StateNames.Parameters(modes.Keys.ToHashSet(StringComparer.Ordinal));
-        foreach (var access in StateAccessCollector.Collect(body, names.Resolve))
+        foreach (var access in effects.Parameters)
         {
             if (access.Kind == AccessKind.Change)
                 yield return new Finding(access.Site, $"changes argument '{access.Name}'");
@@ -52,7 +47,4 @@ public sealed class ImplicitOutputRule : BaseRule, IMethodRule
         if (parameter.IsOut) return "out";
         return parameter.Node.Modifiers.Any(SyntaxKind.RefKeyword) ? "ref" : null;
     }
-
-    private static IEnumerable<Finding> AmbientWrites(SyntaxNode body) =>
-        AmbientApi.Outputs.UsesIn(body).Select(use => new Finding(use.Site, "uses " + use.Name));
 }

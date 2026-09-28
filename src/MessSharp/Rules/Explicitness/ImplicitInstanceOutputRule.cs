@@ -10,7 +10,7 @@ namespace MessSharp.Rules.Explicitness;
 public sealed class ImplicitInstanceOutputRule : BaseRule, IMethodRule
 {
     public void Apply(RuleContext ctx, MethodModel method) =>
-        Finding.ReportAll(ctx, method, InstanceStateAccesses.Collect(ctx, method)
+        Finding.ReportAll(ctx, method, MethodEffects.For(ctx, method).Instance
             .Where(a => a.Kind != AccessKind.Read)
             .Select(a => Finding.FromAccess(a, "member")));
 }

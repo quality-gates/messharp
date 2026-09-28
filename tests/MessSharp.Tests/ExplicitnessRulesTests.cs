@@ -440,4 +440,83 @@ public class Account {
         MustHave(Analyze("explicitness-strict", src), "ImplicitInstanceInput",
             "The method Greet() has an implicit input: reads member 'name'.");
     }
+
+    // -------------------------------------------------------------------------
+    // All four rules over one method
+    // -------------------------------------------------------------------------
+
+    private const string Ledger = @"
+public class Ledger {
+    private static int _count;
+    private static readonly List<string> Names = new();
+    private int _total;
+    public void Post(int amount, ref int balance, out int seen) {
+        _count++;
+        Names.Add(""post"");
+        _total = amount;
+        balance += _total;
+        seen = _count;
+        Console.WriteLine(amount);
+    }
+}";
+
+    private static List<string> RuleAndDescription(IEnumerable<Violation> vs) =>
+        vs.Select(v => v.Rule.Name + ": " + v.Description).ToList();
+
+    [Fact]
+    public void Strict_AllFourRulesOnOneMethod_KeepTheirDistinctionsAndReportOrder()
+    {
+        Assert.Equal(
+            new[]
+            {
+                "ImplicitInput: The method Post() has an implicit input: reads static member '_count'.",
+                "ImplicitOutput: The method Post() has an implicit output: writes static member '_count'.",
+                "ImplicitOutput: The method Post() has an implicit output: changes the object in static member 'Names'.",
+                "ImplicitOutput: The method Post() has an implicit output: writes ref parameter 'balance'.",
+                "ImplicitOutput: The method Post() has an implicit output: writes out parameter 'seen'.",
+                "ImplicitOutput: The method Post() has an implicit output: uses Console.WriteLine.",
+                "ImplicitInstanceInput: The method Post() has an implicit input: reads member '_total'.",
+                "ImplicitInstanceOutput: The method Post() has an implicit output: writes member '_total'.",
+            },
+            RuleAndDescription(Analyze("explicitness-strict", Ledger)));
+    }
+
+    [Theory]
+    [InlineData("ImplicitInput")]
+    [InlineData("ImplicitOutput")]
+    [InlineData("ImplicitInstanceInput")]
+    [InlineData("ImplicitInstanceOutput")]
+    public void Strict_OneRuleAlone_ReportsOnlyItsOwnFindings(string ruleName)
+    {
+        var strict = Analyze("explicitness-strict", Ledger);
+        var rule = new Loader().Load("explicitness-strict").SelectMany(s => s.Rules).Single(r => r.Name == ruleName);
+        var alone = Engine.Analyze(ModelBuilder.Parse("test.cs", Ledger), new[] { rule });
+        Assert.NotEmpty(alone);
+        Assert.Equal(Descriptions(strict, ruleName), Descriptions(alone, ruleName));
+        Assert.All(alone, v => Assert.Equal(ruleName, v.Rule.Name));
+    }
+
+    [Fact]
+    public void SuccessiveAnalyses_DoNotShareResults()
+    {
+        var first = Analyze("explicitness", "public class Foo { private static int x; public int Get() => x; }");
+        var second = Analyze("explicitness", "public class Foo { private const int x = 1; public int Get() => x; }");
+        MustHave(first, "ImplicitInput", "The method Get() has an implicit input: reads static member 'x'.");
+        MustNotHave(second, "ImplicitInput");
+    }
+
+    [Fact]
+    public void PartialType_StateFromOtherFile_SeenByAllRules()
+    {
+        var files = new[]
+        {
+            ModelBuilder.Parse("a.cs", "public partial class Foo { private static int _n; private int _m; }"),
+            ModelBuilder.Parse("b.cs", "public partial class Foo { public void Bump() { _n++; _m++; } }"),
+        };
+        var vs = Engine.AnalyzeAll(files, new Loader().Load("explicitness-strict"));
+        MustHave(vs, "ImplicitInput", "The method Bump() has an implicit input: reads static member '_n'.");
+        MustHave(vs, "ImplicitOutput", "The method Bump() has an implicit output: writes static member '_n'.");
+        MustHave(vs, "ImplicitInstanceInput", "The method Bump() has an implicit input: reads member '_m'.");
+        MustHave(vs, "ImplicitInstanceOutput", "The method Bump() has an implicit output: writes member '_m'.");
+    }
 }

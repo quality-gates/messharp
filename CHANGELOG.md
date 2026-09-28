@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- The four explicitness rules now share one analysis per method: class state (including other partial parts) is gathered once per class and each method body is walked once per engine analysis, instead of each rule re-gathering and re-scanning. Findings, messages and report order are unchanged (#193).
+
 ## [0.2.19] - 2026-09-27
 
 ### Fixed

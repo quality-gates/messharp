@@ -1,6 +1,5 @@
 using MessSharp.Model;
 using MessSharp.Rule;
-using Microsoft.CodeAnalysis;
 
 namespace MessSharp.Rules.Explicitness;
 
@@ -13,20 +12,12 @@ public sealed class ImplicitInputRule : BaseRule, IMethodRule
 {
     public void Apply(RuleContext ctx, MethodModel method)
     {
-        if (method.EffectiveBody is not { } body) return;
-        Finding.ReportAll(ctx, method, StaticReads(ctx, method, body).Concat(AmbientReads(body)));
+        var effects = MethodEffects.For(ctx, method);
+        Finding.ReportAll(ctx, method, StaticReads(effects).Concat(effects.AmbientInputs));
     }
 
-    private static IEnumerable<Finding> StaticReads(RuleContext ctx, MethodModel method, SyntaxNode body)
-    {
-        if (method.Class is not { } cls || method.IsStaticConstructor()) return [];
-        var names = StateNames.StaticMembers(ClassState.Gather(ctx, cls).MutableStatics, cls.Name);
-        return StateAccessCollector.Collect(body, names.Resolve)
-            .Where(a => a.Kind == AccessKind.Read)
+    private static IEnumerable<Finding> StaticReads(MethodEffects effects) =>
+        effects.Statics
+            .Where(a => a.Kind == AccessKind.Read && effects.MutableStatics.Contains(a.Name))
             .Select(a => Finding.FromAccess(a, "static member"));
-    }
-
-    private static IEnumerable<Finding> AmbientReads(SyntaxNode body) =>
-        AmbientApi.Inputs.UsesIn(body).Select(use => new Finding(use.Site, "uses " + use.Name))
-            .Concat(AmbientApi.UnseededRandoms(body).Select(site => new Finding(site, "uses new Random()")));
 }

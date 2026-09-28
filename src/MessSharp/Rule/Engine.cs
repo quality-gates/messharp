@@ -25,12 +25,13 @@ public static class Engine
         PartialTypeIndex? partials = null)
     {
         var violations = new List<Violation>();
+        var facts = new AnalysisFacts();
         foreach (var set in sets)
         {
             foreach (var rule in set.Rules)
             {
                 var props = rule is BaseRule br ? br.RuleProps : Properties.Empty;
-                var ctx = new RuleContext(file, rule, props, violations, partials);
+                var ctx = new RuleContext(file, rule, props, violations, partials, facts);
                 ApplyRule(ctx, rule, file);
             }
         }
