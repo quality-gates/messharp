@@ -21,11 +21,17 @@ public sealed class RuleContext
     public PartialTypeIndex Partials { get; }
 
     /// <summary>Facts shared by all rules of the current engine analysis.</summary>
-    public AnalysisFacts Facts { get; }
+    internal AnalysisFacts Facts { get; }
     private readonly IRule _rule;
 
     public RuleContext(SourceFile file, IRule rule, Properties props, List<Violation> violations,
-        PartialTypeIndex? partials = null, AnalysisFacts? facts = null)
+        PartialTypeIndex? partials = null)
+        : this(file, rule, props, violations, partials, new AnalysisFacts())
+    {
+    }
+
+    internal RuleContext(SourceFile file, IRule rule, Properties props, List<Violation> violations,
+        PartialTypeIndex? partials, AnalysisFacts facts)
     {
         File = file;
         _rule = rule;
@@ -33,7 +39,7 @@ public sealed class RuleContext
         _violations = violations;
         CurrentPackage = file.Namespace;
         Partials = partials ?? PartialTypeIndex.Empty;
-        Facts = facts ?? new AnalysisFacts();
+        Facts = facts;
     }
 
     public void Report(int beginLine, int endLine, params object[] args) =>

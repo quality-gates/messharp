@@ -31,7 +31,7 @@ internal sealed class MethodEffects
     /// <summary>Uses of the console, debug trace, file writes and environment changes.</summary>
     public IReadOnlyList<Finding> AmbientOutputs { get; private init; } = [];
 
-    /// <summary>The method's effects, analysed once per analysis.</summary>
+    /// <summary>The method's effects, analyzed once per analysis.</summary>
     public static MethodEffects For(RuleContext ctx, MethodModel method) =>
         ctx.Facts.Get(method, () => Analyze(ctx, method));
 
