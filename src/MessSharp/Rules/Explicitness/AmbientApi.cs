@@ -52,16 +52,13 @@ internal sealed class AmbientApi
     private AmbientApi(IEnumerable<string> members) =>
         _members = new HashSet<string>(members, StringComparer.Ordinal);
 
-    /// <summary>Each use of a listed member in the body, as the node and its "Type.Member" name.</summary>
-    public IEnumerable<(SyntaxNode Site, string Name)> UsesIn(SyntaxNode body)
+    /// <summary>The "Type.Member" name when the node uses a listed member, otherwise null.</summary>
+    public string? UseAt(SyntaxNode node)
     {
-        foreach (var access in body.DescendantNodesAndSelf().OfType<MemberAccessExpressionSyntax>())
-        {
-            if (RightmostName(access.Expression) is not { } type) continue;
-            var name = type + "." + access.Name.Identifier.Text;
-            if (_members.Contains(name))
-                yield return (access, name);
-        }
+        if (node is not MemberAccessExpressionSyntax access || RightmostName(access.Expression) is not { } type)
+            return null;
+        var name = type + "." + access.Name.Identifier.Text;
+        return _members.Contains(name) ? name : null;
     }
 
     private static string? RightmostName(ExpressionSyntax expr) => expr switch
@@ -73,8 +70,32 @@ internal sealed class AmbientApi
         _ => null,
     };
 
-    /// <summary>Each <c>new Random()</c> without a seed: its values come from the clock.</summary>
-    public static IEnumerable<SyntaxNode> UnseededRandoms(SyntaxNode body) =>
-        body.DescendantNodesAndSelf().OfType<ObjectCreationExpressionSyntax>()
-            .Where(c => RightmostName(c.Type) == "Random" && (c.ArgumentList?.Arguments.Count ?? 0) == 0);
+    /// <summary>True for <c>new Random()</c> without a seed: its values come from the clock.</summary>
+    public static bool IsUnseededRandom(SyntaxNode node) =>
+        node is ObjectCreationExpressionSyntax creation
+        && RightmostName(creation.Type) == "Random"
+        && (creation.ArgumentList?.Arguments.Count ?? 0) == 0;
+}
+
+/// <summary>The ambient sources and sinks that a method body uses, found during the shared walk.</summary>
+internal sealed class AmbientUses : IBodyVisitor
+{
+    private readonly List<Finding> _sources = [];
+    private readonly List<Finding> _randoms = [];
+    private readonly List<Finding> _sinks = [];
+
+    /// <summary>Uses of ambient sources, then unseeded randoms.</summary>
+    public List<Finding> Inputs() => [.. _sources, .. _randoms];
+
+    public List<Finding> Outputs() => [.. _sinks];
+
+    public void Visit(SyntaxNode node)
+    {
+        if (AmbientApi.Inputs.UseAt(node) is { } source)
+            _sources.Add(new Finding(node, "uses " + source));
+        if (AmbientApi.Outputs.UseAt(node) is { } sink)
+            _sinks.Add(new Finding(node, "uses " + sink));
+        if (AmbientApi.IsUnseededRandom(node))
+            _randoms.Add(new Finding(node, "uses new Random()"));
+    }
 }

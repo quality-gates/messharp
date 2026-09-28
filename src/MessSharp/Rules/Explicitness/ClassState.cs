@@ -25,7 +25,11 @@ internal sealed class ClassState
 
     public IReadOnlySet<string> Instance => _instance;
 
-    public static ClassState Gather(RuleContext ctx, ClassModel cls)
+    /// <summary>The class's state, gathered once per analysis.</summary>
+    public static ClassState For(RuleContext ctx, ClassModel cls) =>
+        ctx.Facts.Get(cls, () => Gather(ctx, cls));
+
+    private static ClassState Gather(RuleContext ctx, ClassModel cls)
     {
         var state = new ClassState();
         foreach (var part in ctx.Partials.PartsInOtherFiles(cls).Prepend(cls))
