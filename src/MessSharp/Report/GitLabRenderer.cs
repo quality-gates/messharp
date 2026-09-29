@@ -51,6 +51,8 @@ public sealed class GitLabRenderer : IRenderer
                 Location = new GitLabLocation
                 {
                     Path = e.File,
+                    // lines.begin is required by GitLab; line 1 points at the file when no line is known.
+                    Lines = new GitLabLines { Begin = e.Line ?? 1 },
                 },
             });
         }

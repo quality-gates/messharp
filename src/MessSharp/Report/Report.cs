@@ -6,6 +6,8 @@ public sealed class ProcessingError
 {
     public string File { get; init; } = "";
     public string Message { get; init; } = "";
+    /// <summary>1-based line the error points at; null when no line is known (e.g. I/O failures).</summary>
+    public int? Line { get; init; }
 }
 
 public sealed class Report
