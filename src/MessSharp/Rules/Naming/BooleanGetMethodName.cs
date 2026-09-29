@@ -19,7 +19,7 @@ public sealed class BooleanGetMethodNameRule : BaseRule, IMethodRule
         if (!GetterPattern.IsMatch(method.Name))
             return;
 
-        if (!ReturnsBool(method.ReturnType))
+        if (!BooleanReturnType.Matches(method.ReturnType))
             return;
 
         bool checkParameterized = ctx.Props.Bool("checkParameterizedMethods", false);
@@ -28,12 +28,32 @@ public sealed class BooleanGetMethodNameRule : BaseRule, IMethodRule
 
         ctx.ReportMethod(method, method.Name);
     }
+}
 
-    private static bool ReturnsBool(string returnType)
+/// <summary>
+/// Classifies a return type's source text as boolean. A <c>T?</c> suffix or a
+/// <c>[System.]Nullable&lt;T&gt;</c> wrapper is unwrapped first, so nullable
+/// booleans count as booleans (as BooleanArgumentFlag does).
+/// </summary>
+internal static class BooleanReturnType
+{
+    private static readonly Regex NullableWrapper =
+        new(@"^(?:System\s*\.\s*)?Nullable\s*<(?<inner>.*)>$", RegexOptions.Compiled);
+
+    public static bool Matches(string returnType)
     {
-        var t = returnType.Trim();
+        var t = UnwrapNullable(returnType.Trim());
         return t.Equals("bool", StringComparison.OrdinalIgnoreCase)
             || t.Equals("boolean", StringComparison.OrdinalIgnoreCase)
             || t.Equals("System.Boolean", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string UnwrapNullable(string type)
+    {
+        if (type.EndsWith('?'))
+            return type[..^1].TrimEnd();
+
+        var match = NullableWrapper.Match(type);
+        return match.Success ? match.Groups["inner"].Value.Trim() : type;
     }
 }

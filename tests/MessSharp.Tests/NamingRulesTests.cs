@@ -647,6 +647,40 @@ class Foo
         MustNotHave(violations, "BooleanGetMethodName");
     }
 
+    [Fact]
+    public void BooleanGetMethodName_NullableBoolReturns_ReportViolations()
+    {
+        var src = @"
+class Foo
+{
+    public bool? GetMaybe() => true;
+    public System.Boolean? GetSystemMaybe() => true;
+    public System.Nullable<bool> GetNullable() => true;
+    public Nullable<System.Boolean> GetShortNullable() => true;
+}";
+        var rule = MakeRule<BooleanGetMethodNameRule>("BooleanGetMethodName",
+            "The '{0}()' method which returns a boolean should be named 'Is...()' or 'Has...()'");
+        var violations = Run(src, rule);
+        Assert.Equal(
+            new[] { "GetMaybe", "GetSystemMaybe", "GetNullable", "GetShortNullable" },
+            violations.Select(v => (string)v.Args[0]).ToArray());
+    }
+
+    [Fact]
+    public void BooleanGetMethodName_NullableNonBoolReturn_NoViolation()
+    {
+        var src = @"
+class Foo
+{
+    public int? GetCount() => 0;
+    public System.Nullable<int> GetTotal() => 0;
+}";
+        var rule = MakeRule<BooleanGetMethodNameRule>("BooleanGetMethodName",
+            "The '{0}()' method which returns a boolean should be named 'Is...()' or 'Has...()'");
+        var violations = Run(src, rule);
+        MustNotHave(violations, "BooleanGetMethodName");
+    }
+
     // ------------------------------------------------------------------ Combined (ports messgo TestNaming)
 
     [Fact]

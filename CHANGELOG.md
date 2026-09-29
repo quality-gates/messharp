@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `ImplicitOutput` (and `ImplicitInstanceOutput`) now reports state written inside a nested tuple deconstruction, such as `C` in `(B, (C, _)) = (1, (2, 3));`. Previously only the outer tuple level was flattened, so the inner tuple was treated as one target that named no state (#202).
 - A ruleset whose `<rule ref>` chain leads back to a ruleset already being loaded (for example `a.xml` → `b.xml` → `a.xml`, or a file that refs itself) now fails the run with exit code 1 and `error: Cyclic ruleset ref: …`. Before, the cycle was skipped without a message, and an empty result exited 0 as a clean analysis (#203).
 - The `gitlab` renderer now reports a parse error at its diagnostic's line (`location.lines.begin`), for example 4 for `CS1026: ) expected on line 4`. Before, it always used line 0, which does not exist. An error with no known line, such as an I/O failure, now uses line 1. Message text and other renderers' output are unchanged (#204).
+- `BooleanGetMethodName` now reports `GetX()` methods that return a nullable boolean: `bool?`, `System.Boolean?`, `Nullable<bool>` or `System.Nullable<bool>`. Before, only `bool` and `System.Boolean` were checked. Nullable non-boolean returns such as `int?` stay quiet (#205).
 
 ### Changed
 
