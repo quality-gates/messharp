@@ -11,16 +11,18 @@ namespace MessSharp.Rules.UnusedCode;
 ///   - `out var` parameters (the parameter itself) still count if referenced
 ///   - params named `_` are ignored (explicit discard pattern)
 ///   - expression-bodied members are checked via BodyAnalysis.EffectiveBody
+///   - class/struct primary constructor parameters are checked across the
+///     whole type declaration (see PrimaryConstructorScope)
 /// </summary>
 public sealed class UnusedFormalParameterRule : BaseRule, IMethodRule
 {
     public void Apply(RuleContext ctx, MethodModel method)
     {
         if (method.Parameters.Count == 0) return;
-        var body = BodyAnalysis.EffectiveBody(method);
-        if (body == null) return;   // abstract / extern / interface declaration
+        var scope = Scope(method);
+        if (scope == null) return;   // abstract / extern / interface declaration, record, partial type
 
-        var reads = CollectReads(method, body);
+        var (body, reads) = scope.Value;
         HashSet<string>? writes = null;
 
         foreach (var p in method.Parameters)
@@ -36,6 +38,22 @@ public sealed class UnusedFormalParameterRule : BaseRule, IMethodRule
 
             ctx.Report(p.Line, p.Line, p.Name);
         }
+    }
+
+    /// <summary>
+    /// The syntax the parameters are visible in, with the names read there,
+    /// or null when the method has nothing to check.
+    /// </summary>
+    private static (SyntaxNode Body, HashSet<string> Reads)? Scope(MethodModel method)
+    {
+        if (method.Node is ParameterListSyntax)
+        {
+            var type = PrimaryConstructorScope.CheckableType(method);
+            return type == null ? null : (type, PrimaryConstructorScope.Reads(type));
+        }
+
+        var body = BodyAnalysis.EffectiveBody(method);
+        return body == null ? null : (body, CollectReads(method, body));
     }
 
     /// <summary>

@@ -21,23 +21,34 @@ internal static class BodyAnalysis
     ///   - `nameof(x)` — counts as a read of bare identifier x
     ///   - member accesses (`obj.member`, `this.member`) — member names do not count as reads of locals/parameters
     /// </summary>
-    internal static HashSet<string> IdentReads(SyntaxNode body)
+    internal static HashSet<string> IdentReads(SyntaxNode body) =>
+        IdentReads(body, _ => false);
+
+    /// <summary>
+    /// As <see cref="IdentReads(SyntaxNode)"/>, but skips identifiers for which
+    /// <paramref name="isExcluded"/> returns true (e.g. names bound to a
+    /// shadowing declaration).
+    /// </summary>
+    internal static HashSet<string> IdentReads(SyntaxNode body, Func<IdentifierNameSyntax, bool> isExcluded)
     {
         var writes = WriteIdentCollector.Collect(body);
         var reads = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var node in body.DescendantNodesAndSelf())
-            CollectRead(node, writes, reads);
+            CollectRead(node, writes, isExcluded, reads);
 
         return reads;
     }
 
-    private static void CollectRead(SyntaxNode node, HashSet<SyntaxNode> writes, HashSet<string> reads)
+    private static void CollectRead(
+        SyntaxNode node, HashSet<SyntaxNode> writes,
+        Func<IdentifierNameSyntax, bool> isExcluded, HashSet<string> reads)
     {
-        if (TryCollectNameofRead(node, reads)) return;
+        if (TryCollectNameofRead(node, isExcluded, reads)) return;
 
         if (node is IdentifierNameSyntax id
             && !writes.Contains(id)
+            && !isExcluded(id)
             && id.Identifier.Text != "_"
             && !IsMemberOrCallLabel(id))
         {
@@ -59,17 +70,20 @@ internal static class BodyAnalysis
         };
     }
 
-    private static bool TryCollectNameofRead(SyntaxNode node, HashSet<string> reads)
+    private static bool TryCollectNameofRead(
+        SyntaxNode node, Func<IdentifierNameSyntax, bool> isExcluded, HashSet<string> reads)
     {
-        if (node is not InvocationExpressionSyntax inv) return false;
-        if (inv.Expression is not IdentifierNameSyntax kw || kw.Identifier.Text != "nameof") return false;
-        if (inv.ArgumentList.Arguments.Count != 1) return false;
+        if (node is not InvocationExpressionSyntax inv || !IsSingleArgumentNameof(inv)) return false;
 
         var argExpr = inv.ArgumentList.Arguments[0].Expression;
-        if (argExpr is IdentifierNameSyntax nameofId && nameofId.Identifier.Text != "_")
+        if (argExpr is IdentifierNameSyntax nameofId && nameofId.Identifier.Text != "_" && !isExcluded(nameofId))
             reads.Add(nameofId.Identifier.Text);
         return true;
     }
+
+    private static bool IsSingleArgumentNameof(InvocationExpressionSyntax inv) =>
+        inv.Expression is IdentifierNameSyntax { Identifier.Text: "nameof" }
+        && inv.ArgumentList.Arguments.Count == 1;
 
     /// <summary>
     /// Collects the set of identifier names that are written to as assignment targets

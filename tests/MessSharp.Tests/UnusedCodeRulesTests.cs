@@ -1726,6 +1726,40 @@ public partial class Gauge
             vs.Count(v => v.Rule.Name == "UnusedPrivateField") == 2,
             $"Expected both 'reading' fields reported ({reason}).");
     }
+
+
+    // ─── UnusedFormalParameter: primary constructors (issue #199) ─────────────
+
+    [Theory]
+    [InlineData("public class Foo(int unused) { public int Value => 1; }", "class")]
+    [InlineData("public struct Foo(int unused) { public int Value => 1; }", "struct")]
+    [InlineData("public class Foo(int unused) { public int M(int unused) => unused; }", "shadowed by a method parameter")]
+    [InlineData("public class Foo(int unused) { public System.Func<int, int> F => unused => unused; }", "shadowed by a lambda parameter")]
+    [InlineData("public class Foo(int unused) { public int M() { var unused = 1; return unused; } }", "shadowed by a local")]
+    [InlineData("public class Foo(int unused) { public class Inner { public int unused; public int M() => unused; } }", "read only in a nested type")]
+    public void UnusedFormalParameter_UnusedPrimaryConstructorParameter_Fires(string src, string reason)
+    {
+        var vs = Analyze(src);
+        Assert.True(
+            vs.Any(v => v.Rule.Name == "UnusedFormalParameter" && v.Description.Contains("'unused'")),
+            $"Expected 'unused' reported ({reason}).");
+    }
+
+    [Theory]
+    [InlineData("public class Foo(int used) { private readonly int _v = used; public int Value => _v; }", "field initializer")]
+    [InlineData("public class Foo(int used) { public int Value => used; }", "property")]
+    [InlineData("public class Foo(int used) { public int M() { return used + 1; } }", "method body")]
+    [InlineData("public class Base(int x) { public int X => x; } public class Foo(int used) : Base(used);", "base constructor argument")]
+    [InlineData("public class Foo(int used) { public Foo() : this(0) { } public int M() => nameof(used).Length; }", "nameof")]
+    [InlineData("public record Foo(int Unused);", "positional record")]
+    [InlineData("public record struct Foo(int Unused);", "positional record struct")]
+    [InlineData("public partial class Foo(int unused);", "partial type")]
+    [InlineData("public class Foo(int _) { }", "discard")]
+    public void UnusedFormalParameter_PrimaryConstructorParameter_NoFire(string src, string reason)
+    {
+        var vs = Analyze(src);
+        Assert.False(
+            vs.Any(v => v.Rule.Name == "UnusedFormalParameter"),
+            $"Unexpected UnusedFormalParameter ({reason}): {string.Join(", ", vs.Select(v => v.Description))}");
+    }
 }
-
-
