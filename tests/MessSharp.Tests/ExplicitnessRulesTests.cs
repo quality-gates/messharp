@@ -212,6 +212,28 @@ public class Counter {
         MustNotHave(Analyze("explicitness", src), "ImplicitInput");
     }
 
+    [Theory]
+    [InlineData("Random r = new();")]
+    [InlineData("System.Random r = new();")]
+    [InlineData("Random? r = new();")]
+    [InlineData("Random a = new(1), r = new();")]
+    public void ImplicitInput_TargetTypedUnseededRandom_Flagged(string statement)
+    {
+        var src = "public class Foo { public void Bar() { " + statement + " } }";
+        MustHave(Analyze("explicitness", src), "ImplicitInput",
+            "The method Bar() has an implicit input: uses new Random().");
+    }
+
+    [Theory]
+    [InlineData("Random r = new(1);")]
+    [InlineData("object r = new();")]
+    [InlineData("List<int> r = new();")]
+    public void ImplicitInput_TargetTypedSeededOrOtherType_NotFlagged(string statement)
+    {
+        var src = "public class Foo { public void Bar() { " + statement + " } }";
+        MustNotHave(Analyze("explicitness", src), "ImplicitInput");
+    }
+
     [Fact]
     public void ImplicitInput_RepeatedRead_ReportedOncePerMethodAtFirstUse()
     {
