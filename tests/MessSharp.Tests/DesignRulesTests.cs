@@ -569,6 +569,34 @@ public class Simple {
     }
 
     [Fact]
+    public void CouplingBetweenObjects_TaskTypeArgument_Counted()
+    {
+        var src = @"
+public class TaskReturn
+{
+    public System.Threading.Tasks.Task<Customer> Get() => null!;
+}
+public class Customer { }
+";
+        Assert.Equal(1, CboValue(src));
+    }
+
+    [Fact]
+    public void CouplingBetweenObjects_GenericTypeArguments_CountedWithGenericType()
+    {
+        var src = @"
+public class Holder
+{
+    private List<Customer> _customers;
+    private Dictionary<string, Order[]> _orders;
+    public ValueTask<(Invoice, int)?> Load(Func<Customer, Receipt> map) => default;
+    public void Make() { var x = new List<Widget>(); }
+}";
+        // List, Customer, Dictionary, Order, Invoice, Func, Receipt, Widget
+        Assert.Equal(8, CboValue(src));
+    }
+
+    [Fact]
     public void CouplingBetweenObjects_ExpressionBodiedMethod_ObjectCreationsCounted()
     {
         var src = @"
