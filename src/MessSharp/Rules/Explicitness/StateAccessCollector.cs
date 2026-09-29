@@ -75,8 +75,9 @@ internal sealed class StateAccessCollector(Func<ExpressionSyntax, string?> resol
         _ => [],
     };
 
+    /// <summary>The targets of an assignment, with nested tuple deconstruction flattened.</summary>
     private static IEnumerable<ExpressionSyntax> AssignedExpressions(ExpressionSyntax left) =>
-        left is TupleExpressionSyntax tuple ? tuple.Arguments.Select(a => a.Expression) : [left];
+        left is TupleExpressionSyntax tuple ? tuple.Arguments.SelectMany(a => AssignedExpressions(a.Expression)) : [left];
 
     private static bool IsIncrementOrDecrement(SyntaxKind kind) =>
         kind is SyntaxKind.PreIncrementExpression or SyntaxKind.PreDecrementExpression
