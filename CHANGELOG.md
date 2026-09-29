@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- `UnusedLocalVariable` and `UnusedPrivateField` now treat `out` arguments as writes, not reads: a local or private field that is only passed as `Helper(out x)`, `Helper(out _f)` or `Helper(out this._f)` is reported. `ref` arguments still count as reads. As a consequence, `UnusedFormalParameter` now reports a non-`out` parameter that is only overwritten through an `out` argument, the same as `p = 1;`, and `UnusedPrivateField` reports a field assigned only as a qualified tuple target such as `(_a, this._b) = (1, 2);` (#196).
+
 ### Changed
 
 - The four explicitness rules now share one analysis per method: class state (including other partial parts) is gathered once per class and each method body is walked once per engine analysis, instead of each rule re-gathering and re-scanning. Findings, messages and report order are unchanged (#193).

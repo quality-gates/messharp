@@ -695,6 +695,140 @@ public class Foo
     }
 
     [Fact]
+    public void UnusedLocalVariable_OutArgument_WriteOnly_Fires()
+    {
+        // Issue #196: an out argument is a pure write, not a read of the local.
+        var src = @"
+public class Foo
+{
+    public void Bar() { int dead; Helper(out dead); }
+    private static void Helper(out int x) => x = 1;
+}";
+        var vs = Analyze(src);
+        Assert.Contains(vs, v => v.Rule.Name == "UnusedLocalVariable"
+            && v.Description.Contains("'dead'"));
+    }
+
+    [Fact]
+    public void UnusedLocalVariable_OutArgumentThenRead_NoFire()
+    {
+        var src = @"
+public class Foo
+{
+    public int Bar() { int dead; Helper(out dead); return dead; }
+    private static void Helper(out int x) => x = 1;
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedLocalVariable");
+    }
+
+    [Fact]
+    public void UnusedLocalVariable_RefArgument_NoFire()
+    {
+        // A ref argument reads the caller's value, so it counts as a use.
+        var src = @"
+public class Foo
+{
+    public void Bar() { int live = 0; Helper(ref live); }
+    private static void Helper(ref int x) => x++;
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedLocalVariable");
+    }
+
+    [Fact]
+    public void UnusedPrivateField_OutArgument_WriteOnly_Fires()
+    {
+        // Issue #196: out _f and out this._f are pure writes to the field.
+        var src = @"
+public class Foo
+{
+    private int _deadOut;
+
+    public void Bar() { Helper(out _deadOut); Helper(out this._deadOut); }
+    private static void Helper(out int x) => x = 1;
+}";
+        var vs = Analyze(src);
+        Assert.Contains(vs, v => v.Rule.Name == "UnusedPrivateField"
+            && v.Description.Contains("'_deadOut'"));
+    }
+
+    [Fact]
+    public void UnusedPrivateField_OutArgumentThenRead_NoFire()
+    {
+        var src = @"
+public class Foo
+{
+    private int _f;
+
+    public int Bar() { Helper(out _f); return _f; }
+    private static void Helper(out int x) => x = 1;
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedPrivateField");
+    }
+
+    [Fact]
+    public void UnusedPrivateField_QualifiedTupleDeconstructionTarget_WriteOnly_Fires()
+    {
+        var src = @"
+public class Foo
+{
+    private int _a;
+    private int _b;
+
+    public void Bar() { (_a, this._b) = (1, 2); }
+}";
+        var vs = Analyze(src);
+        Assert.Contains(vs, v => v.Rule.Name == "UnusedPrivateField"
+            && v.Description.Contains("'_b'"));
+    }
+
+    [Fact]
+    public void UnusedFormalParameter_OverwrittenByOutArgument_Fires()
+    {
+        // The caller's value of p is never read, same as `p = 1`.
+        var src = @"
+public class Foo
+{
+    public void Bar(int p) { Helper(out p); }
+    private static void Helper(out int x) => x = 1;
+}";
+        var vs = Analyze(src);
+        Assert.Contains(vs, v => v.Rule.Name == "UnusedFormalParameter"
+            && v.Description.Contains("'p'"));
+    }
+
+    [Fact]
+    public void UnusedFormalParameter_OutParameterForwardedAsOutArgument_NoFire()
+    {
+        var src = @"
+public class Foo
+{
+    public void Bar(out int p) { Helper(out p); }
+    private static void Helper(out int x) => x = 1;
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedFormalParameter");
+    }
+
+    [Fact]
+    public void UnusedPrivateField_RefArgument_NoFire()
+    {
+        var src = @"
+public class Foo
+{
+    private int _a;
+    private int _b;
+
+    public void Bar() { Helper(ref _a); Helper(ref this._b); }
+    private static void Helper(ref int x) => x++;
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedPrivateField");
+    }
+
+    [Fact]
     public void UnusedLocalVariable_ExceptionsProperty_Suppresses()
     {
         var src = @"
