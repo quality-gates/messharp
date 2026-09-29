@@ -908,6 +908,24 @@ class Foo
     }
 
     [Fact]
+    public void ShortVariable_UsingDeclarationVar_IsReported()
+    {
+        var src = @"
+class Foo
+{
+    public void Bar()
+    {
+        using var s = new System.IO.MemoryStream();
+    }
+}";
+        var rule = MakeRule<ShortVariableRule>("ShortVariable",
+            "Avoid variables with short names like {0}. Configured minimum length is {1}.");
+        var violations = Run(src, rule);
+        Assert.Contains(violations, v => v.Rule.Name == "ShortVariable"
+            && v.Description.Contains("like s."));
+    }
+
+    [Fact]
     public void ShortVariable_FixedStatementVar_IsReported()
     {
         var src = @"

@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - `UnusedLocalVariable` and `UnusedPrivateField` now treat `out` arguments as writes, not reads: a local or private field that is only passed as `Helper(out x)`, `Helper(out _f)` or `Helper(out this._f)` is reported. `ref` arguments still count as reads. As a consequence, `UnusedFormalParameter` now reports a non-`out` parameter that is only overwritten through an `out` argument, the same as `p = 1;`, and `UnusedPrivateField` reports a field assigned only as a qualified tuple target such as `(_a, this._b) = (1, 2);` (#196).
+- `UnusedLocalVariable` no longer reports a variable declared by `using var x = …;`, `using (var x = …) { }` or `await using var x = …;`: disposal at scope exit is a use, matching the C# compiler and the already-exempt `using var _`. `ShortVariable` and `LongVariable` still check these names (#197).
 
 ### Changed
 
