@@ -135,6 +135,17 @@ internal static class BodyAnalysis
         return result;
     }
 
+    /// <summary>
+    /// Collects the (name, line) pairs of locals declared as <c>using</c>
+    /// resources. Disposal at scope exit reads them, so they are never unused.
+    /// </summary>
+    internal static HashSet<(string Name, int Line)> UsingResourceVariables(SyntaxNode body) =>
+        body.DescendantNodesAndSelf()
+            .OfType<VariableDeclarationSyntax>()
+            .Where(LocalVariableCollector.IsUsingResourceDeclaration)
+            .SelectMany(LocalVariableCollector.CollectVariables)
+            .ToHashSet();
+
     private static void CollectLocalNode(SyntaxNode node, List<(string, int)> result)
     {
         switch (node)

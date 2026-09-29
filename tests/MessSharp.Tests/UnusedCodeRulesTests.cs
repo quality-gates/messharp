@@ -904,22 +904,66 @@ public class Foo
     }
 
     [Fact]
-    public void UnusedLocalVariable_UsingStatementUnusedVar_Fires()
+    public void UnusedLocalVariable_UsingStatementDisposedOnly_NoFire()
     {
         var src = @"
 public class Foo
 {
     public void Bar()
     {
-        using (var unused = new System.IO.MemoryStream())
+        using (var deadClassic = new System.IO.MemoryStream())
         {
         }
     }
 }";
         var vs = Analyze(src);
-        MustHave(vs, "UnusedLocalVariable");
+        MustNotHave(vs, "UnusedLocalVariable");
+    }
+
+    [Fact]
+    public void UnusedLocalVariable_UsingDeclarationDisposedOnly_NoFire()
+    {
+        var src = @"
+public class Foo
+{
+    public void Bar()
+    {
+        using var deadUsing = new System.IO.MemoryStream();
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedLocalVariable");
+    }
+
+    [Fact]
+    public void UnusedLocalVariable_AwaitUsingDeclarationDisposedOnly_NoFire()
+    {
+        var src = @"
+public class Foo
+{
+    public async System.Threading.Tasks.Task Bar()
+    {
+        await using var deadAwait = new System.IO.MemoryStream();
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedLocalVariable");
+    }
+
+    [Fact]
+    public void UnusedLocalVariable_UndisposedResource_Fires()
+    {
+        var src = @"
+public class Foo
+{
+    public void Bar()
+    {
+        var dead = new System.IO.MemoryStream();
+    }
+}";
+        var vs = Analyze(src);
         Assert.Contains(vs, v => v.Rule.Name == "UnusedLocalVariable"
-            && v.Description.Contains("unused"));
+            && v.Description.Contains("'dead'"));
     }
 
     [Fact]

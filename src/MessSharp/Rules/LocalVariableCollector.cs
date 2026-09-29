@@ -1,4 +1,5 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules;
@@ -16,6 +17,16 @@ internal static class LocalVariableCollector
             or ForStatementSyntax
             or UsingStatementSyntax
             or FixedStatementSyntax;
+
+    /// <summary>
+    /// Returns true if the variable declaration declares a resource disposed by
+    /// <c>using</c>: a using statement, a using declaration, or their
+    /// <c>await</c> forms.
+    /// </summary>
+    internal static bool IsUsingResourceDeclaration(VariableDeclarationSyntax declaration) =>
+        declaration.Parent is UsingStatementSyntax
+            || declaration.Parent is LocalDeclarationStatementSyntax local
+                && !local.UsingKeyword.IsKind(SyntaxKind.None);
 
     /// <summary>
     /// Collects declared variable names from a variable declaration node
