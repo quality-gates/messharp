@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `ImplicitInput` now reports an unseeded `Random` created with target-typed `new()` in a declaration, such as `Random r = new();` or `Random? r = new();`, the same as `new Random()`. Seeded `new(1)` stays quiet. A target-typed `new()` whose type the syntax does not show (assignment, return, argument) is still not checked (#200).
 - `CouplingBetweenObjects` now counts types that appear as generic type arguments, tuple elements or nested generics. For example, `Task<Customer>` counts `Customer`, and `List<Customer>` counts both `List` and `Customer`. Built-in wrappers (`Task`, `ValueTask`) and namespace qualifiers are still not counted (#201).
 - `ImplicitOutput` (and `ImplicitInstanceOutput`) now reports state written inside a nested tuple deconstruction, such as `C` in `(B, (C, _)) = (1, (2, 3));`. Previously only the outer tuple level was flattened, so the inner tuple was treated as one target that named no state (#202).
+- A ruleset whose `<rule ref>` chain leads back to a ruleset already being loaded (for example `a.xml` → `b.xml` → `a.xml`, or a file that refs itself) now fails the run with exit code 1 and `error: Cyclic ruleset ref: …`. Before, the cycle was skipped without a message, and an empty result exited 0 as a clean analysis (#203).
 
 ### Changed
 

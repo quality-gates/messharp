@@ -250,6 +250,49 @@ public class RuleSetLoaderTests
     }
 
     [Fact]
+    public void Load_WithSelfReferencingRuleset_ThrowsInvalidDataException()
+    {
+        var tmpFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(tmpFile, $@"<?xml version=""1.0"" encoding=""UTF-8"" ?>
+<ruleset name=""Self"">
+  <rule ref=""{tmpFile}""/>
+</ruleset>");
+        try
+        {
+            var loader = new Loader { MaxPriority = 1 };
+            var ex = Assert.Throws<InvalidDataException>(() => loader.Load(tmpFile));
+            Assert.Contains("Cyclic ruleset ref", ex.Message);
+        }
+        finally { File.Delete(tmpFile); }
+    }
+
+    [Fact]
+    public void Load_WithMutuallyReferencingRulesets_ThrowsInvalidDataException()
+    {
+        var aFile = Path.GetTempFileName() + ".xml";
+        var bFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(aFile, $@"<?xml version=""1.0"" encoding=""UTF-8"" ?>
+<ruleset name=""a"">
+  <rule ref=""{bFile}""/>
+</ruleset>");
+        File.WriteAllText(bFile, $@"<?xml version=""1.0"" encoding=""UTF-8"" ?>
+<ruleset name=""b"">
+  <rule ref=""{aFile}""/>
+</ruleset>");
+        try
+        {
+            var loader = new Loader { MaxPriority = 1 };
+            var ex = Assert.Throws<InvalidDataException>(() => loader.Load(aFile));
+            Assert.Contains("Cyclic ruleset ref", ex.Message);
+        }
+        finally
+        {
+            File.Delete(aFile);
+            File.Delete(bFile);
+        }
+    }
+
+    [Fact]
     public void Load_ReferencingRuleThroughNestedRuleset_LoadsRule()
     {
         var xmlContent = @"<?xml version=""1.0"" encoding=""UTF-8"" ?>

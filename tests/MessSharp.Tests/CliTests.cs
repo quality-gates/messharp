@@ -181,6 +181,35 @@ public class CliTests
     }
 
     [Fact]
+    public void RulesetWithCyclicRefs_ExitsWithError()
+    {
+        var srcFile = Path.GetTempFileName() + ".cs";
+        var aFile = Path.GetTempFileName() + ".xml";
+        var bFile = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(srcFile, "public class Aa { }");
+        File.WriteAllText(aFile, $@"<?xml version=""1.0""?>
+<ruleset name=""a"" xmlns=""http://pmd.sf.net/ruleset/1.0.0"">
+  <rule ref=""{bFile}""/>
+</ruleset>");
+        File.WriteAllText(bFile, $@"<?xml version=""1.0""?>
+<ruleset name=""b"" xmlns=""http://pmd.sf.net/ruleset/1.0.0"">
+  <rule ref=""{aFile}""/>
+</ruleset>");
+        try
+        {
+            var (code, _, stderr) = RunCli(srcFile, "text", aFile);
+            Assert.Equal(1, code);
+            Assert.Contains("Cyclic ruleset ref", stderr);
+        }
+        finally
+        {
+            File.Delete(srcFile);
+            File.Delete(aFile);
+            File.Delete(bFile);
+        }
+    }
+
+    [Fact]
     public void RulesetWithBareRuleRef_Succeeds()
     {
         var srcFile = Path.GetTempFileName() + ".cs";
