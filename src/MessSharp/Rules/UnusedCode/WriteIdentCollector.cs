@@ -6,7 +6,7 @@ namespace MessSharp.Rules.UnusedCode;
 
 /// <summary>
 /// Collects the specific IdentifierNameSyntax nodes that appear only as
-/// assignment or declaration targets (pure writes), for use by
+/// assignment, declaration or `out` argument targets (pure writes), for use by
 /// <see cref="BodyAnalysis.IdentReads"/>. Split out from BodyAnalysis to
 /// keep that class's overall complexity within its configured threshold.
 /// </summary>
@@ -41,6 +41,13 @@ internal static class WriteIdentCollector
                 when aes.IsKind(SyntaxKind.SimpleAssignmentExpression)
                     && aes.Left is TupleExpressionSyntax tuple:
                 CollectTupleWriteIdents(tuple, writes);
+                break;
+
+            // out argument: Helper(out x); the callee must assign x and
+            // never sees its previous value, so this is a pure write.
+            case ArgumentSyntax { Expression: IdentifierNameSyntax outId } arg
+                when arg.RefOrOutKeyword.IsKind(SyntaxKind.OutKeyword):
+                writes.Add(outId);
                 break;
         }
     }

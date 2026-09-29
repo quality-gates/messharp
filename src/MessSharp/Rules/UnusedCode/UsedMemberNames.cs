@@ -1,7 +1,6 @@
 using MessSharp.Model;
 using MessSharp.Rule;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules.UnusedCode;
@@ -51,7 +50,7 @@ internal static class UsedMemberNames
         var mae = node as MemberAccessExpressionSyntax;
         if (mae is null) return false;
 
-        if (!IsWriteOnlyAssignmentTarget(mae))
+        if (!WriteOnlyTarget.Matches(mae))
             used.Add(mae.Name.Identifier.Text);
         return true;
     }
@@ -74,65 +73,9 @@ internal static class UsedMemberNames
         var id = node as IdentifierNameSyntax;
         if (id is null) return;
         if (IsDeclarationContext(id)) return;
-        if (IsWriteOnlyAssignmentTarget(id)) return;
+        if (WriteOnlyTarget.Matches(id)) return;
         if (shadowed.IsShadowed(id)) return;
         used.Add(id.Identifier.Text);
-    }
-
-    private static bool IsWriteOnlyAssignmentTarget(SyntaxNode node)
-    {
-        if (node.Parent is AssignmentExpressionSyntax assignment)
-            return IsSimpleAssignmentTarget(node, assignment);
-
-        if (node.Parent is MemberAccessExpressionSyntax member
-            && ReferenceEquals(member.Name, node)
-            && member.Parent is AssignmentExpressionSyntax memberAssignment)
-        {
-            return IsSimpleAssignmentTarget(member, memberAssignment);
-        }
-
-        if (IsTupleDeconstructionTarget(node))
-            return true;
-
-        return false;
-    }
-
-    /// <summary>
-    /// Recognises identifier/member targets inside a tuple deconstruction
-    /// assignment's LHS (e.g. `(_a, _b) = (1, 2)` or `(_a, this._b) = ...`),
-    /// which are pure writes just like a simple assignment target.
-    /// </summary>
-    private static bool IsTupleDeconstructionTarget(SyntaxNode node)
-    {
-        var arg = node.Parent as ArgumentSyntax;
-        if (arg is null) return false;
-
-        var tuple = arg.Parent as TupleExpressionSyntax;
-        if (tuple is null) return false;
-        return IsSimpleAssignmentTargetTuple(tuple);
-    }
-
-    private static bool IsSimpleAssignmentTargetTuple(TupleExpressionSyntax tuple)
-    {
-        if (tuple.Parent is AssignmentExpressionSyntax assignment)
-        {
-            return assignment.IsKind(SyntaxKind.SimpleAssignmentExpression)
-                && ReferenceEquals(assignment.Left, tuple);
-        }
-
-        // nested tuple target, e.g. (_a, (_b, _c)) = ...
-        return tuple.Parent is ArgumentSyntax { Parent: TupleExpressionSyntax outer }
-            && IsSimpleAssignmentTargetTuple(outer);
-    }
-
-    private static bool IsSimpleAssignmentTarget(
-        SyntaxNode target,
-        AssignmentExpressionSyntax assignment)
-    {
-        var isInitializer = assignment.Parent is InitializerExpressionSyntax;
-        return assignment.IsKind(SyntaxKind.SimpleAssignmentExpression)
-            && !isInitializer
-            && ReferenceEquals(assignment.Left, target);
     }
 
     private static bool TryCollectNameof(SyntaxNode node, HashSet<string> used)
