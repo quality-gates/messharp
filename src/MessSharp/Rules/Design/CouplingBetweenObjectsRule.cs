@@ -1,11 +1,14 @@
 using MessSharp.Model;
 using MessSharp.Rule;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules.Design;
 
 /// <summary>
-/// Counts distinct non-builtin type names a class references through field types,
+/// Counts distinct non-builtin type names (including generic type arguments)
+/// a class references through field types,
 /// method parameter types, return types, and object creation expressions.
 /// Violation when the count reaches the `maximum` property (default 13).
 /// </summary>
@@ -31,9 +34,7 @@ public sealed class CouplingBetweenObjectsRule : BaseRule, IClassRule
 
         void Collect(string typeStr)
         {
-            var name = BaseTypeName(typeStr);
-            if (!string.IsNullOrEmpty(name) && !BuiltinTypes.Contains(name))
-                types.Add(name);
+            types.UnionWith(CoupledTypeNames(typeStr));
         }
 
         foreach (var f in cls.Fields)
@@ -58,28 +59,32 @@ public sealed class CouplingBetweenObjectsRule : BaseRule, IClassRule
             ctx.ReportClass(cls, cls.Name, cbo, threshold);
     }
 
-    private static string BaseTypeName(string t)
+    /// <summary>
+    /// Yields the simple name of every non-builtin named type in <paramref name="t"/>,
+    /// including generic type arguments, tuple elements and array/nullable
+    /// element types. Namespace and alias qualifiers are skipped, so
+    /// <c>System.Threading.Tasks.Task&lt;Customer&gt;</c> yields only Customer.
+    /// </summary>
+    private static IEnumerable<string> CoupledTypeNames(string t)
     {
-        if (string.IsNullOrEmpty(t)) return "";
+        if (string.IsNullOrWhiteSpace(t)) return [];
 
-        // Strip leading ?, [], *, &
-        t = t.TrimStart('?', '[', ']', '*', '&');
+        return SyntaxFactory.ParseTypeName(t)
+            .DescendantNodesAndSelf()
+            .OfType<SimpleNameSyntax>()
+            .Where(n => !IsQualifier(n))
+            .Select(n => n.Identifier.ValueText)
+            .Where(name => name.Length > 0 && !BuiltinTypes.Contains(name));
+    }
 
-        // Strip generic like List<T> -> List
-        var ltIdx = t.IndexOf('<');
-        if (ltIdx >= 0) t = t[..ltIdx];
-
-        // Strip array ranks int[], int[,], int[][] -> int
-        var bracketIdx = t.IndexOf('[');
-        if (bracketIdx >= 0) t = t[..bracketIdx];
-
-        // Strip nullable and pointer suffixes int?, int* -> int
-        t = t.TrimEnd('?', '*');
-
-        // Take last part of qualified name A.B -> B
-        var dotIdx = t.LastIndexOf('.');
-        if (dotIdx >= 0) t = t[(dotIdx + 1)..];
-
-        return t.Trim();
+    private static bool IsQualifier(SimpleNameSyntax name)
+    {
+        SyntaxNode current = name;
+        while (current.Parent is QualifiedNameSyntax qualified)
+        {
+            if (qualified.Left == current) return true;
+            current = qualified;
+        }
+        return current.Parent is AliasQualifiedNameSyntax alias && alias.Alias == current;
     }
 }
