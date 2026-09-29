@@ -667,6 +667,31 @@ public class RenderersTests
         Assert.Equal("/src/Bad.cs:Syntax error on line 1.", decoded);
     }
 
+    [Fact]
+    public void GitLab_ErrorEntryUsesDiagnosticLine()
+    {
+        var report = new ViolationReport
+        {
+            Errors = new List<ProcessingError>
+            {
+                new ProcessingError { File = "Broken.cs", Message = "CS1026: ) expected on line 4", Line = 4 },
+            },
+        };
+        var doc = JsonDocument.Parse(Render(new GitLabRenderer(), report));
+        var lines = doc.RootElement[0].GetProperty("location").GetProperty("lines");
+        Assert.Equal(4, lines.GetProperty("begin").GetInt32());
+    }
+
+    [Fact]
+    public void GitLab_ErrorEntryWithoutLinePointsAtFirstLine()
+    {
+        var out_ = Render(new GitLabRenderer());
+        var doc = JsonDocument.Parse(out_);
+        var lines = doc.RootElement[3].GetProperty("location").GetProperty("lines");
+        Assert.Equal(1, lines.GetProperty("begin").GetInt32());
+        Assert.DoesNotContain("\"begin\": 0", out_);
+    }
+
     // -------------------------------------------------------------------------
     // Checkstyle renderer
     // -------------------------------------------------------------------------

@@ -48,6 +48,31 @@ public class Broken
     }
 
     [Fact]
+    public void Run_SyntaxInvalidFile_RecordsDiagnosticLineOnProcessingError()
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-runner-");
+        try
+        {
+            File.WriteAllText(Path.Combine(directory.FullName, "Broken.cs"),
+                "namespace Probe;\npublic class Broken\n{\n    public void M( { }\n}\n");
+
+            var report = new RunnerType().Run(new RunOptions
+            {
+                Paths = new List<string> { directory.FullName },
+                RuleSets = new List<RuleSetType> { new() { Name = "empty" } },
+            });
+
+            var error = Assert.Single(report.Errors);
+            Assert.Equal("CS1026: ) expected on line 4", error.Message);
+            Assert.Equal(4, error.Line);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Run_SyntaxValidFile_ProducesNoProcessingErrors()
     {
         var directory = Directory.CreateTempSubdirectory("messharp-runner-");

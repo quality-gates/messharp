@@ -19,14 +19,32 @@ public sealed class SourceFile
     public List<MethodModel> AllMethods { get; init; } = new();
 
     /// <summary>
+    /// Recoverable syntax errors reported by the parser, each carrying the
+    /// 1-based line of the diagnostic. Empty for syntactically valid files.
+    /// </summary>
+    public IReadOnlyList<SyntaxError> SyntaxErrors => Tree
+        .GetDiagnostics()
+        .Where(d => d.Severity == DiagnosticSeverity.Error)
+        .Select(SyntaxError.From)
+        .ToList();
+
+    /// <summary>
     /// Recoverable syntax errors reported by the parser, each formatted as
     /// "CSxxxx: message on line N". Empty for syntactically valid files.
     /// </summary>
-    public IReadOnlyList<string> SyntaxErrorMessages => Tree
-        .GetDiagnostics()
-        .Where(d => d.Severity == DiagnosticSeverity.Error)
-        .Select(d => $"{d.Id}: {d.GetMessage()} on line {d.Location.GetLineSpan().StartLinePosition.Line + 1}")
-        .ToList();
+    public IReadOnlyList<string> SyntaxErrorMessages => SyntaxErrors.Select(e => e.Message).ToList();
+}
+
+/// <summary>
+/// A parser diagnostic: its "CSxxxx: message on line N" text and its 1-based line.
+/// </summary>
+public sealed record SyntaxError(string Message, int Line)
+{
+    public static SyntaxError From(Diagnostic d)
+    {
+        var line = d.Location.GetLineSpan().StartLinePosition.Line + 1;
+        return new SyntaxError($"{d.Id}: {d.GetMessage()} on line {line}", line);
+    }
 }
 
 public sealed class ClassModel

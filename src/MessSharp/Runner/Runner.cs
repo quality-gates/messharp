@@ -70,9 +70,9 @@ public sealed class Runner : IRunner
     /// </summary>
     private static bool TryRecordSyntaxErrors(SourceFile sf, Report.Report report)
     {
-        var messages = sf.SyntaxErrorMessages;
-        foreach (var message in messages)
-            report.Errors.Add(new ProcessingError { File = sf.Path, Message = message });
-        return messages.Count > 0;
+        var errors = sf.SyntaxErrors;
+        foreach (var error in errors)
+            report.Errors.Add(new ProcessingError { File = sf.Path, Message = error.Message, Line = error.Line });
+        return errors.Count > 0;
     }
 }
