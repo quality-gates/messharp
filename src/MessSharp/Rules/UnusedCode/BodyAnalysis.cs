@@ -108,7 +108,8 @@ internal static class BodyAnalysis
     /// Collects declared local variable names from a body node.
     /// Returns (name, line) pairs. Excludes `_` discards.
     /// Covers: LocalDeclarationStatement, local deconstruction declarations,
-    /// foreach variables, direct `is` declaration-pattern variables,
+    /// foreach variables, top-level declaration-pattern variables (`is`,
+    /// switch case labels, switch-expression arms), catch variables,
     /// out-variable declarations, and range-loop variables.
     /// </summary>
     internal static List<(string Name, int Line)> LocalVariables(SyntaxNode body)
@@ -118,7 +119,7 @@ internal static class BodyAnalysis
         {
             if (node is DeclarationPatternSyntax pattern)
             {
-                result.AddRange(LocalVariableCollector.DeclarationPatternVariables(pattern));
+                result.AddRange(LocalVariableCollector.TopLevelPatternVariables(pattern));
                 continue;
             }
 
@@ -176,6 +177,10 @@ internal static class BodyAnalysis
                         decl.SyntaxTree.GetLineSpan(decl.Span).StartLinePosition.Line + 1));
                 break;
 
+            // catch (Exception ex)
+            case CatchDeclarationSyntax catchDecl:
+                result.AddRange(LocalVariableCollector.CatchVariables(catchDecl));
+                break;
         }
     }
     /// <summary>
