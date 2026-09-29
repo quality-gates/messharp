@@ -29,7 +29,12 @@ internal sealed class RuleRefResolver
     {
         visited ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var (baseName, ruleName) = LoaderFilters.SplitRef(xr.Ref!, _builtins);
-        if (!visited.Add(baseName)) return false;
+        // A ref back to an ancestor ruleset is a cycle: it can never resolve,
+        // so fail like any other unresolved ref instead of loading nothing.
+        // InvalidDataException is deliberately not an InvalidOperationException,
+        // which ResolveNestedRule swallows while probing nested sets.
+        if (!visited.Add(baseName))
+            throw new InvalidDataException($"Cyclic ruleset ref: {xr.Ref}");
 
         byte[] data;
         try { data = _readRuleset(baseName); }
