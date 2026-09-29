@@ -190,6 +190,29 @@ public class Counter {
         MustNotHave(Analyze("explicitness", src), "ImplicitInput", "ImplicitOutput");
     }
 
+    [Fact]
+    public void ImplicitOutput_NestedTupleDeconstruction_ReportsEveryWrite()
+    {
+        var src = @"
+public class C {
+    private static int A;
+    private static int B;
+    private static int D;
+    public static void Nested() { (A, (B, _)) = (1, (2, 3)); }
+    public static void Deep() { ((D, _), _) = ((1, 2), 3); }
+}";
+        var vs = Analyze("explicitness", src);
+        Assert.Equal(
+            new[]
+            {
+                "The method Nested() has an implicit output: writes static member 'A'.",
+                "The method Nested() has an implicit output: writes static member 'B'.",
+                "The method Deep() has an implicit output: writes static member 'D'.",
+            },
+            Descriptions(vs, "ImplicitOutput"));
+        MustNotHave(vs, "ImplicitInput");
+    }
+
     [Theory]
     [InlineData("DateTime.Now", "var t = DateTime.Now;")]
     [InlineData("DateTime.UtcNow", "var t = System.DateTime.UtcNow;")]
