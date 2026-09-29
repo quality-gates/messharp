@@ -51,14 +51,43 @@ internal static class LocalVariableCollector
     /// Nested recursive patterns are intentionally outside this rule's scope.
     /// </summary>
     internal static List<(string Name, int Line)> DeclarationPatternVariables(
+        DeclarationPatternSyntax pattern) =>
+        pattern.Parent is IsPatternExpressionSyntax ? DesignatedVariables(pattern) : [];
+
+    /// <summary>
+    /// Collects variables declared by a top-level declaration pattern: an
+    /// <c>is</c> pattern, a <c>switch</c> statement case label, or a
+    /// switch-expression arm. Nested recursive patterns are out of scope.
+    /// </summary>
+    internal static List<(string Name, int Line)> TopLevelPatternVariables(
+        DeclarationPatternSyntax pattern) =>
+        pattern.Parent is IsPatternExpressionSyntax
+            or CasePatternSwitchLabelSyntax
+            or SwitchExpressionArmSyntax
+            ? DesignatedVariables(pattern)
+            : [];
+
+    private static List<(string Name, int Line)> DesignatedVariables(
         DeclarationPatternSyntax pattern)
     {
         var result = new List<(string Name, int Line)>();
-        if (pattern.Parent is not IsPatternExpressionSyntax)
-            return result;
-
         CollectDesignation(pattern.Designation, pattern.SyntaxTree, result);
         return result;
+    }
+
+    /// <summary>
+    /// Collects the variable declared by a <c>catch</c> clause. Type-only
+    /// catches such as <c>catch (Exception)</c> declare nothing.
+    /// </summary>
+    internal static IEnumerable<(string Name, int Line)> CatchVariables(
+        CatchDeclarationSyntax declaration)
+    {
+        var identifier = declaration.Identifier;
+        if (identifier.IsKind(SyntaxKind.None) || identifier.Text == "_")
+            yield break;
+
+        var line = declaration.SyntaxTree.GetLineSpan(identifier.Span).StartLinePosition.Line + 1;
+        yield return (identifier.Text, line);
     }
 
     /// <summary>

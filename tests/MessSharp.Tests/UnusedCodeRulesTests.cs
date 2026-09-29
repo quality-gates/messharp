@@ -577,6 +577,117 @@ class C
     }
 
     [Fact]
+    public void UnusedLocalVariable_SwitchAndCatchLocals_FiresOnlyForUnread()
+    {
+        // Issue #198: case-label patterns, switch-expression arms, and catch
+        // declarations declare locals just like `is` patterns do.
+        var src = @"
+class C
+{
+    void M(object o)
+    {
+        if (o is string deadIs) { }
+
+        switch (o)
+        {
+            case string deadCase:
+                break;
+        }
+
+        _ = o switch
+        {
+            string deadArm => 1,
+            _ => 0,
+        };
+
+        try { }
+        catch (System.Exception deadCatch) { }
+    }
+
+    int Used(object o)
+    {
+        switch (o)
+        {
+            case string usedCase:
+                return usedCase.Length;
+            default:
+                return 0;
+        }
+    }
+}";
+        var reported = Analyze(src)
+            .Where(v => v.Rule.Name == "UnusedLocalVariable")
+            .Select(v => (v.Description, v.BeginLine))
+            .ToList();
+
+        Assert.Equal(4, reported.Count);
+        Assert.Contains(reported, r => r.Description.Contains("'deadIs'") && r.BeginLine == 6);
+        Assert.Contains(reported, r => r.Description.Contains("'deadCase'") && r.BeginLine == 10);
+        Assert.Contains(reported, r => r.Description.Contains("'deadArm'") && r.BeginLine == 16);
+        Assert.Contains(reported, r => r.Description.Contains("'deadCatch'") && r.BeginLine == 21);
+    }
+
+    [Fact]
+    public void UnusedLocalVariable_SwitchPatternReadInWhenClause_NoFire()
+    {
+        var src = @"
+class C
+{
+    void M(object o)
+    {
+        switch (o)
+        {
+            case string s when s.Length > 0:
+                break;
+        }
+
+        _ = o switch
+        {
+            int n when n > 0 => 1,
+            _ => 0,
+        };
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedLocalVariable");
+    }
+
+    [Fact]
+    public void UnusedLocalVariable_SwitchArmReadInExpression_NoFire()
+    {
+        var src = @"
+class C
+{
+    int M(object o) => o switch
+    {
+        string s => s.Length,
+        _ => 0,
+    };
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedLocalVariable");
+    }
+
+    [Fact]
+    public void UnusedLocalVariable_TypeOnlyAndReadCatch_NoFire()
+    {
+        var src = @"
+class C
+{
+    void Log(object o) { }
+
+    void M()
+    {
+        try { }
+        catch (System.InvalidOperationException ex) { Log(ex); }
+        catch (System.Exception) { }
+    }
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedLocalVariable");
+    }
+
+    [Fact]
     public void UnusedLocalVariable_UsedLocal_NoFire()
     {
         var src = @"
