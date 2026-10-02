@@ -1,7 +1,5 @@
 using MessSharp.Model;
 using MessSharp.Rule;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 
 namespace MessSharp.Rules.Explicitness;
 
@@ -45,6 +43,6 @@ public sealed class ImplicitOutputRule : BaseRule, IMethodRule
     private static string? PassingMode(ParameterModel parameter)
     {
         if (parameter.IsOut) return "out";
-        return parameter.Node.Modifiers.Any(SyntaxKind.RefKeyword) ? "ref" : null;
+        return parameter.IsRef ? "ref" : null;
     }
 }

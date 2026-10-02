@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- `UnusedFormalParameter` no longer reports a `ref` parameter that is only written in the body, by assignment (`counter = 1;`), tuple deconstruction (`(a, b) = (1, 2);`) or an `out` argument (`Helper(out counter);`). As with `out` parameters, the write reaches the caller. A `ref` parameter that is neither read nor written is still reported, and so is a by-value parameter that is only overwritten (#223).
+
 ## [0.2.20] - 2026-09-30
 
 ### Fixed
