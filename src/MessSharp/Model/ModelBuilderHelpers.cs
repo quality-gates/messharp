@@ -118,6 +118,7 @@ internal static class ModelBuilderHelpers
                 Type = p.Type?.ToString() ?? "",
                 Line = span.StartLinePosition.Line + 1,
                 IsOut = p.Modifiers.Any(SyntaxKind.OutKeyword),
+                IsRef = p.Modifiers.Any(SyntaxKind.RefKeyword),
                 Node = p,
             });
         }

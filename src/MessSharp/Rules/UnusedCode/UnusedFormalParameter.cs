@@ -9,6 +9,8 @@ namespace MessSharp.Rules.UnusedCode;
 /// Reports method/constructor parameters that are never referenced in the body.
 /// Port of messgo's UnusedFormalParameter; C# adaptations:
 ///   - `out var` parameters (the parameter itself) still count if referenced
+///   - `out` and `ref` parameters count as used when written, since the
+///     write reaches the caller
 ///   - params named `_` are ignored (explicit discard pattern)
 ///   - expression-bodied members are checked via BodyAnalysis.EffectiveBody
 ///   - class/struct primary constructor parameters are checked across the
@@ -30,7 +32,7 @@ public sealed class UnusedFormalParameterRule : BaseRule, IMethodRule
             if (string.IsNullOrEmpty(p.Name) || p.Name == "_") continue;
             if (reads.Contains(p.Name)) continue;
 
-            if (p.IsOut)
+            if (p.WritesReachCaller)
             {
                 writes ??= BodyAnalysis.IdentWrites(body);
                 if (writes.Contains(p.Name)) continue;

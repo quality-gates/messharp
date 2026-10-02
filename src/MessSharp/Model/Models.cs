@@ -140,5 +140,8 @@ public sealed class ParameterModel
     public string Type { get; init; } = "";
     public int Line { get; init; }
     public bool IsOut { get; init; }
+    public bool IsRef { get; init; }
+    /// <summary>out or ref: a value written to the parameter reaches the caller.</summary>
+    public bool WritesReachCaller => IsOut || IsRef;
     public ParameterSyntax Node { get; init; } = null!;
 }

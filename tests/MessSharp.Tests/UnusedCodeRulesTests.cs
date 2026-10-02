@@ -924,6 +924,36 @@ public class Foo
     }
 
     [Fact]
+    public void UnusedFormalParameter_RefParameterWritten_NoFire()
+    {
+        // Issue #223: writing a ref parameter passes state back to the caller,
+        // whether by assignment, tuple deconstruction or an out argument.
+        var src = @"
+public class Foo
+{
+    public void WriteRef(ref int counter) { counter = 1; }
+    public void TupleRef(ref int a, ref int b) { (a, b) = (1, 2); }
+    public void OutArgRef(ref int forwarded) { Helper(out forwarded); }
+    private static void Helper(out int x) => x = 1;
+}";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedFormalParameter");
+    }
+
+    [Fact]
+    public void UnusedFormalParameter_RefParameterNeverTouched_Fires()
+    {
+        var src = @"
+public class Foo
+{
+    public void Bar(ref int counter) { }
+}";
+        var vs = Analyze(src);
+        Assert.Contains(vs, v => v.Rule.Name == "UnusedFormalParameter"
+            && v.Description.Contains("'counter'"));
+    }
+
+    [Fact]
     public void UnusedPrivateField_RefArgument_NoFire()
     {
         var src = @"
