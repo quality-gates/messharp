@@ -86,7 +86,7 @@ internal sealed class MethodEffects
         /// locals are visible inside it.
         /// </summary>
         private static SyntaxNode EnclosingMember(SyntaxNode node) =>
-            node.AncestorsAndSelf().OfType<MemberDeclarationSyntax>().First();
+            node.AncestorsAndSelf().OfType<MemberDeclarationSyntax>().FirstOrDefault() ?? node;
 
         /// <summary>Constructors set up the instance state and static members have none.</summary>
         private static bool OwnsInstance(MethodModel method) => !method.IsConstructor && !method.IsStatic();

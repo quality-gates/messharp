@@ -534,6 +534,16 @@ public class Foo
         MustNotHave(vs, "UnusedPrivateField");
     }
 
+    [Theory]
+    [InlineData("var value = 1; System.Console.WriteLine(value);\npublic class Scoped { private int value; public int M() => value; }", "top-level local")]
+    [InlineData("if (args is { Length: > 0 } value) { }\npublic class Scoped { private int value; public int M() => value; }", "top-level pattern variable")]
+    [InlineData("public class Base(int x); public class Scoped(object o) : Base(o is int value ? value : 0) { private int value; public int M() => value; }", "base-list pattern variable")]
+    public void UnusedPrivateField_ReadInMemberDespiteOuterDeclaration_NoFire(string src, string reason)
+    {
+        var vs = Analyze(src);
+        Assert.False(vs.Any(v => v.Rule.Name == "UnusedPrivateField"), $"Unexpected UnusedPrivateField ({reason}).");
+    }
+
     [Fact]
     public void UnusedPrivateField_ReadOnlyInInitializerByPrimaryConstructorParameter_Fires()
     {

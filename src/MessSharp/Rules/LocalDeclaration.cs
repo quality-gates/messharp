@@ -17,9 +17,9 @@ internal readonly record struct LocalDeclaration(string Name, IReadOnlyList<Synt
     {
         ParameterSyntax p => new(p.Identifier.Text, ParameterScopes(p)),
         VariableDeclaratorSyntax v => new(v.Identifier.Text, DeclaratorScopes(v)),
-        SingleVariableDesignationSyntax d => new(d.Identifier.Text, [ExpressionVariableScope(d)]),
+        SingleVariableDesignationSyntax d => new(d.Identifier.Text, EnclosingScopes(d, IsExpressionVariableScope)),
         ForEachStatementSyntax f => new(f.Identifier.Text, [f]),
-        CatchDeclarationSyntax c => new(c.Identifier.Text, [c.Parent!]),
+        CatchDeclarationSyntax { Parent: CatchClauseSyntax clause } c => new(c.Identifier.Text, [clause]),
         _ => null,
     };
 
@@ -62,33 +62,38 @@ internal readonly record struct LocalDeclaration(string Name, IReadOnlyList<Synt
         declarator.Parent?.Parent switch
         {
             ForStatementSyntax or UsingStatementSyntax or FixedStatementSyntax => [declarator.Parent.Parent],
-            LocalDeclarationStatementSyntax statement => [statement.Ancestors().First(IsStatementScope)],
+            LocalDeclarationStatementSyntax statement => EnclosingScopes(statement, IsStatementScope),
             _ => [],
         };
 
+    /// <summary>
+    /// The nearest enclosing scope of <paramref name="node"/>. Top-level
+    /// statements share one scope: all the global statements of the file,
+    /// but not the type declarations between them.
+    /// </summary>
+    private static IReadOnlyList<SyntaxNode> EnclosingScopes(SyntaxNode node, Func<SyntaxNode, bool> isScope) =>
+        node.Ancestors().FirstOrDefault(isScope) switch
+        {
+            null => [],
+            GlobalStatementSyntax { Parent: CompilationUnitSyntax unit } => unit.Members.OfType<GlobalStatementSyntax>().ToList(),
+            var scope => [scope],
+        };
+
     private static bool IsStatementScope(SyntaxNode node) =>
-        node is BlockSyntax or SwitchStatementSyntax or CompilationUnitSyntax;
+        node is BlockSyntax or SwitchStatementSyntax or GlobalStatementSyntax;
 
     /// <summary>
     /// Pattern, out and deconstruction variables are scoped to the nearest
     /// enclosing block, switch section or arm, catch clause, loop or using
-    /// header, function body or member.
+    /// header, base list, function body or member.
     /// </summary>
-    private static SyntaxNode ExpressionVariableScope(SyntaxNode designation) =>
-        designation.Ancestors().First(IsExpressionVariableScope);
-
     private static bool IsExpressionVariableScope(SyntaxNode node) =>
         IsStatementScope(node) || IsClauseScope(node) || IsFunctionScope(node);
 
     private static bool IsClauseScope(SyntaxNode node) =>
         node is SwitchSectionSyntax or SwitchExpressionArmSyntax or CatchClauseSyntax
-            or ForStatementSyntax or CommonForEachStatementSyntax or UsingStatementSyntax;
+            or ForStatementSyntax or CommonForEachStatementSyntax or UsingStatementSyntax or BaseListSyntax;
 
-    /// <summary>
-    /// Top-level statements share one scope, the compilation unit, so a
-    /// global statement does not bound its variables.
-    /// </summary>
     private static bool IsFunctionScope(SyntaxNode node) =>
-        node is AnonymousFunctionExpressionSyntax or ArrowExpressionClauseSyntax
-            or (MemberDeclarationSyntax and not GlobalStatementSyntax);
+        node is AnonymousFunctionExpressionSyntax or ArrowExpressionClauseSyntax or MemberDeclarationSyntax;
 }
