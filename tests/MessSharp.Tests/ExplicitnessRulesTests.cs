@@ -179,6 +179,37 @@ public class Counter {
         MustNotHave(Analyze("explicitness", src), "ImplicitInput");
     }
 
+    // Issue #220: each declaration kind shadows the static field `total`
+    // exactly within its lexical scope.
+    [Theory]
+    [InlineData("public int M() { try { return 0; } catch (System.Exception total) { return total.HResult; } }", "catch variable")]
+    [InlineData("public int M() { System.Func<int, int> f = total => total; return f(1); }", "simple lambda parameter")]
+    [InlineData("public int M() { System.Func<int, int> f = (total) => total; return f(1); }", "parenthesized lambda parameter")]
+    [InlineData("public int M() { int Inner(int total) => total; return Inner(1); }", "local function parameter")]
+    [InlineData("public int M(object o) => o is int total ? total : 0;", "pattern variable")]
+    [InlineData("public int M() { var n = 0; foreach (var total in new int[0]) n += total; return n; }", "foreach variable")]
+    [InlineData("public int M() { using (var total = new System.IO.MemoryStream()) { return total.Capacity; } }", "using resource")]
+    [InlineData("public int this[int total] { get { return total; } }", "indexer parameter")]
+    public void ImplicitInput_ReadOfShadowingDeclaration_NotFlagged(string member, string reason)
+    {
+        var src = "public class Counter { private static int total; " + member + " }";
+        Assert.True(
+            Descriptions(Analyze("explicitness", src), "ImplicitInput").Count == 0,
+            $"Unexpected ImplicitInput ({reason}).");
+    }
+
+    [Theory]
+    [InlineData("public int M() { try { } catch (System.Exception total) { } return total; }", "catch variable")]
+    [InlineData("public int M() { System.Func<int, int> f = total => 0; return total; }", "lambda parameter")]
+    [InlineData("public int M() { foreach (var total in new int[0]) { } return total; }", "foreach variable")]
+    public void ImplicitInput_ReadOutsideShadowingScope_Flagged(string member, string reason)
+    {
+        var src = "public class Counter { private static int total; " + member + " }";
+        Assert.True(
+            Descriptions(Analyze("explicitness", src), "ImplicitInput").Count > 0,
+            $"Expected ImplicitInput ({reason}).");
+    }
+
     [Fact]
     public void ImplicitInput_ObjectInitializerKeyAndNameof_NotFlagged()
     {

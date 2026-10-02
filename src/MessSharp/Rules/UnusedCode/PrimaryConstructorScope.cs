@@ -44,7 +44,7 @@ internal static class PrimaryConstructorScope
 
     private static HashSet<string> UnshadowedReads(SyntaxNode member)
     {
-        var shadows = ShadowMap.From(member);
+        var shadows = LexicalScopes.From(member);
         return BodyAnalysis.IdentReads(member, shadows.IsShadowed);
     }
 }

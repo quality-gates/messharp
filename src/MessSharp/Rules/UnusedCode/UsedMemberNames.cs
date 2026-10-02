@@ -32,12 +32,12 @@ internal static class UsedMemberNames
 
     private static void CollectUsedNames(SyntaxNode root, HashSet<string> used)
     {
-        var shadowed = ShadowMap.From(root);
+        var shadowed = LexicalScopes.From(root);
         foreach (var node in root.DescendantNodes())
             CollectUsedNode(node, shadowed, used);
     }
 
-    private static void CollectUsedNode(SyntaxNode node, ShadowMap shadowed, HashSet<string> used)
+    private static void CollectUsedNode(SyntaxNode node, LexicalScopes shadowed, HashSet<string> used)
     {
         if (TryCollectMemberAccess(node, used)) return;
         if (TryCollectInitializerAssignment(node, used)) return;
@@ -68,7 +68,7 @@ internal static class UsedMemberNames
         return true;
     }
 
-    private static void CollectBareIdentifier(SyntaxNode node, ShadowMap shadowed, HashSet<string> used)
+    private static void CollectBareIdentifier(SyntaxNode node, LexicalScopes shadowed, HashSet<string> used)
     {
         var id = node as IdentifierNameSyntax;
         if (id is null) return;
