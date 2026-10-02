@@ -13,23 +13,25 @@ internal sealed class StateNames
 {
     private readonly IReadOnlySet<string> _names;
     private readonly Func<ExpressionSyntax, bool> _isOwnQualifier;
-    private readonly bool _canBeShadowed;
+    private readonly LexicalScopes _shadows;
 
-    private StateNames(IReadOnlySet<string> names, Func<ExpressionSyntax, bool> isOwnQualifier, bool canBeShadowed)
+    private StateNames(IReadOnlySet<string> names, Func<ExpressionSyntax, bool> isOwnQualifier, LexicalScopes shadows)
     {
         _names = names;
         _isOwnQualifier = isOwnQualifier;
-        _canBeShadowed = canBeShadowed;
+        _shadows = shadows;
     }
 
-    public static StateNames StaticMembers(IReadOnlySet<string> names, string className) =>
-        new(names, q => q is SimpleNameSyntax type && type.Identifier.Text == className, canBeShadowed: true);
+    /// <summary>Static members, which locals and parameters in <paramref name="scopes"/> shadow.</summary>
+    public static StateNames StaticMembers(IReadOnlySet<string> names, string className, LexicalScopes scopes) =>
+        new(names, q => q is SimpleNameSyntax type && type.Identifier.Text == className, scopes);
 
-    public static StateNames InstanceMembers(IReadOnlySet<string> names) =>
-        new(names, q => q is ThisExpressionSyntax or BaseExpressionSyntax, canBeShadowed: true);
+    /// <summary>Instance members, which locals and parameters in <paramref name="scopes"/> shadow.</summary>
+    public static StateNames InstanceMembers(IReadOnlySet<string> names, LexicalScopes scopes) =>
+        new(names, q => q is ThisExpressionSyntax or BaseExpressionSyntax, scopes);
 
     public static StateNames Parameters(IReadOnlySet<string> names) =>
-        new(names, _ => false, canBeShadowed: false);
+        new(names, _ => false, LexicalScopes.None);
 
     public string? Resolve(ExpressionSyntax expr) => expr switch
     {
@@ -47,7 +49,7 @@ internal sealed class StateNames
             && !IsObjectInitializerKey(id)
             && !SyntaxFacts.IsInTypeOnlyContext(id)
             && !IsInNameOf(id)
-            && !(_canBeShadowed && LocalShadowing.IsShadowedByLocal(id, name));
+            && !_shadows.IsShadowed(id);
     }
 
     /// <summary>

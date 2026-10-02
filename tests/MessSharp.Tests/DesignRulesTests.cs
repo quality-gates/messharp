@@ -845,6 +845,51 @@ public class TupleShadow {
         MustNotHave(vs, "GlobalVariable");
     }
 
+    // Issue #220: each declaration kind shadows the static field `state`
+    // exactly within its lexical scope.
+    [Theory]
+    [InlineData("void M() { try { } catch (System.Exception state) { state = null; } }", "catch variable")]
+    [InlineData("void M() { System.Action<int> f = state => state++; }", "simple lambda parameter")]
+    [InlineData("void M() { System.Action<int> f = (state) => state++; }", "parenthesized lambda parameter")]
+    [InlineData("void M() { System.Action<int> f = delegate (int state) { state++; }; }", "anonymous method parameter")]
+    [InlineData("void M() { void Inner(int state) { state++; } Inner(0); }", "local function parameter")]
+    [InlineData("void M(object o) { if (o is int state) { state++; } }", "pattern variable")]
+    [InlineData("int M(object o) => o is int state ? state++ : 0;", "pattern variable in an expression body")]
+    [InlineData("void M() { foreach (var state in new int[0]) { System.Console.WriteLine(state); } int x = 0; x++; }", "foreach variable")]
+    [InlineData("void M() { for (int state = 0; state < 3; state++) { } }", "for variable")]
+    [InlineData("void M() { using (var state = new System.IO.MemoryStream()) { state = null; } }", "using resource")]
+    [InlineData("int this[int state] { get { return state++; } }", "indexer parameter")]
+    public void GlobalVariable_WriteToShadowingDeclaration_NotFlagged(string member, string reason)
+    {
+        var src = "public class Scoped { public static int state; " + member + " }";
+        var vs = Analyze(src, MakeGlobalVarRule());
+        Assert.False(Has(vs, "GlobalVariable"), $"Unexpected GlobalVariable ({reason}).");
+    }
+
+    [Theory]
+    [InlineData("void M() { try { } catch (System.Exception state) { } state = 1; }", "catch variable")]
+    [InlineData("void M() { System.Action<int> f = state => { }; state++; }", "lambda parameter")]
+    [InlineData("void M() { for (int state = 0; state < 3; ) { break; } state = 1; }", "for variable")]
+    [InlineData("void M() { foreach (var state in new int[0]) { } state = 1; }", "foreach variable")]
+    [InlineData("void M() { using (var state = new System.IO.MemoryStream()) { } state = 1; }", "using resource")]
+    [InlineData("void M() { { int state = 0; state++; } state = 1; }", "local in a nested block")]
+    public void GlobalVariable_WriteOutsideShadowingScope_Flagged(string member, string reason)
+    {
+        var src = "public class Scoped { public static int state; " + member + " }";
+        var vs = Analyze(src, MakeGlobalVarRule());
+        Assert.True(Has(vs, "GlobalVariable"), $"Expected GlobalVariable ({reason}).");
+    }
+
+    [Fact]
+    public void GlobalVariable_PrimaryConstructorParameterInMethodBody_Flagged()
+    {
+        // A member wins over a same-named primary constructor parameter
+        // outside initializers and the base list.
+        var src = "public class Scoped(int state) { public static int state; void M() { state++; } }";
+        var vs = Analyze(src, MakeGlobalVarRule());
+        MustHave(vs, "GlobalVariable");
+    }
+
     [Fact]
     public void GlobalVariable_InstanceField_NotFlagged()
     {

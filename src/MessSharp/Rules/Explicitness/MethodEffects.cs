@@ -1,5 +1,7 @@
 using MessSharp.Model;
 using MessSharp.Rule;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules.Explicitness;
 
@@ -66,14 +68,25 @@ internal sealed class MethodEffects
         {
             var parameters = StateNames.Parameters(method.Parameters.Select(p => p.Name).ToHashSet(StringComparer.Ordinal));
             if (method.Class is not { } cls)
-                return new StateInScope(NoStatics(""), NoNames, StateNames.InstanceMembers(NoNames), parameters);
+                return new StateInScope(NoStatics(""), NoNames, NoInstance, parameters);
             var state = ClassState.For(ctx, cls);
-            var statics = method.IsStaticConstructor() ? NoStatics(cls.Name) : StateNames.StaticMembers(state.Statics, cls.Name);
-            var instance = StateNames.InstanceMembers(OwnsInstance(method) ? state.Instance : NoNames);
+            var scopes = LexicalScopes.From(EnclosingMember(method.Node));
+            var statics = method.IsStaticConstructor() ? NoStatics(cls.Name) : StateNames.StaticMembers(state.Statics, cls.Name, scopes);
+            var instance = OwnsInstance(method) ? StateNames.InstanceMembers(state.Instance, scopes) : NoInstance;
             return new StateInScope(statics, state.MutableStatics, instance, parameters);
         }
 
-        private static StateNames NoStatics(string className) => StateNames.StaticMembers(NoNames, className);
+        private static readonly StateNames NoInstance = StateNames.InstanceMembers(NoNames, LexicalScopes.None);
+
+        private static StateNames NoStatics(string className) => StateNames.StaticMembers(NoNames, className, LexicalScopes.None);
+
+        /// <summary>
+        /// The member declaring the method: itself, or the property, indexer or
+        /// method enclosing an accessor or local function, whose parameters and
+        /// locals are visible inside it.
+        /// </summary>
+        private static SyntaxNode EnclosingMember(SyntaxNode node) =>
+            node.AncestorsAndSelf().OfType<MemberDeclarationSyntax>().FirstOrDefault() ?? node;
 
         /// <summary>Constructors set up the instance state and static members have none.</summary>
         private static bool OwnsInstance(MethodModel method) => !method.IsConstructor && !method.IsStatic();

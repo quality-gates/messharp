@@ -490,6 +490,68 @@ public class Foo
         MustNotHave(vs, "UnusedLocalVariable");
     }
 
+    // ─── lexical scopes (issue #220) ─────────────────────────────────────────
+
+    [Theory]
+    [InlineData("public int M() { try { return 0; } catch (System.Exception value) { return value.HResult; } }", "catch variable")]
+    [InlineData("public System.Func<int, int> M() => value => value;", "simple lambda parameter")]
+    [InlineData("public System.Func<int, int> M() => (value) => value;", "parenthesized lambda parameter")]
+    [InlineData("public System.Func<int, int> M() => delegate (int value) { return value; };", "anonymous method parameter")]
+    [InlineData("public int M() { int Inner(int value) => value; return Inner(1); }", "local function parameter")]
+    [InlineData("public int M(object o) => o is int value ? value : 0;", "pattern variable")]
+    [InlineData("public int M() { using (var value = new System.IO.MemoryStream()) { return value.Capacity; } }", "using resource")]
+    [InlineData("public int M() { var n = 0; for (int value = 0; value < 3; value++) n += value; return n; }", "for variable")]
+    [InlineData("public int this[int value] { get { return value; } }", "indexer parameter")]
+    public void UnusedPrivateField_ReadOnlyThroughShadowingDeclaration_Fires(string member, string reason)
+    {
+        var src = "public class Scoped { private int value; " + member + " }";
+        var vs = Analyze(src);
+        Assert.True(
+            vs.Any(v => v.Rule.Name == "UnusedPrivateField" && v.Description.Contains("'value'")),
+            $"Expected 'value' reported ({reason}).");
+    }
+
+    [Theory]
+    [InlineData("public int M() { try { } catch (System.Exception value) { } return value; }", "catch variable")]
+    [InlineData("public int M() { System.Func<int, int> f = value => 0; return value; }", "lambda parameter")]
+    [InlineData("public int M() { using (var value = new System.IO.MemoryStream()) { } return value; }", "using resource")]
+    [InlineData("public int M() { for (int value = 0; value < 3; value++) { } return value; }", "for variable")]
+    [InlineData("public int M() { { int value = 1; _ = value; } return value; }", "local in a nested block")]
+    public void UnusedPrivateField_ReadOutsideShadowingScope_NoFire(string member, string reason)
+    {
+        var src = "public class Scoped { private int value; " + member + " }";
+        var vs = Analyze(src);
+        Assert.False(vs.Any(v => v.Rule.Name == "UnusedPrivateField"), $"Unexpected UnusedPrivateField ({reason}).");
+    }
+
+    [Fact]
+    public void UnusedPrivateField_ReadInBodyWithSameNamedPrimaryConstructorParameter_NoFire()
+    {
+        // In member bodies the field wins over the primary constructor
+        // parameter; only initializers and the base list bind the parameter.
+        var src = "public class Scoped(int value) { private int value = value; public int M() => value; }";
+        var vs = Analyze(src);
+        MustNotHave(vs, "UnusedPrivateField");
+    }
+
+    [Theory]
+    [InlineData("var value = 1; System.Console.WriteLine(value);\npublic class Scoped { private int value; public int M() => value; }", "top-level local")]
+    [InlineData("if (args is { Length: > 0 } value) { }\npublic class Scoped { private int value; public int M() => value; }", "top-level pattern variable")]
+    [InlineData("public class Base(int x); public class Scoped(object o) : Base(o is int value ? value : 0) { private int value; public int M() => value; }", "base-list pattern variable")]
+    public void UnusedPrivateField_ReadInMemberDespiteOuterDeclaration_NoFire(string src, string reason)
+    {
+        var vs = Analyze(src);
+        Assert.False(vs.Any(v => v.Rule.Name == "UnusedPrivateField"), $"Unexpected UnusedPrivateField ({reason}).");
+    }
+
+    [Fact]
+    public void UnusedPrivateField_ReadOnlyInInitializerByPrimaryConstructorParameter_Fires()
+    {
+        var src = "public class Scoped(int value) { private int value = value; }";
+        var vs = Analyze(src);
+        MustHave(vs, "UnusedPrivateField");
+    }
+
     // ─── UnusedLocalVariable ────────────────────────────────────────────────
 
     [Fact]

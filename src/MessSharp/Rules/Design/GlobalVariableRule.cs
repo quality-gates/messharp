@@ -62,14 +62,15 @@ public sealed class GlobalVariableRule : BaseRule, IClassRule
     private static HashSet<string> FindMutatedFieldNames(ClassModel cls)
     {
         var mutated = new HashSet<string>(StringComparer.Ordinal);
+        var targets = new StaticFieldTargets(cls.Name, LexicalScopes.From(cls.Node));
         foreach (var node in cls.Node.DescendantNodes())
         {
             if (node is AssignmentExpressionSyntax assign)
             {
-                mutated.UnionWith(AssignmentTargetNames(assign.Left, cls.Name));
+                mutated.UnionWith(AssignmentTargetNames(assign.Left, targets));
                 continue;
             }
-            var name = ExtractMutationTarget(node, cls.Name);
+            var name = ExtractMutationTarget(node, targets);
             if (name != null) mutated.Add(name);
         }
         return mutated;
@@ -80,25 +81,25 @@ public sealed class GlobalVariableRule : BaseRule, IClassRule
     /// deconstruction (`(A, (Cls.B, _)) = ...`) writes every target it
     /// contains, recursing into nested tuples.
     /// </summary>
-    private static IEnumerable<string> AssignmentTargetNames(ExpressionSyntax left, string className)
+    private static IEnumerable<string> AssignmentTargetNames(ExpressionSyntax left, StaticFieldTargets targets)
     {
         if (left is TupleExpressionSyntax tuple)
-            return tuple.Arguments.SelectMany(a => AssignmentTargetNames(a.Expression, className));
+            return tuple.Arguments.SelectMany(a => AssignmentTargetNames(a.Expression, targets));
 
-        var name = ExtractSimpleOrQualifiedName(left, className);
+        var name = targets.NameOf(left);
         return name == null ? Enumerable.Empty<string>() : new[] { name };
     }
 
-    private static string? ExtractMutationTarget(SyntaxNode node, string className)
+    private static string? ExtractMutationTarget(SyntaxNode node, StaticFieldTargets targets)
     {
         if (node is PostfixUnaryExpressionSyntax postfix && IsIncrDecr(postfix.Kind()))
-            return ExtractSimpleOrQualifiedName(postfix.Operand, className);
+            return targets.NameOf(postfix.Operand);
 
         if (node is PrefixUnaryExpressionSyntax prefix && IsIncrDecr(prefix.Kind()))
-            return ExtractSimpleOrQualifiedName(prefix.Operand, className);
+            return targets.NameOf(prefix.Operand);
 
         if (node is ArgumentSyntax arg && IsRefOrOut(arg.RefKindKeyword.Kind()))
-            return ExtractSimpleOrQualifiedName(arg.Expression, className);
+            return targets.NameOf(arg.Expression);
 
         return null;
     }
@@ -111,24 +112,29 @@ public sealed class GlobalVariableRule : BaseRule, IClassRule
         kind is SyntaxKind.RefKeyword or SyntaxKind.OutKeyword;
 
     /// <summary>
-    /// Returns the field name if expr is a bare identifier (FieldName) or
-    /// a class-qualified access (ClassName.FieldName or ClassName&lt;T&gt;.FieldName).
-    /// Returns null otherwise.
+    /// Resolves a written expression to the static field of one class it
+    /// targets, given the class's lexical scopes.
     /// </summary>
-    private static string? ExtractSimpleOrQualifiedName(ExpressionSyntax expr, string className)
+    private sealed record StaticFieldTargets(string ClassName, LexicalScopes Scopes)
     {
-        // A bare identifier may be bound by a local or parameter that shadows
-        // the static field; that is a mutation of the local, not the field.
-        if (expr is IdentifierNameSyntax id)
-            return LocalShadowing.IsShadowedByLocal(id, id.Identifier.Text)
-                ? null
-                : id.Identifier.Text;
+        /// <summary>
+        /// Returns the field name if expr is a bare identifier (FieldName) or
+        /// a class-qualified access (ClassName.FieldName or ClassName&lt;T&gt;.FieldName).
+        /// Returns null otherwise.
+        /// </summary>
+        public string? NameOf(ExpressionSyntax expr)
+        {
+            // A bare identifier may be bound by a local or parameter that shadows
+            // the static field; that is a mutation of the local, not the field.
+            if (expr is IdentifierNameSyntax id)
+                return Scopes.IsShadowed(id) ? null : id.Identifier.Text;
 
-        if (expr is MemberAccessExpressionSyntax ma &&
-            ma.Expression is SimpleNameSyntax cls2 &&
-            cls2.Identifier.Text == className)
-            return ma.Name.Identifier.Text;
+            if (expr is MemberAccessExpressionSyntax ma &&
+                ma.Expression is SimpleNameSyntax cls2 &&
+                cls2.Identifier.Text == ClassName)
+                return ma.Name.Identifier.Text;
 
-        return null;
+            return null;
+        }
     }
 }
