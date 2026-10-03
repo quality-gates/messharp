@@ -197,6 +197,41 @@ class Foo
     }
 
     [Fact]
+    public void ShortVariable_LambdaParameters_AreReported()
+    {
+        var src = @"
+class Foo
+{
+    public void Bar()
+    {
+        new System.Func<int, int>(q => q);
+        new System.Func<int, int>((r) => r);
+        new System.Func<int, int>(delegate (int s) { return s; });
+    }
+}";
+        var rule = MakeRule<ShortVariableRule>("ShortVariable",
+            "Avoid variables with short names like {0}. Configured minimum length is {1}.");
+        var violations = Run(src, rule).OrderBy(v => v.BeginLine).ToList();
+
+        Assert.Collection(violations,
+            violation =>
+            {
+                Assert.Equal(6, violation.BeginLine);
+                Assert.Contains("like q.", violation.Description);
+            },
+            violation =>
+            {
+                Assert.Equal(7, violation.BeginLine);
+                Assert.Contains("like r.", violation.Description);
+            },
+            violation =>
+            {
+                Assert.Equal(8, violation.BeginLine);
+                Assert.Contains("like s.", violation.Description);
+            });
+    }
+
+    [Fact]
     public void ShortVariable_ShortLocal_TwoChars_ReportsViolation()
     {
         var src = @"
@@ -324,6 +359,41 @@ class Foo
             "Avoid excessively long variable names like {0}. Keep variable name length under {1}.");
         var violations = Run(src, rule);
         MustHave(violations, "LongVariable");
+    }
+
+    [Fact]
+    public void LongVariable_LambdaParameters_AreReported()
+    {
+        var src = @"
+class Foo
+{
+    public void Bar()
+    {
+        new System.Func<int, int>(thisIsAVeryLongSimpleLambdaParameterName => thisIsAVeryLongSimpleLambdaParameterName);
+        new System.Func<int, int>((thisIsAVeryLongParenthesizedLambdaParameterName) => thisIsAVeryLongParenthesizedLambdaParameterName);
+        new System.Func<int, int>(delegate (int thisIsAVeryLongAnonymousMethodParameterName) { return thisIsAVeryLongAnonymousMethodParameterName; });
+    }
+}";
+        var rule = MakeRule<LongVariableRule>("LongVariable",
+            "Avoid excessively long variable names like {0}. Keep variable name length under {1}.");
+        var violations = Run(src, rule).OrderBy(v => v.BeginLine).ToList();
+
+        Assert.Collection(violations,
+            violation =>
+            {
+                Assert.Equal(6, violation.BeginLine);
+                Assert.Contains("thisIsAVeryLongSimpleLambdaParameterName", violation.Description);
+            },
+            violation =>
+            {
+                Assert.Equal(7, violation.BeginLine);
+                Assert.Contains("thisIsAVeryLongParenthesizedLambdaParameterName", violation.Description);
+            },
+            violation =>
+            {
+                Assert.Equal(8, violation.BeginLine);
+                Assert.Contains("thisIsAVeryLongAnonymousMethodParameterName", violation.Description);
+            });
     }
 
     [Fact]

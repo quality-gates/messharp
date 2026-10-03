@@ -272,6 +272,35 @@ public class CliTests
     }
 
     [Fact]
+    public void CSharpRuleset_LongLambdaParameter_UsesConfiguredMaximum()
+    {
+        var srcFile = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.cs");
+        const string parameterName = "thisIsAnExtremelyLongLambdaParameterNameForTheDefaultCSharpRuleset";
+        File.WriteAllText(srcFile, $@"
+public class SampleClass
+{{
+    public void Run()
+    {{
+        new System.Action<int>({parameterName} => {{ }});
+    }}
+}}");
+        try
+        {
+            var (code, stdout, stderr) = RunCli(srcFile, "text", "csharp", "--only", "LongVariable");
+
+            Assert.Equal(2, code);
+            Assert.Empty(stderr);
+            Assert.Contains("LongVariable", stdout);
+            Assert.Contains(parameterName, stdout);
+            Assert.Contains("under 35", stdout);
+        }
+        finally
+        {
+            File.Delete(srcFile);
+        }
+    }
+
+    [Fact]
     public void RulesetWithQualifiedRuleOverride_HonorsOverriddenProperties()
     {
         var srcFile = Path.GetTempFileName() + ".cs";

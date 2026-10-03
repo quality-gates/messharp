@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `ShortVariable` and `LongVariable` now check parameters declared by simple lambdas, parenthesized lambdas, and anonymous methods, so those names no longer escape member-body analysis (#227).
 - `UnusedFormalParameter` no longer reports a `ref` parameter that is only written in the body, by assignment (`counter = 1;`), tuple deconstruction (`(a, b) = (1, 2);`) or an `out` argument (`Helper(out counter);`). As with `out` parameters, the write reaches the caller. A `ref` parameter that is neither read nor written is still reported, and so is a by-value parameter that is only overwritten (#223).
 - `[SuppressMessage]` and `@SuppressWarnings` on a property now suppress matching violations from its accessors, including findings inside accessor bodies and the `CamelCaseMethodName` finding for `get_X`/`set_X`. A `[SuppressMessage]` attribute on a single accessor (`[SuppressMessage(...)] get { ... }`) now suppresses that accessor only. `--strict` still reports the suppressed findings (#226).
 
