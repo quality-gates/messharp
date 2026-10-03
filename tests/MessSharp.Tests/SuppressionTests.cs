@@ -810,4 +810,143 @@ namespace Ns2
         Assert.Single(violations);
         Assert.Equal(sf.AllMethods[0].Line, violations[0].BeginLine);
     }
+
+    private static RuleSetType MakeShortVariableSet()
+    {
+        var rule = new ShortVariableRule
+        {
+            Name = "ShortVariable",
+            Message = "Avoid variables with short names like {0}. Configured minimum length is {1}.",
+            Priority = 3,
+            SetName = "naming",
+        };
+        return new RuleSetType { Name = "naming", Rules = { rule } };
+    }
+
+    private const string AttributeSuppressedPropertySource = @"
+using System.Diagnostics.CodeAnalysis;
+
+public class Sample
+{
+    [SuppressMessage(""PHPMD"", ""ShortVariable"")]
+    public int Suppressed { get { int b = 1; return b; } }
+
+    public int Reported { get { int c = 1; return c; } }
+}";
+
+    private const string CommentSuppressedPropertySource = @"
+public class Sample
+{
+    /** @SuppressWarnings(PHPMD.ShortVariable) */
+    public int Suppressed { get { int b = 1; return b; } }
+
+    public int Reported { get { int c = 1; return c; } }
+}";
+
+    private const string AttributeSuppressedAccessorSource = @"
+using System.Diagnostics.CodeAnalysis;
+
+public class Sample
+{
+    private int _total;
+
+    public int Total
+    {
+        [SuppressMessage(""PHPMD"", ""ShortVariable"")]
+        get { int b = _total; return b; }
+        set { int c = value; _total = c; }
+    }
+}";
+
+    private const string CommentSuppressedAccessorSource = @"
+public class Sample
+{
+    private int _total;
+
+    public int Total
+    {
+        // @SuppressWarnings(PHPMD.ShortVariable)
+        get { int b = _total; return b; }
+        set { int c = value; _total = c; }
+    }
+}";
+
+    private const string AttributeSuppressedPropertyAccessorNameSource = @"
+using System.Diagnostics.CodeAnalysis;
+
+public class Sample
+{
+    private int _count;
+
+    [SuppressMessage(""PHPMD"", ""CamelCaseMethodName"")]
+    public int Count { get { return _count; } }
+}";
+
+    [Fact]
+    public void Engine_SuppressedPropertyByAttribute_SuppressesAccessorBodyOnly()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", AttributeSuppressedPropertySource);
+        var violations = Engine.Analyze(sf, new[] { MakeShortVariableSet() }, strict: false);
+
+        var violation = Assert.Single(violations);
+        Assert.Equal(9, violation.BeginLine);
+    }
+
+    [Fact]
+    public void Engine_SuppressedPropertyByAttribute_ReportedWhenStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", AttributeSuppressedPropertySource);
+        var violations = Engine.Analyze(sf, new[] { MakeShortVariableSet() }, strict: true);
+
+        Assert.Equal(new[] { 7, 9 }, violations.Select(v => v.BeginLine).OrderBy(l => l));
+    }
+
+    [Fact]
+    public void Engine_SuppressedPropertyByComment_SuppressesAccessorBodyOnly()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", CommentSuppressedPropertySource);
+        var violations = Engine.Analyze(sf, new[] { MakeShortVariableSet() }, strict: false);
+
+        var violation = Assert.Single(violations);
+        Assert.Equal(7, violation.BeginLine);
+    }
+
+    [Fact]
+    public void Engine_SuppressedAccessorByAttribute_DoesNotSuppressSiblingAccessor()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", AttributeSuppressedAccessorSource);
+        var violations = Engine.Analyze(sf, new[] { MakeShortVariableSet() }, strict: false);
+
+        var violation = Assert.Single(violations);
+        Assert.Equal(12, violation.BeginLine);
+    }
+
+    [Fact]
+    public void Engine_SuppressedAccessorByAttribute_ReportedWhenStrict()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", AttributeSuppressedAccessorSource);
+        var violations = Engine.Analyze(sf, new[] { MakeShortVariableSet() }, strict: true);
+
+        Assert.Equal(new[] { 11, 12 }, violations.Select(v => v.BeginLine).OrderBy(l => l));
+    }
+
+    [Fact]
+    public void Engine_SuppressedAccessorByComment_DoesNotSuppressSiblingAccessor()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", CommentSuppressedAccessorSource);
+        var violations = Engine.Analyze(sf, new[] { MakeShortVariableSet() }, strict: false);
+
+        var violation = Assert.Single(violations);
+        Assert.Equal(10, violation.BeginLine);
+    }
+
+    [Fact]
+    public void Engine_SuppressedPropertyByAttribute_SuppressesAccessorName()
+    {
+        var sf = ModelBuilder.Parse("sample.cs", AttributeSuppressedPropertyAccessorNameSource);
+        var sets = new[] { MakeCamelCaseMethodNameSet() };
+
+        Assert.Empty(Engine.Analyze(sf, sets, strict: false));
+        Assert.Single(Engine.Analyze(sf, sets, strict: true));
+    }
 }
