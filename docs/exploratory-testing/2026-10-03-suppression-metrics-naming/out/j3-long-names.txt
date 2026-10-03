@@ -1,0 +1,1 @@
+7  LongVariable  Avoid excessively long variable names like thisIsAVeryLongForeachVariableName. Keep variable name length under 20.

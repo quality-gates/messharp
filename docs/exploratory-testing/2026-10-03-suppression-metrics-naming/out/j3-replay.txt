@@ -1,0 +1,6 @@
+exit=0
+ForeachShort.cs:6  ShortVariable  Avoid variables with short names like v. Configured minimum length is 3.
+exit=2
+exit=0
+ForeachShort.cs:6  ShortVariable  Avoid variables with short names like v. Configured minimum length is 3.
+exit=2

@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<ruleset name="Team" xmlns="http://pmd.sf.net/ruleset/1.0.0">
+  <description>Team ruleset</description>
+  <rule ref="csharp">
+    <exclude name="ShortVariable" />
+  </rule>
+</ruleset>

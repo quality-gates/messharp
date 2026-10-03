@@ -1,0 +1,4 @@
+docs/exploratory-testing/2026-10-03-suppression-metrics-naming/fixtures/MemberKinds.cs:7  ShortVariable        Avoid variables with short names like q. Configured minimum length is 3.
+docs/exploratory-testing/2026-10-03-suppression-metrics-naming/fixtures/MemberKinds.cs:7  UnusedLocalVariable  Avoid unused local variables such as 'unusedA'.
+docs/exploratory-testing/2026-10-03-suppression-metrics-naming/fixtures/MemberKinds.cs:9  ShortVariable        Avoid variables with short names like r. Configured minimum length is 3.
+docs/exploratory-testing/2026-10-03-suppression-metrics-naming/fixtures/MemberKinds.cs:9  UnusedLocalVariable  Avoid unused local variables such as 'unusedB'.

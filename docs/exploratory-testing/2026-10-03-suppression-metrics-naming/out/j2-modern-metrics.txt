@@ -1,0 +1,14 @@
+7   CyclomaticComplexity  The method Coalesce() has a Cyclomatic Complexity of 3. The configured cyclomatic complexity threshold is 1.
+7   NPathComplexity       The method Coalesce() has an NPath complexity of 1. The configured NPath complexity threshold is 1.
+9   CyclomaticComplexity  The method CoalesceAssign() has a Cyclomatic Complexity of 2. The configured cyclomatic complexity threshold is 1.
+9   NPathComplexity       The method CoalesceAssign() has an NPath complexity of 1. The configured NPath complexity threshold is 1.
+11  CyclomaticComplexity  The method GuardedCase() has a Cyclomatic Complexity of 3. The configured cyclomatic complexity threshold is 1.
+11  NPathComplexity       The method GuardedCase() has an NPath complexity of 3. The configured NPath complexity threshold is 1.
+21  CyclomaticComplexity  The method GuardedArm() has a Cyclomatic Complexity of 3. The configured cyclomatic complexity threshold is 1.
+21  NPathComplexity       The method GuardedArm() has an NPath complexity of 3. The configured NPath complexity threshold is 1.
+28  CyclomaticComplexity  The method CatchFilter() has a Cyclomatic Complexity of 2. The configured cyclomatic complexity threshold is 1.
+28  NPathComplexity       The method CatchFilter() has an NPath complexity of 2. The configured NPath complexity threshold is 1.
+34  CyclomaticComplexity  The method Lambda() has a Cyclomatic Complexity of 2. The configured cyclomatic complexity threshold is 1.
+34  NPathComplexity       The method Lambda() has an NPath complexity of 2. The configured NPath complexity threshold is 1.
+36  CyclomaticComplexity  The method LocalFn() has a Cyclomatic Complexity of 2. The configured cyclomatic complexity threshold is 1.
+36  NPathComplexity       The method LocalFn() has an NPath complexity of 1. The configured NPath complexity threshold is 1.
