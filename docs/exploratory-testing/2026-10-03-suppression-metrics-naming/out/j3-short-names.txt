@@ -1,0 +1,8 @@
+11  ShortVariable  Avoid variables with short names like a. Configured minimum length is 3.
+12  ShortVariable  Avoid variables with short names like b. Configured minimum length is 3.
+14  ShortVariable  Avoid variables with short names like d. Configured minimum length is 3.
+14  ShortVariable  Avoid variables with short names like e. Configured minimum length is 3.
+15  ShortVariable  Avoid variables with short names like f. Configured minimum length is 3.
+16  ShortVariable  Avoid variables with short names like g. Configured minimum length is 3.
+18  ShortVariable  Avoid variables with short names like i. Configured minimum length is 3.
+31  ShortVariable  Avoid variables with short names like o. Configured minimum length is 3.

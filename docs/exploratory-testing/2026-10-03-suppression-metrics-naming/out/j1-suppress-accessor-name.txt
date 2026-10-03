@@ -1,0 +1,1 @@
+SuppressAccessorName.cs:12  CamelCaseMethodName  The method get_Count is not named in PascalCase.

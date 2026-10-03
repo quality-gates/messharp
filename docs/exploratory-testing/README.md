@@ -4,6 +4,7 @@ Each exploratory testing pass drives the CLI through realistic user journeys. Th
 
 | Date | Scope | Issues filed |
 | :--- | :--- | :--- |
+| 2026-10-03 | [Suppression, modern-C# metrics, variable naming](2026-10-03-suppression-metrics-naming/REPORT.md) | #226, #227 |
 | 2026-09-26 | [Unused code, design, and naming edge cases](2026-09-26-unusedcode-and-design-edgecases/REPORT.md) | #188, #189 |
 | 2026-09-23 | [Explicitness rulesets](2026-09-23-explicitness-rulesets/REPORT.md) | #180 |
 | 2026-09-19 | [Modern C#, CI report formats, policy tuning](2026-09-19-modern-csharp/REPORT.md) | #148–#152 |

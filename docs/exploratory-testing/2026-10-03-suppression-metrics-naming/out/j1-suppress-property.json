@@ -1,0 +1,38 @@
+{
+  "version": "0.0.0-dev",
+  "package": "messharp",
+  "timestamp": "2026-10-03T00:09:38.8369896+00:00",
+  "files": [
+    {
+      "file": "docs/exploratory-testing/2026-10-03-suppression-metrics-naming/fixtures/SuppressProperty.cs",
+      "violations": [
+        {
+          "beginLine": 9,
+          "endLine": 9,
+          "package": "",
+          "function": "",
+          "class": "",
+          "method": "",
+          "description": "Avoid variables with short names like b. Configured minimum length is 3.",
+          "rule": "ShortVariable",
+          "ruleSet": "Naming Rules",
+          "externalInfoUrl": "https://phpmd.org/rules/naming.html#shortvariable",
+          "priority": 3
+        },
+        {
+          "beginLine": 12,
+          "endLine": 12,
+          "package": "",
+          "function": "",
+          "class": "",
+          "method": "",
+          "description": "Avoid variables with short names like c. Configured minimum length is 3.",
+          "rule": "ShortVariable",
+          "ruleSet": "Naming Rules",
+          "externalInfoUrl": "https://phpmd.org/rules/naming.html#shortvariable",
+          "priority": 3
+        }
+      ]
+    }
+  ]
+}

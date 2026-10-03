@@ -1,0 +1,22 @@
+== s.php
+
+/w/s.php:4   ShortVariable  Avoid variables with short names like $aa. Configured minimum length is 3.
+/w/s.php:11  ShortVariable  Avoid variables with short names like $j. Configured minimum length is 3.
+/w/s.php:12  ShortVariable  Avoid variables with short names like $k. Configured minimum length is 3.
+/w/s.php:12  ShortVariable  Avoid variables with short names like $l. Configured minimum length is 3.
+== lv.php
+
+/w/lv.php:3  ShortMethodName  Avoid using short method names like LongNames::m(). The configured minimum method name length is 3.
+/w/lv.php:4  LongVariable     Avoid excessively long variable names like $thisIsAVeryLongForeachVariableName. Keep variable name length under 20.
+/w/lv.php:5  ShortVariable    Avoid variables with short names like $f. Configured minimum length is 3.
+/w/lv.php:5  LongVariable     Avoid excessively long variable names like $thisIsAVeryLongLambdaParameterName. Keep variable name length under 20.
+== t.php
+
+/w/t.php:4  CyclomaticComplexity  The method coalesce() has a Cyclomatic Complexity of 1. The configured cyclomatic complexity threshold is 1.
+/w/t.php:4  NPathComplexity       The method coalesce() has an NPath complexity of 1. The configured NPath complexity threshold is 1.
+/w/t.php:5  CyclomaticComplexity  The method coalesceAssign() has a Cyclomatic Complexity of 1. The configured cyclomatic complexity threshold is 1.
+/w/t.php:5  NPathComplexity       The method coalesceAssign() has an NPath complexity of 1. The configured NPath complexity threshold is 1.
+/w/t.php:6  CyclomaticComplexity  The method plain() has a Cyclomatic Complexity of 1. The configured cyclomatic complexity threshold is 1.
+/w/t.php:6  NPathComplexity       The method plain() has an NPath complexity of 1. The configured NPath complexity threshold is 1.
+/w/t.php:7  CyclomaticComplexity  The method andOp() has a Cyclomatic Complexity of 2. The configured cyclomatic complexity threshold is 1.
+/w/t.php:7  NPathComplexity       The method andOp() has an NPath complexity of 1. The configured NPath complexity threshold is 1.

@@ -1,0 +1,7 @@
+== csharp
+docs/exploratory-testing/2026-10-03-suppression-metrics-naming/fixtures/AccessorName.cs:9   CamelCaseMethodName  The method get_Count is not named in PascalCase.
+docs/exploratory-testing/2026-10-03-suppression-metrics-naming/fixtures/AccessorName.cs:10  CamelCaseMethodName  The method set_Count is not named in PascalCase.
+docs/exploratory-testing/2026-10-03-suppression-metrics-naming/fixtures/AccessorName.cs:15  CamelCaseMethodName  The method get_ExprAccessor is not named in PascalCase.
+exit=2
+== naming
+exit=0
