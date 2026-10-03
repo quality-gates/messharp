@@ -53,10 +53,10 @@ public sealed class ShortVariableRule : BaseRule, IClassRule, IMethodRule
             StringComparer.Ordinal);
 
     /// <summary>
-    /// Walks a method body and yields (name, line, isLoop) for local declarations,
-    /// local deconstruction declarations, foreach variables, and direct <c>is</c>
-    /// declaration patterns. isLoop = true when the declarator is the initializer
-    /// of a for-statement (phpmd skips those).
+    /// Walks a method body and yields (name, line, isLoop) for lambda parameters,
+    /// local declarations, deconstruction variables, foreach variables, and direct
+    /// <c>is</c> declaration patterns. isLoop is true for a for-statement initializer
+    /// (phpmd skips those).
     /// </summary>
     internal static IEnumerable<(string Name, int Line, bool IsLoop)> CollectLocals(
         Microsoft.CodeAnalysis.SyntaxNode body)
@@ -76,8 +76,26 @@ public sealed class ShortVariableRule : BaseRule, IClassRule, IMethodRule
             DeclarationPatternSyntax pattern => CollectDeclarationPattern(pattern),
             ForEachStatementSyntax forEach => CollectForEach(forEach),
             ForEachVariableStatementSyntax forEachVariable => CollectForEachVariable(forEachVariable),
+            ParameterSyntax parameter when IsLambdaParameter(parameter)
+                => CollectLambdaParameter(parameter),
             _ => [],
         };
+
+    private static bool IsLambdaParameter(ParameterSyntax parameter) =>
+        parameter.Parent is SimpleLambdaExpressionSyntax
+        || parameter.Parent is ParameterListSyntax
+        { Parent: ParenthesizedLambdaExpressionSyntax or AnonymousMethodExpressionSyntax };
+
+    private static IEnumerable<(string Name, int Line, bool IsLoop)> CollectLambdaParameter(
+        ParameterSyntax parameter)
+    {
+        var name = parameter.Identifier.Text;
+        if (name == "_") yield break;
+
+        int line = parameter.SyntaxTree.GetLineSpan(parameter.Identifier.Span)
+            .StartLinePosition.Line + 1;
+        yield return (name, line, false);
+    }
 
     private static IEnumerable<(string Name, int Line, bool IsLoop)> CollectVariableDeclaration(
         VariableDeclarationSyntax varDecl)
