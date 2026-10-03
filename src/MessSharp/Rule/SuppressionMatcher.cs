@@ -28,6 +28,7 @@ internal static class SuppressionMatcher
     private static IEnumerable<AttributeListSyntax> GetAttributeLists(SyntaxNode node) => node switch
     {
         MemberDeclarationSyntax m => m.AttributeLists,
+        AccessorDeclarationSyntax a => a.AttributeLists,
         CompilationUnitSyntax cu => cu.AttributeLists,
         _ => Enumerable.Empty<AttributeListSyntax>(),
     };

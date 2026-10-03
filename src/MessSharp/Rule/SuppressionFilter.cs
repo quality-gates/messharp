@@ -1,4 +1,5 @@
 using MessSharp.Model;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rule;
 
@@ -23,10 +24,21 @@ internal static class SuppressionFilter
         if (IsTypeSuppressed(cls, iface, v.Rule)) return true;
 
         var method = FindMethod(file, cls, iface, v);
-        if (method != null && SuppressionMatcher.IsNodeSuppressed(method.Node, v.Rule)) return true;
+        if (method != null && IsMethodSuppressed(method, v.Rule)) return true;
 
         var field = FindField(cls, v);
         return field != null && SuppressionMatcher.IsNodeSuppressed(field.Node, v.Rule);
+    }
+
+    /// <summary>
+    /// A property accessor is suppressed by its own declaration or by the
+    /// declaring property, mirroring how a method suppression covers its body.
+    /// </summary>
+    private static bool IsMethodSuppressed(MethodModel method, IRule rule)
+    {
+        if (SuppressionMatcher.IsNodeSuppressed(method.Node, rule)) return true;
+        return method.Node is AccessorDeclarationSyntax { Parent.Parent: BasePropertyDeclarationSyntax property }
+            && SuppressionMatcher.IsNodeSuppressed(property, rule);
     }
 
     private static bool IsTypeSuppressed(ClassModel? cls, InterfaceModel? iface, IRule rule) =>
