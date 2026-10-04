@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.21] - 2026-10-04
+
 ### Fixed
 
 - `ShortVariable` and `LongVariable` now check parameters declared by simple lambdas, parenthesized lambdas, and anonymous methods, so those names no longer escape member-body analysis (#227).
