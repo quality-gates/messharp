@@ -104,4 +104,4 @@ Default vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-
 
 ### Domain docs
 
-Single-context: `CONTEXT.md` at the repo root + `docs/adr/` for decisions. See `docs/agents/domain.md`.
+Single-context: `GLOSSARY.md` at the repo root + `docs/adr/` for decisions. See `docs/agents/domain.md`.
