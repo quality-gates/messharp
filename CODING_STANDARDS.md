@@ -10,7 +10,7 @@
 ## Comments and docs
 
 - Code comments use ASD-STE100 Simplified Technical English.
-- Ground terms in `CONTEXT.md` domain language when that file exists. Do not invent synonyms for glossary terms.
+- Ground terms in `GLOSSARY.md` domain language when that file exists. Do not invent synonyms for glossary terms.
 - Do not write comments that only repeat what the code already makes clear.
 - Do not put brittle references in README or comments (versions, line numbers, temporary paths, "as of today" claims) when those details are allowed to change.
 
@@ -27,7 +27,7 @@
 - Toolchain: all `dotnet` invokes go through `scripts/dotnet.sh` (Docker). Do not rely on a host SDK.
 - Target the project TFM (`net8.0`) with nullable reference types enabled. Do not add null-suppression (`!`) to paper over model holes.
 - Keep the phpmd-faithful shape: Roslyn **syntax-only** analysis, ruleset XML, exit codes `0` clean / `1` error / `2` violations.
-- Honor domain seams from `CONTEXT.md`: runner, file discoverer, source file parser, ruleset loader, rule engine, reporters. New behaviour belongs behind those seams, not as ad-hoc static helpers scattered through `Cli/`.
+- Honor domain seams from `GLOSSARY.md`: runner, file discoverer, source file parser, ruleset loader, rule engine, reporters. New behaviour belongs behind those seams, not as ad-hoc static helpers scattered through `Cli/`.
 - Prefer composition: extract a cohesive collaborator type when a class or method exceeds complexity limits.
 - Do not cheat Cyclomatic Complexity or NPath limits (compressed expressions, nested ternaries, "helper" dumps).
 - Extension methods: only for genuine shared stateless operations on a clear host type — not as a trash drawer for complexity escape.
