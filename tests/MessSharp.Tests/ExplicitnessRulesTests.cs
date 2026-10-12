@@ -1,6 +1,8 @@
 using MessSharp.Model;
+using MessSharp.Report;
 using MessSharp.Rule;
 using MessSharp.RuleSet;
+using System.Text.Json;
 using Xunit;
 
 namespace MessSharp.Tests;
@@ -38,7 +40,7 @@ public class ExplicitnessRulesTests
     public void Explicitness_LoadsOnlyFunctionLevelRules()
     {
         var names = new Loader().Load("explicitness").SelectMany(s => s.Rules).Select(r => r.Name);
-        Assert.Equal(new[] { "ImplicitInput", "ImplicitOutput" }, names.OrderBy(n => n));
+        Assert.Equal(new[] { "ImplicitInput", "ImplicitOutput", "UnknownEffect" }, names.OrderBy(n => n));
     }
 
     [Fact]
@@ -46,7 +48,7 @@ public class ExplicitnessRulesTests
     {
         var names = new Loader().Load("explicitness-strict").SelectMany(s => s.Rules).Select(r => r.Name);
         Assert.Equal(
-            new[] { "ImplicitInput", "ImplicitInstanceInput", "ImplicitInstanceOutput", "ImplicitOutput" },
+            new[] { "ImplicitInput", "ImplicitInstanceInput", "ImplicitInstanceOutput", "ImplicitOutput", "UnknownEffect" },
             names.OrderBy(n => n));
     }
 
@@ -305,8 +307,14 @@ public class Counter {
     public void ImplicitOutput_DiscardedCallAsExpressionBody_Flagged(string member, string kindAndName)
     {
         var src = "public class Foo { " + member + " }";
-        MustHave(Analyze("explicitness", src), "ImplicitOutput",
-            $"The {kindAndName} has an implicit output: changes argument 'items'.");
+        var findings = Analyze("explicitness", src);
+        if (member.Contains("SaveAsync", StringComparison.Ordinal))
+        {
+            MustHave(findings, "UnknownEffect", $"The {kindAndName} has an unknown effect: unresolved call 'items.SaveAsync'.");
+            MustNotHave(findings, "ImplicitOutput");
+        }
+        else
+            MustHave(findings, "ImplicitOutput", $"The {kindAndName} has an implicit output: changes argument 'items'.");
     }
 
     [Fact]
@@ -324,7 +332,7 @@ public class Foo {
     }
 
     [Fact]
-    public void ImplicitOutput_CallAsReturnedExpressionBody_NotFlagged()
+    public void ImplicitOutput_ReturnedMutatorIsStillAnOutput()
     {
         var src = @"
 public class Foo {
@@ -333,7 +341,221 @@ public class Foo {
     public async Task<int> Count(Db db) => await db.CountAsync();
     public int Size(List<int> items) { int Local() => items.IndexOf(1); return Local(); }
 }";
-        MustNotHave(Analyze("explicitness", src), "ImplicitOutput");
+        MustHave(Analyze("explicitness", src), "ImplicitOutput", "The method Bar() has an implicit output: changes argument 'items'.");
+    }
+
+    [Fact]
+    public void ImplicitOutput_ArgumentOwnershipFollowsAliasesAndRebinding()
+    {
+        var src = @"
+public class Changes {
+    public void Alias(List<int> values) { var alias = values; alias.Add(1); }
+    public List<int> Copy(List<int> values) { values = new List<int>(values); values.Add(1); return values; }
+    public List<int> AfterRebind(List<int> values) { values = new List<int>(); values.Add(1); return values; }
+    public void Conditional(List<int> values, bool copy) { if (copy) values = new List<int>(values); values.Add(1); }
+    public void Before(List<int> values) { values.Add(1); values = new List<int>(); }
+}";
+        var vs = Analyze("explicitness", src);
+        MustHave(vs, "ImplicitOutput", "The method Alias() has an implicit output: changes argument 'values'.");
+        MustHave(vs, "ImplicitOutput", "The method Conditional() has an implicit output: changes argument 'values'.");
+        MustHave(vs, "ImplicitOutput", "The method Before() has an implicit output: changes argument 'values'.");
+        Assert.DoesNotContain(vs, v => v.Description.Contains("Copy()"));
+        Assert.DoesNotContain(vs, v => v.Description.Contains("AfterRebind()"));
+    }
+
+    [Fact]
+    public void ImplicitOutput_ShallowCopyKeepsSharedReachableElements()
+    {
+        var src = @"
+public class Changes {
+    public void Shared(List<List<int>> values) { var copy = new List<List<int>>(values); copy[0].Add(1); }
+    public List<int> Detached(List<int> values) { var copy = (int[]) values.ToArray().Clone(); copy[0] = 1; return copy.ToList(); }
+}";
+        var vs = Analyze("explicitness", src);
+        MustHave(vs, "ImplicitOutput", "The method Shared() has an implicit output: changes argument 'values'.");
+        Assert.DoesNotContain(vs, v => v.Description.Contains("Detached()"));
+        MustNotHave(vs.Where(v => v.Description.Contains("Detached()")), "UnknownEffect", "ImplicitOutput");
+    }
+
+    [Fact]
+    public void ImplicitOutput_ParameterEffectsAreSubstitutedAtCallSite()
+    {
+        var src = @"
+public class Changes {
+    static void Leaf(List<int> values) { values.Add(1); }
+    static void WithAmbient(List<int> values) { Console.WriteLine(values.Count); values.Add(1); }
+    static void CallerOwned(List<int> values) { Leaf(values); }
+    static List<int> FreshPrivate() { var values = new List<int>(); Leaf(values); return values; }
+    static List<int> FreshPrivateWithAmbient() { var values = new List<int>(); WithAmbient(values); return values; }
+}";
+        var vs = Analyze("explicitness", src);
+        MustHave(vs, "ImplicitOutput", "The method Leaf() has an implicit output: changes argument 'values'.");
+        MustHave(vs, "ImplicitOutput", "The method CallerOwned() has an implicit output: changes argument 'values'.");
+        MustHave(vs, "ImplicitOutput", "The method FreshPrivateWithAmbient() has an implicit output: uses Console.WriteLine.");
+        Assert.DoesNotContain(vs, v => v.Description.Contains("FreshPrivate()"));
+        Assert.DoesNotContain(vs, v => v.Description.Contains("FreshPrivateWithAmbient()")
+            && v.Description.Contains("changes argument"));
+    }
+
+    [Fact]
+    public void ImplicitOutput_ReturnedAliasMutationChangesCallerStorage()
+    {
+        var src = @"
+public class Changes {
+    static List<int> Alias(List<int> values) => values;
+    static void Change(List<int> values) { Alias(values).Add(1); }
+}";
+        var vs = Analyze("explicitness", src);
+        MustHave(vs, "ImplicitOutput", "The method Change() has an implicit output: changes argument 'values'.");
+        Assert.DoesNotContain(vs, v => v.Description.Contains("Alias()"));
+        MustNotHave(vs.Where(v => v.Description.Contains("Change()")), "UnknownEffect");
+    }
+
+    [Fact]
+    public void Explicitness_UnknownAndKnownEffectsPropagateThroughCycles()
+    {
+        var src = @"
+public class Probe {
+    static int First(int value, Func<int, int> notify) => value <= 0 ? 0 : Second(value, notify);
+    static int Second(int value, Func<int, int> notify) => notify(value) + First(value - 1, notify);
+}";
+        var vs = Analyze("explicitness", src);
+        MustHave(vs, "UnknownEffect", "The method First() has an unknown effect: unresolved call 'notify'.");
+        MustHave(vs, "UnknownEffect", "The method Second() has an unknown effect: unresolved call 'notify'.");
+        MustNotHave(vs, "ImplicitInput", "ImplicitOutput");
+    }
+
+    [Fact]
+    public void Explicitness_ShadowedCallableParameterStaysUnknown()
+    {
+        var src = @"
+public class Probe {
+    static int Helper(int value) => value + 1;
+    static int Send(int value, Func<int, int> Helper) => Helper(value);
+}";
+        var vs = Analyze("explicitness", src);
+        MustHave(vs, "UnknownEffect", "The method Send() has an unknown effect: unresolved call 'Helper'.");
+        MustNotHave(vs, "ImplicitInput", "ImplicitOutput");
+    }
+
+    [Fact]
+    public void Explicitness_FixedCaptureAndTopLevelPrivateMutationAreCalculations()
+    {
+        var src = @"
+var values = new System.Collections.Generic.List<int>();
+values.Add(1);
+public class Probe {
+    static int Run() { int offset = 1; Func<int, int> add = value => value + offset; return add(2); }
+}";
+        MustNotHave(Analyze("explicitness", src), "ImplicitInput", "ImplicitOutput", "UnknownEffect");
+    }
+
+    [Fact]
+    public void Explicitness_CallbackCreationIsDeferredButInvocationTransfersEffects()
+    {
+        var src = @"
+public class Probe {
+    static Action Build() => () => Console.WriteLine(1);
+    static void CreateOnly() { var action = Build(); }
+    static void Invoke() { var action = Build(); action(); }
+}";
+        var vs = Analyze("explicitness", src);
+        MustHave(vs, "ImplicitOutput", "The method <lambda>() has an implicit output: uses Console.WriteLine.");
+        MustHave(vs, "ImplicitOutput", "The method Invoke() has an implicit output: uses Console.WriteLine.");
+        Assert.DoesNotContain(vs, v => v.Description.Contains("Build()"));
+        Assert.DoesNotContain(vs, v => v.Description.Contains("CreateOnly()"));
+    }
+
+    [Fact]
+    public void Explicitness_CallbackArgumentUsesLexicalIdentity()
+    {
+        var src = @"
+using System;
+class Probe {
+    static int Apply(int value, Func<int, int> f) => f(value);
+    static int Pure(int value) => value + 1;
+    static int Shadowed(int value, Func<int, int> Pure) => Apply(value, Pure);
+    static int Known(int value) => Apply(value, Pure);
+}";
+        var vs = Analyze("explicitness", src);
+        MustHave(vs, "UnknownEffect", "The method Apply() has an unknown effect: unresolved call 'f'.");
+        MustHave(vs, "UnknownEffect", "The method Shadowed() has an unknown effect: unresolved call 'f'.");
+        Assert.DoesNotContain(vs, v => v.Description.Contains("Known()"));
+        MustNotHave(vs, "ImplicitInput", "ImplicitOutput");
+    }
+
+    [Fact]
+    public void Explicitness_CallbackParameterEffectsUseInvocationArguments()
+    {
+        var src = @"
+using System; using System.Collections.Generic;
+class Probe {
+    static void Apply(List<int> value, Action<List<int>> f) { f(value); }
+    static void Mutator(List<int> payload) { payload.Add(1); }
+    static void PrivateWrapper() { var items = new List<int>(); Apply(items, Mutator); }
+    static void CallerOwnedWrapper(List<int> items) { Apply(items, Mutator); }
+}";
+        var vs = Analyze("explicitness", src);
+        MustHave(vs, "ImplicitOutput", "The method Mutator() has an implicit output: changes argument 'payload'.");
+        MustHave(vs, "ImplicitOutput", "The method CallerOwnedWrapper() has an implicit output: changes argument 'items'.");
+        Assert.DoesNotContain(vs, v => v.Description.Contains("PrivateWrapper()"));
+        Assert.DoesNotContain(vs, v => v.Description.Contains("payload")
+            && v.Description.Contains("CallerOwnedWrapper()"));
+        MustHave(vs, "UnknownEffect", "The method Apply() has an unknown effect: unresolved call 'f'.");
+    }
+
+    [Fact]
+    public void Explicitness_CallbackTransferJsonNamesActualCaller()
+    {
+        var vs = Analyze("explicitness", @"
+using System; using System.Collections.Generic;
+class Probe {
+    static void Apply(List<int> value, Action<List<int>> f) { f(value); }
+    static void Mutator(List<int> payload) { payload.Add(1); }
+    static void Wrapper(List<int> items) { Apply(items, Mutator); }
+}");
+        using var output = new StringWriter();
+        new JsonRenderer().Render(output, new Report.Report { Violations = vs });
+        using var json = JsonDocument.Parse(output.ToString());
+        var wrapper = json.RootElement.GetProperty("files")[0].GetProperty("violations").EnumerateArray()
+            .Single(v => v.GetProperty("method").GetString() == "Wrapper");
+        Assert.Equal("ImplicitOutput", wrapper.GetProperty("rule").GetString());
+        Assert.Contains("changes argument 'items'", wrapper.GetProperty("description").GetString());
+    }
+
+    [Fact]
+    public void Explicitness_LiteralFalseBranchDoesNotExecuteEffects()
+    {
+        var src = @"
+using System;
+public class Probe {
+    static int Dead(int value) { if (false) { Console.WriteLine(value); ThirdParty.Process(value); } return value; }
+    static int LiveThen(int value) { if (true) { Console.WriteLine(value); } else { ThirdParty.Process(value); } return value; }
+    static int LiveElse(int value) { if (false) { ThirdParty.Process(value); } else { Console.WriteLine(value); } return value; }
+}";
+        var vs = Analyze("explicitness", src);
+        Assert.DoesNotContain(vs, v => v.Description.Contains("Dead()"));
+        MustHave(vs, "ImplicitOutput", "The method LiveThen() has an implicit output: uses Console.WriteLine.");
+        MustHave(vs, "ImplicitOutput", "The method LiveElse() has an implicit output: uses Console.WriteLine.");
+        MustNotHave(vs.Where(v => v.Description.Contains("LiveThen()") || v.Description.Contains("LiveElse()")),
+            "UnknownEffect");
+    }
+
+    [Fact]
+    public void Explicitness_JsonMetadataNamesCallbackOwner()
+    {
+        var vs = Analyze("explicitness", @"
+public class Probe {
+    static Action Build() => () => Console.WriteLine(1);
+}");
+        using var output = new StringWriter();
+        new JsonRenderer().Render(output, new Report.Report { Violations = vs });
+        using var json = JsonDocument.Parse(output.ToString());
+        var violation = json.RootElement.GetProperty("files")[0].GetProperty("violations").EnumerateArray()
+            .Single(v => v.GetProperty("rule").GetString() == "ImplicitOutput");
+        Assert.Equal("Probe", violation.GetProperty("class").GetString());
+        Assert.Equal("<lambda>", violation.GetProperty("method").GetString());
+        Assert.Contains("<lambda>()", violation.GetProperty("description").GetString());
     }
 
     [Fact]
@@ -376,7 +598,11 @@ public class Cache {
 }";
         var vs = Analyze("explicitness", src);
         MustHave(vs, "ImplicitOutput", "The method Put() has an implicit output: changes the object in static member 'Map'.");
-        MustNotHave(vs, "ImplicitInput");
+        MustHave(vs, "ImplicitInput", "The method Get() has an implicit input: reads static member 'Map'.");
+        MustNotHave(Analyze("explicitness", @"class Lookup {
+            private static readonly List<int> Values = new() { 1, 2 };
+            public int Get(int index) => Values[index];
+        }"), "ImplicitInput");
     }
 
     [Fact]
@@ -515,6 +741,7 @@ public class Ledger {
             new[]
             {
                 "ImplicitInput: The method Post() has an implicit input: reads static member '_count'.",
+                "ImplicitInput: The method Post() has an implicit input: reads static member 'Names'.",
                 "ImplicitOutput: The method Post() has an implicit output: writes static member '_count'.",
                 "ImplicitOutput: The method Post() has an implicit output: changes the object in static member 'Names'.",
                 "ImplicitOutput: The method Post() has an implicit output: writes ref parameter 'balance'.",

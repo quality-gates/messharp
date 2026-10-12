@@ -11,7 +11,9 @@ The Explicitness Ruleset finds implicit inputs and outputs, as defined in
 "Grokking Simplicity" by Eric Normand. A method's explicit inputs are its
 arguments and its explicit output is its return value. Any other way that
 data enters or leaves the method is implicit, and makes the method an action
-rather than a calculation. It is opt-in and is not part of the csharp ruleset.
+rather than a calculation. UnknownEffect reports unresolved calls whose effects
+cannot be established by the syntax-only analyzer. It is opt-in and is not part
+of the csharp ruleset.
     </description>
 
     <rule name="ImplicitInput"
@@ -79,5 +81,15 @@ class Cart {
 }
             ]]>
         </example>
+    </rule>
+    <rule name="UnknownEffect"
+          since="0.2.18"
+          message="The {0} {1}() has an unknown effect: {2}."
+          class="MessSharp\Rule\Explicitness\UnknownEffect"
+          externalInfoUrl="https://github.com/quality-gates/messharp/blob/main/docs/rules.md#explicitness">
+        <description>Unresolved calls and callback invocations retain uncertainty, even when the callable also has known actions. Receiver state requires the strict policy.</description>
+        <priority>3</priority>
+        <properties />
+        <example><![CDATA[class Probe { static int Send(int value, Func<int, int> callback) => callback(value); }]]></example>
     </rule>
 </ruleset>

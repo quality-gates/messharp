@@ -13,7 +13,14 @@ implicit input, and changing them is an implicit output. Constructors and
 static methods are exempt.
     </description>
 
-    <rule ref="explicitness" />
+    <rule ref="explicitness">
+        <exclude name="UnknownEffect" />
+    </rule>
+    <rule ref="explicitness/UnknownEffect">
+        <properties>
+            <property name="receiver-effects-established" value="true" />
+        </properties>
+    </rule>
 
     <rule name="ImplicitInstanceInput"
           since="0.2.17"

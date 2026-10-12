@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Add `UnknownEffect` to the explicitness ruleset and propagate same-file callable effect summaries to a fixed point, including local functions, lambdas, recursive cycles, and simple returned-callback factories.
+
+### Changed
+
+- Document the explicitness ruleset's supported calculation subset and uncertainty boundaries, including shallow-copy reachable ownership and unresolved dynamic behavior.
+
+### Fixed
+
+- Ignore explicitness effects in statement arms guarded by literal `false`, while still analyzing the reachable arm of literal branches.
+- Preserve lexical identity when resolving callback arguments, and substitute callback parameter effects through the callback invocation's actual arguments before propagating them to callers.
+- Treat `Clone()` as a known shallow copy for explicitness ownership, so mutating a cloned array's outer storage does not become an unknown effect.
+- Populate explicitness JSON metadata with the actual callable owner, including callbacks, instead of only embedding the callable name in the description.
+
 ## [0.2.21] - 2026-10-04
 
 ### Fixed

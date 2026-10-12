@@ -13,7 +13,7 @@ phpmd-format ruleset XML file.
 | `design` | ExitExpression, GotoStatement, CountInLoopExpression, DevelopmentCodeFragment, EmptyCatchBlock, CouplingBetweenObjects, GlobalVariable, LackOfCohesionOfMethods |
 | `controversial` | CamelCaseClassName, CamelCaseMethodName, CamelCasePropertyName, CamelCaseParameterName, CamelCaseVariableName — adapted to C# conventions (PascalCase types/members, camelCase locals/params) |
 | `opinionated` | **Opt-in.** Rules the `csharp` ruleset deliberately drops because they fight common C# practice. |
-| `explicitness` | **Opt-in.** ImplicitInput, ImplicitOutput — data that enters a method other than through its arguments, or leaves it other than through its return value. See [Explicitness](#explicitness). |
+| `explicitness` | **Opt-in.** ImplicitInput, ImplicitOutput, UnknownEffect. Tracks recognized implicit inputs, implicit outputs, and unresolved calls. See [Explicitness](#explicitness). |
 | `explicitness-strict` | **Opt-in.** `explicitness` plus ImplicitInstanceInput, ImplicitInstanceOutput, which also treat an instance method's own fields and properties as implicit. |
 
 Rules with a direct C# analog reproduce phpmd's behavior and message templates;
@@ -37,12 +37,15 @@ is a compile error).
 The `explicitness` rulesets apply the idea of implicit inputs and outputs from
 Eric Normand's *Grokking Simplicity*. A method's explicit inputs are its
 arguments; its explicit output is its return value. Everything else is
-implicit, and makes the method an action rather than a calculation.
+implicit. These syntax rules classify the supported syntax subset. A clean
+report is a calculation verdict only inside that subset, not a proof about
+arbitrary runtime behavior.
 
 | Rule | Reports |
 | :--- | :--- |
-| `ImplicitInput` | Reads of the class's own mutable static fields and static auto-properties; the clock (`DateTime.Now`, `Stopwatch`), environment, console input, file and directory reads, `Guid.NewGuid()`, and `Random.Shared` or unseeded `new Random()`. |
+| `ImplicitInput` | Reads of the class's own mutable static fields and static auto-properties, including readonly collections with observed writes;  the clock (`DateTime.Now`, `Stopwatch`), environment, console input, file and directory reads, `Guid.NewGuid()`, and `Random.Shared` or unseeded `new Random()`. |
 | `ImplicitOutput` | Writes to the class's own static state, and changes to the objects it holds (including `static readonly` collections); changes to an argument's object; writes to `ref` and `out` parameters; console, `Debug` and `Trace` output; file and directory writes; environment changes, `Environment.Exit` and `Process.Start`. |
+| `UnknownEffect` | Calls whose effects are not established by the analyzer, including injected callbacks, opaque external calls, unsupported dispatch, and receiver effects when strict instance-state rules are not enabled. |
 | `ImplicitInstanceInput` | (strict) Reads of the instance's own fields, properties and primary constructor parameters, bare or through `this`/`base`. |
 | `ImplicitInstanceOutput` | (strict) Writes to the instance's own fields and properties, and changes to the objects they hold. |
 
@@ -51,25 +54,37 @@ Static constructors are exempt from the static-state checks; constructors and
 static methods are exempt from the strict rules. Assigning a new value to a
 by-value parameter is not an output.
 
-The analysis is syntax-only, so it has limits:
+The analysis is syntax-only, so the supported calculation subset is explicit:
 
-* Only the class's own static state is tracked. Static state of other classes,
-  and members called through `using static`, are not.
-* Effects are not followed through method calls: calling a method that writes
-  to the console does not make the caller an action.
-* A call whose result is discarded counts as a change to its receiver. That
-  is a call statement such as `items.Add(x);`, or the expression body of a
-  member that returns nothing, such as `void Add(int x) => items.Add(x);`.
-  Calls made only for an `out` value, such as
-  `map.TryGetValue(k, out var v);`, and calls on struct arguments can
-  therefore be reported.
-* Lambdas and local functions count toward their enclosing method. A lambda's
-  expression body, such as `x => sink.Add(x)`, is not taken as discarded,
-  because its delegate type is not known.
-* Raised events and thrown exceptions are not reported.
-* Like every method rule, these rules do not see expression-bodied properties
-  (`int X => _x;`), indexers or top-level statements, which the method model
-  does not include.
+* Plain built-in numeric, boolean, string, array, and collection operations are
+  trusted only when their standard binding is not shadowed by a local symbol
+  or user-defined type in the analyzed file. A method name alone does not make
+  a custom method pure.
+* Effects propagate through resolved same-file, non-virtual, non-abstract,
+  non-override and non-extern methods, local functions, and lambdas until a
+  fixed point. Recursive cycles terminate because summaries are finite sets of
+  stable effect facts.
+* Statement arms guarded by literal `true` or `false` conditions are analyzed
+  according to the arm that can execute. General constant folding is not part
+  of the supported subset.
+* Deferred callback creation does not execute the callback. Invoking a
+  resolved callback carries that callback's effects to the caller. Injected or
+  rebound callbacks stay unknown.
+* Argument ownership is tracked at each operation site. Direct aliases retain
+  caller ownership. Rebinding to a fresh object detaches the outer storage. A
+  fresh shallow copy keeps caller-owned reachable elements, so mutating an
+  element can still be an output.
+* Mutating a fresh private argument through a helper is a calculation when the
+  helper has no ambient or unknown effects. Ambient and unknown effects are
+  still propagated.
+* Readonly collection reads are considered stable only within the analyzed
+  closed-world subset. External aliases, reflection, dynamic dispatch, partial
+  files outside the analyzed inputs, and unmodeled writes retain uncertainty
+  rather than proving immutability.
+* Unsupported generators, async scheduling, lazy iteration, dynamic dispatch,
+  event raising, thrown exceptions, expression trees, reflection, and external
+  dependencies are not proved pure. Where such behavior appears as an
+  unresolved call, `UnknownEffect` is reported.
 
 ## Custom rulesets
 

@@ -49,6 +49,10 @@ public sealed class RuleContext
         AppendViolation(method.Line, method.EndLine,
             method.DeclaringTypeName, method.Name, "", method.Namespace, args);
 
+    internal void ReportMethodAt(MethodModel method, int beginLine, int endLine, params object[] args) =>
+        AppendViolation(beginLine, endLine,
+            method.DeclaringTypeName, method.Name, "", method.Namespace, args);
+
     public void ReportClass(ClassModel cls, params object[] args) =>
         AppendViolation(cls.Line, cls.EndLine, cls.Name, "", "", cls.Namespace, args);
 

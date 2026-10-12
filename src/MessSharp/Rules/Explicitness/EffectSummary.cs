@@ -1,0 +1,78 @@
+using MessSharp.Model;
+using MessSharp.Rule;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+
+namespace MessSharp.Rules.Explicitness;
+
+internal enum EffectKind { Input, Output, InstanceInput, InstanceOutput, ParameterChange, ParameterWrite, Unknown }
+
+internal readonly record struct EffectFact(
+    EffectKind Kind,
+    string What,
+    bool Reachable = false,
+    CallbackInvocation? Callback = null);
+
+internal sealed record CallbackInvocation(string ParameterName, InvocationExpressionSyntax Call)
+{
+    public static CallbackInvocation? From(CallableOwner owner, InvocationExpressionSyntax call) =>
+        call.Expression is IdentifierNameSyntax name
+        && owner.Method.Parameters.Any(p => p.Name == name.Identifier.Text)
+            ? new CallbackInvocation(name.Identifier.Text, call) : null;
+}
+
+internal sealed class EffectSummary
+{
+    private readonly Dictionary<EffectFact, SyntaxNode> _facts = [];
+
+    public IEnumerable<KeyValuePair<EffectFact, SyntaxNode>> Facts => _facts;
+
+    public bool Add(EffectFact fact, SyntaxNode site) => _facts.TryAdd(fact, site);
+
+    public IEnumerable<Finding> Findings(EffectKind kind) => _facts.Where(f => f.Key.Kind == kind)
+        .Select(f => new Finding(f.Value, f.Key.What));
+
+    public IEnumerable<Finding> Outputs(MethodModel method) => Findings(EffectKind.Output)
+        .Concat(ParameterFindings(method));
+
+    private IEnumerable<Finding> ParameterFindings(MethodModel method)
+    {
+        foreach (var (fact, site) in _facts)
+        {
+            if (fact.Kind == EffectKind.ParameterChange)
+                yield return new Finding(site, $"changes argument '{fact.What}'");
+            if (fact.Kind != EffectKind.ParameterWrite) continue;
+            var parameter = method.Parameters.FirstOrDefault(p => p.Name == fact.What);
+            if (parameter?.WritesReachCaller != true) continue;
+            var mode = parameter.IsOut ? "out" : "ref";
+            yield return new Finding(site, $"writes {mode} parameter '{fact.What}'");
+        }
+    }
+
+    public static EffectSummary Direct(RuleContext ctx, CallableOwner owner, IReadOnlyList<CallableOwner> owners)
+    {
+        var direct = MethodEffectAnalyzer.Analyze(ctx, owner, owners);
+        var summary = new EffectSummary();
+        summary.AddFindings(EffectKind.Input, direct.AmbientInputs);
+        summary.AddFindings(EffectKind.Output, direct.AmbientOutputs);
+        foreach (var access in direct.Statics)
+        {
+            if (access.Kind == AccessKind.Read && !direct.MutableStatics.Contains(access.Name)) continue;
+            summary.AddAccess(access.Kind == AccessKind.Read ? EffectKind.Input : EffectKind.Output, access, "static member");
+        }
+        foreach (var access in direct.Instance)
+            summary.AddAccess(access.Kind == AccessKind.Read ? EffectKind.InstanceInput : EffectKind.InstanceOutput, access, "member");
+        foreach (var access in direct.Parameters.Where(a => a.Kind != AccessKind.Read))
+            summary.Add(new EffectFact(access.Kind == AccessKind.Change ? EffectKind.ParameterChange : EffectKind.ParameterWrite,
+                access.Name, access.Site.DescendantNodesAndSelf().OfType<ElementAccessExpressionSyntax>().Any()), access.Site);
+        return summary;
+    }
+
+    private void AddFindings(EffectKind kind, IEnumerable<Finding> findings)
+    {
+        foreach (var finding in findings) Add(new EffectFact(kind, finding.What), finding.Site);
+    }
+
+    private void AddAccess(EffectKind kind, StateAccess access, string noun) =>
+        Add(new EffectFact(kind, Finding.FromAccess(access, noun).What), access.Site);
+}

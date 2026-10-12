@@ -13,6 +13,7 @@ public static class ExplicitnessRules
         {
             ["MessSharp\\Rule\\Explicitness\\ImplicitInput"] = () => new ImplicitInputRule(),
             ["MessSharp\\Rule\\Explicitness\\ImplicitOutput"] = () => new ImplicitOutputRule(),
+            ["MessSharp\\Rule\\Explicitness\\UnknownEffect"] = () => new UnknownEffectRule(),
             ["MessSharp\\Rule\\Explicitness\\ImplicitInstanceInput"] = () => new ImplicitInstanceInputRule(),
             ["MessSharp\\Rule\\Explicitness\\ImplicitInstanceOutput"] = () => new ImplicitInstanceOutputRule(),
         };

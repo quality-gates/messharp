@@ -27,7 +27,7 @@ internal readonly record struct Finding(SyntaxNode Site, string What)
         {
             if (!seen.Add(finding.What)) continue;
             var line = finding.Site.SyntaxTree.GetLineSpan(finding.Site.Span).StartLinePosition.Line + 1;
-            ctx.Report(line, line, kind, method.Name, finding.What);
+            ctx.ReportMethodAt(method, line, line, kind, method.Name, finding.What);
         }
     }
 }

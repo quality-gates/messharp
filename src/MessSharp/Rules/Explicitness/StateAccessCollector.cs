@@ -23,7 +23,9 @@ internal readonly record struct StateAccess(string Name, AccessKind Kind, Syntax
 /// Finds the reads, writes and changes of named state in a method body.
 /// The resolver gives the state name that an expression refers to, or null.
 /// </summary>
-internal sealed class StateAccessCollector(Func<ExpressionSyntax, string?> resolve) : IBodyVisitor
+internal sealed class StateAccessCollector(
+    Func<ExpressionSyntax, string?> resolve, IReadOnlySet<string>? mutableCollections = null,
+    Func<SyntaxNodeCall, bool>? knownMutation = null) : IBodyVisitor
 {
     private readonly List<StateAccess> _mutations = [];
     private readonly List<StateAccess> _reads = [];
@@ -40,15 +42,15 @@ internal sealed class StateAccessCollector(Func<ExpressionSyntax, string?> resol
     {
         foreach (var (target, isPureWrite) in MutationTargets(node))
             AddMutation(target, isPureWrite);
-        if (DiscardedCallReceiver(node) is { } receiver && ResolveChain(receiver) is { } changed)
-            _mutations.Add(new StateAccess(changed, AccessKind.Change, node));
+        if (CollectionCall(node) is { } call && IsMutation(call) && ResolveChain(call.Receiver) is { } mutated)
+            _mutations.Add(new StateAccess(mutated, AccessKind.Change, node));
         if (node is ExpressionSyntax expr && !_pureWrites.Contains(expr) && resolve(expr) is { } name)
             _reads.Add(new StateAccess(name, AccessKind.Read, expr));
     }
 
     private void AddMutation(ExpressionSyntax target, bool isPureWrite)
     {
-        if (resolve(target) is { } written)
+        if (target is not ElementAccessExpressionSyntax && resolve(target) is { } written)
         {
             _mutations.Add(new StateAccess(written, AccessKind.Write, target));
             if (isPureWrite) _pureWrites.Add(target);
@@ -70,8 +72,6 @@ internal sealed class StateAccessCollector(Func<ExpressionSyntax, string?> resol
             .Select(t => (t, a.IsKind(SyntaxKind.SimpleAssignmentExpression))),
         PrefixUnaryExpressionSyntax p when IsIncrementOrDecrement(p.Kind()) => [(p.Operand, false)],
         PostfixUnaryExpressionSyntax p when IsIncrementOrDecrement(p.Kind()) => [(p.Operand, false)],
-        ArgumentSyntax arg when arg.RefKindKeyword.IsKind(SyntaxKind.OutKeyword) => [(arg.Expression, true)],
-        ArgumentSyntax arg when arg.RefKindKeyword.IsKind(SyntaxKind.RefKeyword) => [(arg.Expression, false)],
         _ => [],
     };
 
@@ -83,29 +83,21 @@ internal sealed class StateAccessCollector(Func<ExpressionSyntax, string?> resol
         kind is SyntaxKind.PreIncrementExpression or SyntaxKind.PreDecrementExpression
              or SyntaxKind.PostIncrementExpression or SyntaxKind.PostDecrementExpression;
 
-    /// <summary>
-    /// The receiver of a call whose result is not used. Such a call is made
-    /// for its effect, so it changes the object it is called on.
-    /// </summary>
-    private static ExpressionSyntax? DiscardedCallReceiver(SyntaxNode node)
+    private static SyntaxNodeCall? CollectionCall(SyntaxNode node) => node switch
     {
-        if (DiscardedExpression(node) is not { } discarded) return null;
-        var expr = discarded is AwaitExpressionSyntax awaited ? awaited.Expression : discarded;
-        return expr switch
+        InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax member } =>
+            new SyntaxNodeCall(member.Expression, member.Name.Identifier.Text),
+        InvocationExpressionSyntax
         {
-            InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax ma } => ma.Expression,
-            ConditionalAccessExpressionSyntax { WhenNotNull: InvocationExpressionSyntax } ca => ca.Expression,
-            _ => null,
-        };
-    }
-
-    /// <summary>An expression statement, or the expression body of a member that returns nothing.</summary>
-    private static ExpressionSyntax? DiscardedExpression(SyntaxNode node) => node switch
-    {
-        ExpressionStatementSyntax statement => statement.Expression,
-        ExpressionSyntax { Parent: ArrowExpressionClauseSyntax arrow } body when ExpressionBodies.DiscardsValue(arrow) => body,
+            Expression: MemberBindingExpressionSyntax member,
+            Parent: ConditionalAccessExpressionSyntax conditional
+        } =>
+            new SyntaxNodeCall(conditional.Expression, member.Name.Identifier.Text),
         _ => null,
     };
+
+    private bool IsMutation(SyntaxNodeCall call) => knownMutation?.Invoke(call)
+        ?? (KnownMutations.IsMutation(call.Name) && mutableCollections?.Contains(ResolveChain(call.Receiver) ?? "") != false);
 
     /// <summary>
     /// Walks from an expression down through member and element access to

@@ -54,8 +54,9 @@ docker run --rm -v "$PWD":/code messharp /code text csharp --ignore-tests
 
 Start with `csharp`. Add `opinionated` when you want the stricter checks the
 recommended set leaves out. Add `explicitness` (or `explicitness-strict`) to
-find implicit inputs and outputs, the side effects that make a method an action. Point at a custom XML ruleset when thresholds or
-membership need to live in the repo:
+find implicit inputs, implicit outputs, and unresolved effects in the supported
+syntax-only functional-core subset. Point at a custom XML ruleset when
+thresholds or membership need to live in the repo:
 
 ```xml
 <ruleset name="team policy">
