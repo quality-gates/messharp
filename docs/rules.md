@@ -36,16 +36,17 @@ is a compile error).
 
 The `explicitness` rulesets apply the idea of implicit inputs and outputs from
 Eric Normand's *Grokking Simplicity*. A method's explicit inputs are its
-arguments; its explicit output is its return value. Everything else is
-implicit. These syntax rules classify the supported syntax subset. A clean
+arguments, including the receiver's fields; its explicit output is its return
+value. Mutations visible to callers and reads of other changing state are
+implicit effects. These syntax rules classify the supported syntax subset. A clean
 report is a calculation verdict only inside that subset, not a proof about
 arbitrary runtime behavior.
 
 | Rule | Reports |
 | :--- | :--- |
-| `ImplicitInput` | Reads of the class's own mutable static fields and static auto-properties, including readonly collections with observed writes;  the clock (`DateTime.Now`, `Stopwatch`), environment, console input, file and directory reads, `Guid.NewGuid()`, and `Random.Shared` or unseeded `new Random()`. |
-| `ImplicitOutput` | Writes to the class's own static state, and changes to the objects it holds (including `static readonly` collections); changes to an argument's object; writes to `ref` and `out` parameters; console, `Debug` and `Trace` output; file and directory writes; environment changes, `Environment.Exit` and `Process.Start`. |
-| `UnknownEffect` | Calls whose effects are not established by the analyzer, including injected callbacks, opaque external calls, unsupported dispatch, and receiver effects when strict instance-state rules are not enabled. |
+| `ImplicitInput` | Reads of the class's own mutable static fields and static auto-properties, including readonly collections with observed writes or exported aliases; reads of mutable captured state; the clock (`DateTime.Now`, `Stopwatch`), environment, console input, file and directory reads, `Guid.NewGuid()`, and `Random.Shared` or unseeded `new Random()`. |
+| `ImplicitOutput` | Writes to the class's own static or instance state, and changes to the objects it holds (including `static readonly` collections); changes to an argument's object or captured storage; writes to `ref` and `out` parameters; console, `Debug` and `Trace` output; file and directory writes; environment changes, `Environment.Exit` and `Process.Start`. |
+| `UnknownEffect` | Effects whose dispatch or storage binding is not established, including injected or rebound callbacks, opaque external calls, custom properties, indexers, operators, and events. |
 | `ImplicitInstanceInput` | (strict) Reads of the instance's own fields, properties and primary constructor parameters, bare or through `this`/`base`. |
 | `ImplicitInstanceOutput` | (strict) Writes to the instance's own fields and properties, and changes to the objects they hold. |
 
@@ -68,8 +69,14 @@ The analysis is syntax-only, so the supported calculation subset is explicit:
   according to the arm that can execute. General constant folding is not part
   of the supported subset.
 * Deferred callback creation does not execute the callback. Invoking a
-  resolved callback carries that callback's effects to the caller. Injected or
-  rebound callbacks stay unknown.
+  resolved callback carries its effects to the caller, with callback arguments
+  and lexical captures bound separately. Returned closures retain their
+  factory arguments and captured storage. Injected or rebound callbacks stay
+  unknown.
+* Recognized iterator methods, LINQ `Select` and `Where`, and `Lazy<T>` creation
+  defer work. Enumeration, terminal sequence operations, or `Lazy<T>.Value`
+  transfer effects to the execution site. Recognized eager collection callbacks
+  execute at their call site.
 * Argument ownership is tracked at each operation site. Direct aliases retain
   caller ownership. Rebinding to a fresh object detaches the outer storage. A
   fresh shallow copy keeps caller-owned reachable elements, so mutating an
@@ -81,10 +88,9 @@ The analysis is syntax-only, so the supported calculation subset is explicit:
   closed-world subset. External aliases, reflection, dynamic dispatch, partial
   files outside the analyzed inputs, and unmodeled writes retain uncertainty
   rather than proving immutability.
-* Unsupported generators, async scheduling, lazy iteration, dynamic dispatch,
-  event raising, thrown exceptions, expression trees, reflection, and external
-  dependencies are not proved pure. Where such behavior appears as an
-  unresolved call, `UnknownEffect` is reported.
+* Async scheduling, unsupported deferred APIs, dynamic dispatch, event raising,
+  thrown exceptions, expression trees, reflection, and external dependencies
+  are not proved pure. Unsupported dispatch produces `UnknownEffect`.
 
 ## Custom rulesets
 

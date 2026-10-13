@@ -9,10 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - Add `UnknownEffect` to the explicitness ruleset and propagate same-file callable effect summaries to a fixed point, including local functions, lambdas, recursive cycles, and simple returned-callback factories.
+- Track iterator, LINQ, and `Lazy<T>` execution separately from deferred creation, and transfer recognized callback and constructor effects to their execution sites.
 
 ### Changed
 
 - Document the explicitness ruleset's supported calculation subset and uncertainty boundaries, including shallow-copy reachable ownership and unresolved dynamic behavior.
+- Treat receiver field reads as explicit inputs and receiver mutations as implicit outputs in the default explicitness ruleset. The strict ruleset retains its instance-state findings.
 
 ### Fixed
 
@@ -20,6 +22,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Preserve lexical identity when resolving callback arguments, and substitute callback parameter effects through the callback invocation's actual arguments before propagating them to callers.
 - Treat `Clone()` as a known shallow copy for explicitness ownership, so mutating a cloned array's outer storage does not become an unknown effect.
 - Populate explicitness JSON metadata with the actual callable owner, including callbacks, instead of only embedding the callable name in the description.
+- Preserve outer and reachable storage origins through shallow copies, conditional bindings, loop-carried aliases, and returned closures; keep captured bindings distinct from callback arguments.
+- Recognize mutable readonly static storage changed through returned aliases, and report uncertainty for unsupported property, indexer, operator, and event dispatch.
 
 ## [0.2.21] - 2026-10-04
 

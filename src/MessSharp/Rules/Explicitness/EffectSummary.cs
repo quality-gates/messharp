@@ -1,25 +1,16 @@
 using MessSharp.Model;
 using MessSharp.Rule;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules.Explicitness;
 
-internal enum EffectKind { Input, Output, InstanceInput, InstanceOutput, ParameterChange, ParameterWrite, Unknown }
+internal enum EffectKind { Input, Output, InstanceInput, InstanceOutput, ParameterChange, ParameterWrite, CaptureRead, CaptureWrite, Unknown }
 
 internal readonly record struct EffectFact(
     EffectKind Kind,
     string What,
     bool Reachable = false,
     CallbackInvocation? Callback = null);
-
-internal sealed record CallbackInvocation(string ParameterName, InvocationExpressionSyntax Call)
-{
-    public static CallbackInvocation? From(CallableOwner owner, InvocationExpressionSyntax call) =>
-        call.Expression is IdentifierNameSyntax name
-        && owner.Method.Parameters.Any(p => p.Name == name.Identifier.Text)
-            ? new CallbackInvocation(name.Identifier.Text, call) : null;
-}
 
 internal sealed class EffectSummary
 {
@@ -35,12 +26,18 @@ internal sealed class EffectSummary
     public IEnumerable<Finding> Outputs(MethodModel method) => Findings(EffectKind.Output)
         .Concat(ParameterFindings(method));
 
+    public IEnumerable<Finding> Inputs() => Findings(EffectKind.Input).Concat(_facts
+        .Where(f => f.Key.Kind == EffectKind.CaptureRead)
+        .Select(f => new Finding(f.Value, $"reads captured value '{f.Key.What}'")));
+
     private IEnumerable<Finding> ParameterFindings(MethodModel method)
     {
         foreach (var (fact, site) in _facts)
         {
             if (fact.Kind == EffectKind.ParameterChange)
                 yield return new Finding(site, $"changes argument '{fact.What}'");
+            if (fact.Kind == EffectKind.CaptureWrite)
+                yield return new Finding(site, $"writes captured value '{fact.What}'");
             if (fact.Kind != EffectKind.ParameterWrite) continue;
             var parameter = method.Parameters.FirstOrDefault(p => p.Name == fact.What);
             if (parameter?.WritesReachCaller != true) continue;
@@ -62,10 +59,26 @@ internal sealed class EffectSummary
         }
         foreach (var access in direct.Instance)
             summary.AddAccess(access.Kind == AccessKind.Read ? EffectKind.InstanceInput : EffectKind.InstanceOutput, access, "member");
-        foreach (var access in direct.Parameters.Where(a => a.Kind != AccessKind.Read))
-            summary.Add(new EffectFact(access.Kind == AccessKind.Change ? EffectKind.ParameterChange : EffectKind.ParameterWrite,
-                access.Name, access.Site.DescendantNodesAndSelf().OfType<ElementAccessExpressionSyntax>().Any()), access.Site);
+        foreach (var access in direct.Parameters)
+            summary.AddParameter(owner, owners, access);
         return summary;
+    }
+
+    private void AddParameter(CallableOwner owner, IReadOnlyList<CallableOwner> owners, StateAccess access)
+    {
+        var captured = CaptureState.Contains(owner, access.Name);
+        if (access.Kind == AccessKind.Read)
+        {
+            if (captured && CaptureState.MayChange(owner, access.Name, owners))
+                Add(new EffectFact(EffectKind.CaptureRead, access.Name, access.Deep), access.Site);
+            return;
+        }
+        if (access.Kind == AccessKind.Change)
+        {
+            Add(StorageRoots.Change(access.Name, access.Deep), access.Site);
+            return;
+        }
+        Add(new EffectFact(captured ? EffectKind.CaptureWrite : EffectKind.ParameterWrite, access.Name), access.Site);
     }
 
     private void AddFindings(EffectKind kind, IEnumerable<Finding> findings)

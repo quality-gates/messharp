@@ -7,7 +7,9 @@ namespace MessSharp.Rules.Explicitness;
 public sealed class ImplicitOutputRule : BaseRule, IMethodRule, IFileRule
 {
     public void Apply(RuleContext ctx, MethodModel method) => Finding.ReportAll(ctx, method,
-        CallableGraph.For(ctx).Summary(method).Outputs(method));
+        CallableGraph.For(ctx).Summary(method).Outputs(method)
+            .Concat(ctx.Props.Bool("receiver-effects-established", false) ? []
+                : CallableGraph.For(ctx).Summary(method).Findings(EffectKind.InstanceOutput)));
 
     public void Apply(RuleContext ctx)
     {

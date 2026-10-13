@@ -1,15 +1,27 @@
 namespace MessSharp.Rules.Explicitness;
 
-internal sealed record StorageOrigin(IReadOnlySet<string> Outer, IReadOnlySet<string> Reachable)
+internal sealed record StorageOrigin(IReadOnlySet<string> Outer, IReadOnlySet<string> Reachable, IReadOnlySet<string> Deep)
 {
-    public static readonly StorageOrigin Private = new(new HashSet<string>(), new HashSet<string>());
+    public const string UnknownRoot = "?";
 
-    public static StorageOrigin Shared(string name) => new(new HashSet<string> { name }, new HashSet<string> { name });
+    private static readonly IReadOnlySet<string> None = new HashSet<string>();
 
-    public StorageOrigin ShallowCopy() => new(new HashSet<string>(), Reachable);
+    public static readonly StorageOrigin Private = new(None, None, None);
 
-    public StorageOrigin Element() => new(Reachable, Reachable);
+    public static readonly StorageOrigin Unknown = Shared(UnknownRoot);
+
+    public static StorageOrigin Shared(string name) => new(new HashSet<string> { name }, new HashSet<string> { name }, None);
+
+    public static StorageOrigin Holding(StorageOrigin elements) =>
+        new(None, elements.Outer.Union(elements.Reachable).ToHashSet(), None);
+
+    public StorageOrigin ShallowCopy() => new(None, Reachable, None);
+
+    public StorageOrigin Element() => new(Reachable, Reachable, Reachable);
 
     public StorageOrigin Join(StorageOrigin other) => new(Outer.Union(other.Outer).ToHashSet(),
-        Reachable.Union(other.Reachable).ToHashSet());
+        Reachable.Union(other.Reachable).ToHashSet(), Deep.Union(other.Deep).ToHashSet());
+
+    public bool SameRoots(StorageOrigin other) => Outer.SetEquals(other.Outer)
+        && Reachable.SetEquals(other.Reachable) && Deep.SetEquals(other.Deep);
 }

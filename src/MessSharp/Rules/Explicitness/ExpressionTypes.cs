@@ -1,4 +1,5 @@
 using MessSharp.Model;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules.Explicitness;
@@ -8,7 +9,20 @@ internal sealed class ExpressionTypes(CallableOwner owner)
     public string? TypeOf(ExpressionSyntax expression) => expression switch
     {
         IdentifierNameSyntax name => Named(name),
+        ElementAccessExpressionSyntax element => Element(TypeOf(element.Expression)),
+        ParenthesizedExpressionSyntax grouped => TypeOf(grouped.Expression),
+        CastExpressionSyntax cast => cast.Type.ToString(),
+        MemberAccessExpressionSyntax member when member.Expression is ThisExpressionSyntax =>
+            owner.Method.Class?.Fields.FirstOrDefault(f => f.Name == member.Name.Identifier.Text)?.Type,
+        InvocationExpressionSyntax invocation => InvocationResult(invocation),
+        _ => CreationType(expression) ?? CompositeType(expression),
+    };
+
+    private string? CreationType(ExpressionSyntax expression) => expression switch
+    {
         ObjectCreationExpressionSyntax creation => creation.Type.ToString(),
+        ArrayCreationExpressionSyntax array => array.Type.ToString(),
+        ImplicitArrayCreationExpressionSyntax array => Agreed(array.Initializer.Expressions) is { } element ? element + "[]" : null,
         ImplicitObjectCreationExpressionSyntax
         {
             Parent: EqualsValueClauseSyntax
@@ -17,14 +31,27 @@ internal sealed class ExpressionTypes(CallableOwner owner)
                 { Parent: VariableDeclarationSyntax declaration }
             }
         } => declaration.Type.ToString(),
-        ElementAccessExpressionSyntax element => Element(TypeOf(element.Expression)),
-        ParenthesizedExpressionSyntax grouped => TypeOf(grouped.Expression),
-        CastExpressionSyntax cast => cast.Type.ToString(),
-        MemberAccessExpressionSyntax member when member.Expression is ThisExpressionSyntax =>
-            owner.Method.Class?.Fields.FirstOrDefault(f => f.Name == member.Name.Identifier.Text)?.Type,
-        InvocationExpressionSyntax invocation => InvocationResult(invocation),
         _ => null,
     };
+
+    private string? CompositeType(ExpressionSyntax expression) => expression switch
+    {
+        ConditionalExpressionSyntax choice => Agreed([choice.WhenTrue, choice.WhenFalse]),
+        BinaryExpressionSyntax { RawKind: (int)SyntaxKind.CoalesceExpression } coalesce =>
+            Agreed([coalesce.Left, coalesce.Right]),
+        BinaryExpressionSyntax { RawKind: (int)SyntaxKind.AsExpression, Right: TypeSyntax type } => type.ToString(),
+        PostfixUnaryExpressionSyntax { RawKind: (int)SyntaxKind.SuppressNullableWarningExpression } forgiven =>
+            TypeOf(forgiven.Operand),
+        SwitchExpressionSyntax arms => Agreed(arms.Arms.Select(arm => arm.Expression)),
+        _ => null,
+    };
+
+    private string? Agreed(IEnumerable<ExpressionSyntax> branches)
+    {
+        var types = branches.Where(b => b is not LiteralExpressionSyntax { RawKind: (int)SyntaxKind.NullLiteralExpression })
+            .Select(TypeOf).Distinct(StringComparer.Ordinal).Take(2).ToList();
+        return types.Count == 1 ? types[0] : null;
+    }
 
     private string? Named(IdentifierNameSyntax name)
     {
@@ -56,6 +83,7 @@ internal sealed class ExpressionTypes(CallableOwner owner)
     {
         "ToList" => "List<" + Element(TypeOf(member.Expression)) + ">",
         "ToArray" => Element(TypeOf(member.Expression)) + "[]",
+        "Select" or "Where" => "IEnumerable<" + Element(TypeOf(member.Expression)) + ">",
         _ => null,
     };
 

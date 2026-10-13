@@ -37,7 +37,8 @@ internal sealed record CallableOwner(MethodModel Method, SyntaxNode? Body, Calla
             AddCaptures(parent, body, parameters);
             var method = new MethodModel
             {
-                Name = node is LocalFunctionStatementSyntax local ? local.Identifier.Text : "<lambda>",
+                Name = ChildName(parent, node),
+                ReturnType = node is LocalFunctionStatementSyntax local ? local.ReturnType.ToString() : "",
                 Node = node,
                 Body = body as BlockSyntax,
                 File = parent.Method.File,
@@ -49,6 +50,13 @@ internal sealed record CallableOwner(MethodModel Method, SyntaxNode? Body, Calla
             owners.Add(child);
             AddChildren(child, owners);
         }
+    }
+
+    private static string ChildName(CallableOwner parent, SyntaxNode node)
+    {
+        if (node is LocalFunctionStatementSyntax local) return local.Identifier.Text;
+        var creation = node.Ancestors().OfType<ObjectCreationExpressionSyntax>().FirstOrDefault();
+        return creation is not null && KnownExecutionOperations.IsLazy(parent, creation) ? "<lazy>" : "<lambda>";
     }
 
     private static void AddCaptures(CallableOwner parent, SyntaxNode body, List<ParameterModel> parameters)
@@ -78,7 +86,7 @@ internal sealed record CallableOwner(MethodModel Method, SyntaxNode? Body, Calla
     {
         LocalFunctionStatementSyntax local => local.ParameterList.Parameters,
         ParenthesizedLambdaExpressionSyntax lambda => lambda.ParameterList.Parameters,
-        SimpleLambdaExpressionSyntax lambda => [lambda.Parameter],
+        SimpleLambdaExpressionSyntax lambda => new[] { lambda.Parameter },
         AnonymousMethodExpressionSyntax anonymous => anonymous.ParameterList?.Parameters ?? [],
         _ => [],
     };

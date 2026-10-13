@@ -7,7 +7,7 @@ namespace MessSharp.Rules.Explicitness;
 public sealed class ImplicitInputRule : BaseRule, IMethodRule, IFileRule
 {
     public void Apply(RuleContext ctx, MethodModel method) => Finding.ReportAll(ctx, method,
-        CallableGraph.For(ctx).Summary(method).Findings(EffectKind.Input));
+        CallableGraph.For(ctx).Summary(method).Inputs());
 
     public void Apply(RuleContext ctx)
     {

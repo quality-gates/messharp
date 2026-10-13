@@ -7,15 +7,8 @@ using Xunit;
 
 namespace MessSharp.Tests;
 
-/// <summary>
-/// Behavioral tests for the explicitness and explicitness-strict rulesets.
-/// Each test loads the bundled ruleset XML, so the rule wiring is exercised too.
-/// </summary>
 public class ExplicitnessRulesTests
 {
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
 
     private static List<Violation> Analyze(string ruleset, string source) =>
         Engine.Analyze(ModelBuilder.Parse("test.cs", source), new Loader().Load(ruleset));
@@ -32,9 +25,6 @@ public class ExplicitnessRulesTests
             Assert.Empty(Descriptions(vs, n));
     }
 
-    // -------------------------------------------------------------------------
-    // Ruleset wiring
-    // -------------------------------------------------------------------------
 
     [Fact]
     public void Explicitness_LoadsOnlyFunctionLevelRules()
@@ -76,9 +66,6 @@ public class ExplicitnessRulesTests
         }
     }
 
-    // -------------------------------------------------------------------------
-    // ImplicitInput / ImplicitOutput: the book's add_to_total example
-    // -------------------------------------------------------------------------
 
     private const string AddToTotal = @"
 using System;
@@ -127,9 +114,6 @@ public class Cart {
         MustNotHave(Analyze("explicitness", src), "ImplicitInput", "ImplicitOutput");
     }
 
-    // -------------------------------------------------------------------------
-    // ImplicitInput
-    // -------------------------------------------------------------------------
 
     [Fact]
     public void ImplicitInput_ReadOfConstOrReadonlyStatic_NotFlagged()
@@ -281,9 +265,6 @@ public class Counter {
         MustNotHave(Analyze("explicitness", src), "ImplicitInput", "ImplicitInstanceInput");
     }
 
-    // -------------------------------------------------------------------------
-    // ImplicitOutput
-    // -------------------------------------------------------------------------
 
     [Theory]
     [InlineData("items.Add(x);")]
@@ -643,10 +624,12 @@ public class Widget {
     }
 
     [Fact]
-    public void ImplicitOutput_InstanceFieldWrite_NotFlaggedByDefaultRuleset()
+    public void ImplicitOutput_InstanceFieldWrite_ReportsCallerVisibleWrite()
     {
-        var src = "public class Foo { private int _n; public void Set(int n) { _n = n; } }";
-        MustNotHave(Analyze("explicitness", src), "ImplicitOutput", "ImplicitInstanceOutput");
+        var src = "public class Foo { private int _n; public void Set(int n) { _n = n; } public int Get() => _n; }";
+        var vs = Analyze("explicitness", src);
+        MustHave(vs, "ImplicitOutput", "The method Set() has an implicit output: writes member '_n'.");
+        MustNotHave(vs, "ImplicitInput", "ImplicitInstanceInput", "ImplicitInstanceOutput", "UnknownEffect");
     }
 
     [Fact]
@@ -660,9 +643,6 @@ public class Foo {
         MustNotHave(Analyze("explicitness", src), "ImplicitOutput");
     }
 
-    // -------------------------------------------------------------------------
-    // ImplicitInstanceInput / ImplicitInstanceOutput (explicitness-strict)
-    // -------------------------------------------------------------------------
 
     private const string Account = @"
 public class Account {
@@ -712,9 +692,6 @@ public class Account {
             "The method Greet() has an implicit input: reads member 'name'.");
     }
 
-    // -------------------------------------------------------------------------
-    // All four rules over one method
-    // -------------------------------------------------------------------------
 
     private const string Ledger = @"
 public class Ledger {

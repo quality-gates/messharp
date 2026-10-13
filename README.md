@@ -76,6 +76,14 @@ thresholds or membership need to live in the repo:
 scripts/dotnet.sh run --project src/MessSharp -- ./src text path/to/team-policy.xml --ignore-tests
 ```
 
+Explicitness follows aliases through helpers, callbacks, returned closures,
+and shallow copies. Recognized iterators, LINQ queries, and `Lazy<T>` transfer
+effects when their work executes. Field reads through the receiver are explicit
+inputs; changing receiver state is an implicit output. The strict ruleset also
+reports receiver reads. Unsupported dispatch produces `UnknownEffect`.
+See the [supported subset](docs/rules.md#explicitness) before treating a clean
+report as a calculation verdict.
+
 ## Suppress one intentional exception
 
 Drop a rule for the whole run with `--disable`, skip paths with `--exclude`, or

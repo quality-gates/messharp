@@ -3,18 +3,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules;
 
-/// <summary>
-/// Syntax-only lexical-scope lookup: decides whether a bare identifier at a
-/// usage site is bound by a local variable or parameter declared in an
-/// enclosing scope, rather than by a member of the containing type.
-/// </summary>
 internal static class LocalShadowing
 {
-    /// <summary>
-    /// Returns true when <paramref name="name"/> is declared as a local or
-    /// parameter in any scope enclosing <paramref name="usage"/>, up to and
-    /// including the containing member declaration.
-    /// </summary>
     internal static bool IsShadowedByLocal(SyntaxNode usage, string name)
     {
         for (var scope = usage.Parent; scope != null; scope = scope.Parent)
@@ -28,10 +18,6 @@ internal static class LocalShadowing
     private static bool DeclaresName(SyntaxNode scope, string name) =>
         ParameterNames(scope).Contains(name) || LocalNames(scope).Contains(name);
 
-    /// <summary>
-    /// Names of the parameters a scope introduces (methods, local functions,
-    /// lambdas and anonymous methods).
-    /// </summary>
     private static IEnumerable<string> ParameterNames(SyntaxNode scope) => scope switch
     {
         BaseMethodDeclarationSyntax m => Names(m.ParameterList),
@@ -45,10 +31,6 @@ internal static class LocalShadowing
     private static IEnumerable<string> Names(BaseParameterListSyntax? parameters) =>
         parameters?.Parameters.Select(p => p.Identifier.Text) ?? [];
 
-    /// <summary>
-    /// Names of the locals a scope introduces directly, without descending
-    /// into nested scopes that own their own declarations.
-    /// </summary>
     private static IEnumerable<string> LocalNames(SyntaxNode scope) =>
         scope.DescendantNodes(descendIntoChildren: n => ReferenceEquals(n, scope) || !IsScopeBoundary(n))
              .SelectMany(DeclaredNames);
@@ -61,6 +43,17 @@ internal static class LocalShadowing
         VariableDeclaratorSyntax v => [v.Identifier.Text],
         SingleVariableDesignationSyntax d => [d.Identifier.Text],
         ForEachStatementSyntax f => [f.Identifier.Text],
+        CatchDeclarationSyntax caught => [caught.Identifier.Text],
+        _ => QueryNames(node),
+    };
+
+    private static IEnumerable<string> QueryNames(SyntaxNode node) => node switch
+    {
+        FromClauseSyntax from => [from.Identifier.Text],
+        LetClauseSyntax let => [let.Identifier.Text],
+        JoinClauseSyntax join => [join.Identifier.Text],
+        JoinIntoClauseSyntax into => [into.Identifier.Text],
+        QueryContinuationSyntax continuation => [continuation.Identifier.Text],
         _ => [],
     };
 }

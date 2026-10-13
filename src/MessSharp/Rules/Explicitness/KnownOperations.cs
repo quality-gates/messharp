@@ -7,6 +7,7 @@ internal static class KnownOperations
     public static bool IsKnown(CallableOwner owner, InvocationExpressionSyntax call)
     {
         if (call.Expression is IdentifierNameSyntax { Identifier.Text: "nameof" }) return true;
+        if (KnownParseOperations.IsKnown(call)) return true;
         if (CallParts(call) is not { } parts) return false;
         var (receiver, name, member) = parts;
         return IsKnownMember(owner, receiver, name, member);
@@ -19,7 +20,8 @@ internal static class KnownOperations
         if (KnownMathOperations.Matches(owner, receiver, name)) return true;
         var type = new ExpressionTypes(owner).TypeOf(receiver);
         if (type is null || KnownTypeChecks.IsCustomType(owner, type)) return false;
-        if (StorageTypes.IsMutable(type)) return KnownQueries.IsCollectionQuery(name) || KnownMutations.IsMutation(name);
+        if (KnownExecutionOperations.IsSequence(owner, receiver))
+            return KnownQueries.IsCollectionQuery(name) || KnownMutations.IsMutation(name) || name is "Select" or "Where";
         return KnownQueries.IsStringCalculation(type, name);
     }
 
