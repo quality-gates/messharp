@@ -58,7 +58,7 @@ internal sealed record CallableOwner(MethodModel Method, SyntaxNode? Body, Calla
     private static string ChildName(CallableOwner parent, SyntaxNode node)
     {
         if (node is LocalFunctionStatementSyntax local) return local.Identifier.Text;
-        var creation = node.Ancestors().OfType<ObjectCreationExpressionSyntax>().FirstOrDefault();
+        var creation = node.Ancestors().OfType<BaseObjectCreationExpressionSyntax>().FirstOrDefault();
         return creation is not null && KnownExecutionOperations.IsLazy(parent, creation) ? "<lazy>" : "<lambda>";
     }
 
