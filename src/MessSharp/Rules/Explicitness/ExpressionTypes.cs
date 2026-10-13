@@ -12,11 +12,10 @@ internal sealed class ExpressionTypes(CallableOwner owner, IReadOnlyList<Callabl
         ElementAccessExpressionSyntax element => Element(TypeOf(element.Expression)),
         ParenthesizedExpressionSyntax grouped => TypeOf(grouped.Expression),
         CastExpressionSyntax cast => cast.Type.ToString(),
-        MemberAccessExpressionSyntax member when member.Expression is ThisExpressionSyntax =>
-            owner.Method.Class?.Fields.FirstOrDefault(f => f.Name == member.Name.Identifier.Text)?.Type,
-        MemberAccessExpressionSyntax member => FieldType(member),
+        MemberAccessExpressionSyntax member => new ExpressionFieldTypes(owner, TypeOf).Find(member),
         InvocationExpressionSyntax invocation => InvocationResult(invocation),
-        _ => ExpressionCreationTypes.Find(expression, Agreed) ?? CompositeType(expression),
+        _ => ExpressionCreationTypes.Find(expression, Agreed, new ExpressionTargetTypes(owner, TypeOf).Find)
+            ?? CompositeType(expression),
     };
 
     private string? CompositeType(ExpressionSyntax expression) => expression switch
@@ -58,17 +57,12 @@ internal sealed class ExpressionTypes(CallableOwner owner, IReadOnlyList<Callabl
         .Where(n => n is BlockSyntax or CompilationUnitSyntax)
         .SelectMany(scope => scope.DescendantNodes().OfType<VariableDeclaratorSyntax>()
             .Where(v => v.Ancestors().FirstOrDefault(n => n is BlockSyntax or CompilationUnitSyntax) == scope))
-        .FirstOrDefault(v => v.Identifier.Text == name.Identifier.Text && v.SpanStart < name.SpanStart);
+        .FirstOrDefault(v => v.Identifier.Text == name.Identifier.Text && v.SpanStart < name.SpanStart
+            && v.Ancestors().OfType<BaseTypeDeclarationSyntax>().FirstOrDefault()
+                == name.Ancestors().OfType<BaseTypeDeclarationSyntax>().FirstOrDefault());
 
     private string? InitializerType(VariableDeclaratorSyntax local) => local.Initializer is { } initializer
         ? TypeOf(initializer.Value) : null;
-
-    private string? FieldType(MemberAccessExpressionSyntax member)
-    {
-        var type = TypeOf(member.Expression)?.Split('<')[0].Split('.').Last();
-        return owner.Method.File.Classes.FirstOrDefault(c => c.Name == type)?.Fields
-            .FirstOrDefault(f => f.Name == member.Name.Identifier.Text)?.Type;
-    }
 
     private string? InvocationResult(InvocationExpressionSyntax invocation)
     {

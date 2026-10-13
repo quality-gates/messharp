@@ -15,6 +15,9 @@ internal sealed class DeferredValueContext(
     public CallableOwner Owner { get; } = owner;
     public IReadOnlyDictionary<string, StorageOrigin> Bindings { get; } = bindings;
 
+    public IEnumerable<ExpressionSyntax> Values(ExpressionSyntax reference) =>
+        new DeferredValueBindings(Owner, body).Values(reference);
+
     public DeferredValueContext Bind(CallableOwner target, InvocationExpressionSyntax call, SyntaxNode targetBody)
     {
         var bound = target.Method.Parameters.Select((parameter, index) =>

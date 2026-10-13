@@ -29,7 +29,7 @@ internal sealed class CallableGraph
     public EffectSummary Summary(MethodModel method) => _summaries.GetValueOrDefault(method) ?? new EffectSummary();
 
     public IEnumerable<MethodModel> ExtraMethods => Owners.Where(o => o.Parent is not null
-        || o.Method.Name == "<top-level>").Select(o => o.Method);
+        || o.Method.Name is "<top-level>" or "<module>").Select(o => o.Method);
 
     private void Propagate(RuleContext ctx)
     {

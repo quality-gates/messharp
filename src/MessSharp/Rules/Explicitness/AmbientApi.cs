@@ -74,25 +74,8 @@ internal sealed class AmbientApi
     /// True for <c>new Random()</c> without a seed, including the target-typed
     /// <c>Random r = new();</c>: its values come from the clock.
     /// </summary>
-    public static bool IsUnseededRandom(SyntaxNode node) =>
+    public static bool IsUnseededRandom(SyntaxNode node, Func<ExpressionSyntax, string?> typeOf) =>
         node is BaseObjectCreationExpressionSyntax creation
-        && CreatedType(creation) is { } type
-        && RightmostName(type) == "Random"
+        && typeOf(creation)?.TrimEnd('?').Split('.').Last() == "Random"
         && (creation.ArgumentList?.Arguments.Count ?? 0) == 0;
-
-    private static TypeSyntax? CreatedType(BaseObjectCreationExpressionSyntax creation) => creation switch
-    {
-        ObjectCreationExpressionSyntax explicitType => explicitType.Type,
-        ImplicitObjectCreationExpressionSyntax implicitType => DeclaredType(implicitType),
-        _ => null,
-    };
-
-    /// <summary>The declared type a target-typed <c>new()</c> initializes, when syntax shows it.</summary>
-    private static TypeSyntax? DeclaredType(ImplicitObjectCreationExpressionSyntax creation) =>
-        creation.Parent is EqualsValueClauseSyntax { Parent: VariableDeclaratorSyntax { Parent: VariableDeclarationSyntax declaration } }
-            ? WithoutNullable(declaration.Type)
-            : null;
-
-    private static TypeSyntax WithoutNullable(TypeSyntax type) =>
-        type is NullableTypeSyntax nullable ? nullable.ElementType : type;
 }

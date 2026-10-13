@@ -24,8 +24,8 @@ internal sealed class DeferredValueResolver(RuleContext ctx, IReadOnlyList<Calla
 
     private IEnumerable<DeferredWork> ResolveValue(DeferredValueContext context, ExpressionSyntax value, HashSet<SyntaxNode> visiting) => value switch
     {
-        IdentifierNameSyntax name when ExpressionTypes.Binding(name)?.Initializer is { } initializer =>
-            Resolve(context, initializer.Value, visiting),
+        IdentifierNameSyntax or MemberAccessExpressionSyntax =>
+            context.Values(value).SelectMany(bound => Resolve(context, bound, visiting)),
         InvocationExpressionSyntax call => ResolveCall(context, call, visiting),
         ConditionalExpressionSyntax choice => Resolve(context, choice.WhenTrue, visiting)
             .Concat(Resolve(context, choice.WhenFalse, visiting)),

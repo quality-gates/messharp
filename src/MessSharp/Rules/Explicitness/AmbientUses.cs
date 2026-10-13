@@ -22,7 +22,7 @@ internal sealed class AmbientUses(CallableOwner owner) : IBodyVisitor
         if (node is Microsoft.CodeAnalysis.CSharp.Syntax.InvocationExpressionSyntax call
             && KnownParseOperations.ReadsCulture(call))
             _sources.Add(new Finding(node, "uses the current culture"));
-        if (AmbientApi.IsUnseededRandom(node))
+        if (AmbientApi.IsUnseededRandom(node, new ExpressionTypes(owner).TypeOf))
             _randoms.Add(new Finding(node, "uses new Random()"));
     }
 

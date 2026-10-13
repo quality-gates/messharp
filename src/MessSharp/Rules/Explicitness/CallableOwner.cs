@@ -11,6 +11,7 @@ internal sealed record CallableOwner(MethodModel Method, SyntaxNode? Body, Calla
     public static List<CallableOwner> Gather(SourceFile file)
     {
         var owners = file.AllMethods.Select(m => new CallableOwner(m, m.EffectiveBody)).ToList();
+        owners.AddRange(FieldInitializerOwners.Gather(file));
         foreach (var owner in owners.ToList()) AddChildren(owner, owners);
         var globals = file.Root.DescendantNodes().OfType<GlobalStatementSyntax>().ToList();
         if (globals.Count > 0)
@@ -67,7 +68,7 @@ internal sealed record CallableOwner(MethodModel Method, SyntaxNode? Body, Calla
         foreach (var name in BodyWalk.Nodes(body).OfType<IdentifierNameSyntax>())
         {
             var binding = ExpressionTypes.Binding(name);
-            if (binding is null || body.Span.Contains(binding.Span)
+            if (binding is null || binding.Parent?.Parent is FieldDeclarationSyntax || body.Span.Contains(binding.Span)
                 || parameters.Any(p => p.Name == name.Identifier.Text)) continue;
             parameters.Add(new ParameterModel
             {

@@ -79,6 +79,11 @@ The analysis is syntax-only, so the supported calculation subset is explicit:
   transfer effects to the execution site and apply storage writes before later
   reads. Recognized eager collection callbacks execute at their call site.
   Known delegate signatures supply types for omitted callback parameters.
+  Explicit and target-typed lazy factories in declarations, assignments,
+  returns, and static fields have a separate `<lazy>` owner. Rebinding a lazy
+  variable preserves the factory retained by an earlier alias. Static field
+  initializer effects belong to `<module>`; their deferred factories stay quiet
+  until forced.
 * Argument ownership is tracked at each operation site. Direct aliases retain
   caller ownership. Rebinding to a fresh object detaches the outer storage. A
   fresh shallow copy keeps caller-owned reachable elements, so mutating an
