@@ -10,9 +10,8 @@ internal sealed class StorageCollections(StorageContext context, Func<Expression
             || !KnownMutations.IsCollectionMutation(owner, new SyntaxNodeCall(member.Expression, member.Name.Identifier.Text))) return false;
         var name = member.Name.Identifier.Text;
         var receiver = origin(member.Expression);
-        var mutation = Mutation(call, name);
-        if (mutation is not null)
-            state.Heap.Change(receiver, mutation, weak || IsRange(name));
+        var mutation = Mutation(call, name) ?? new StorageMutation.Reorder();
+        state.Heap.Change(receiver, mutation, weak || IsRange(name));
         return true;
     }
 
@@ -20,6 +19,7 @@ internal sealed class StorageCollections(StorageContext context, Func<Expression
     {
         if (name == "Clear") return new StorageMutation.Clear();
         if (name == "Insert") return Insert(call);
+        if (StorageCollectionEdits.Find(call, name, origin) is { } edit) return edit;
         if (call.ArgumentList.Arguments.LastOrDefault() is not { } argument) return null;
         var value = origin(argument.Expression);
         if (IsRange(name)) return new StorageMutation.Append(state.Heap.Read(value, StorageCell.AnyElement), context.Identity(call));

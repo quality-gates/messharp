@@ -18,6 +18,8 @@ internal sealed class StorageCallables(StorageContext context, Func<ExpressionSy
         var ownCount = target.Parent is null ? target.Method.Parameters.Count : CallableOwner.Parameters(target.Method.Node).Count();
         var captures = target.Method.Parameters.Skip(ownCount).ToDictionary(parameter => parameter.Name,
             parameter => origin(SyntaxFactory.IdentifierName(parameter.Name)), StringComparer.Ordinal);
-        return new StorageCallable(target, captures);
+        var references = state.References.Where(pair => captures.ContainsKey(pair.Key))
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+        return new StorageCallable(target, captures) { References = references };
     }
 }

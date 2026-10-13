@@ -78,13 +78,13 @@ internal sealed class StateAccessCollector : IBodyVisitor
     {
         if (target is ElementAccessExpressionSyntax || _resolve(target) is not { Count: > 0 } written) return false;
         foreach (var state in written)
-            AddAll([state], MutationKind(target, state), target);
+            AddAll([state], MutationKind(state), target);
         if (isPureWrite) ExcludeReads(target);
         return true;
     }
 
-    private static AccessKind MutationKind(ExpressionSyntax target, ResolvedState state) =>
-        target is MemberAccessExpressionSyntax && state.Deep ? AccessKind.Change : AccessKind.Write;
+    private static AccessKind MutationKind(ResolvedState state) =>
+        state.Deep ? AccessKind.Change : AccessKind.Write;
 
     private void ExcludeReads(ExpressionSyntax target)
     {

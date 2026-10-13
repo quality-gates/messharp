@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules.Explicitness;
 
-internal sealed class ExpressionTypes(CallableOwner owner)
+internal sealed class ExpressionTypes(CallableOwner owner, IReadOnlyList<CallableOwner>? callableOwners = null)
 {
     public string? TypeOf(ExpressionSyntax expression) => expression switch
     {
@@ -16,28 +16,12 @@ internal sealed class ExpressionTypes(CallableOwner owner)
             owner.Method.Class?.Fields.FirstOrDefault(f => f.Name == member.Name.Identifier.Text)?.Type,
         MemberAccessExpressionSyntax member => FieldType(member),
         InvocationExpressionSyntax invocation => InvocationResult(invocation),
-        _ => CreationType(expression) ?? CompositeType(expression),
-    };
-
-    private string? CreationType(ExpressionSyntax expression) => expression switch
-    {
-        ObjectCreationExpressionSyntax creation => creation.Type.ToString(),
-        ArrayCreationExpressionSyntax array => array.Type.ElementType + string.Concat(array.Type.RankSpecifiers
-            .Select(rank => "[" + new string(',', rank.Rank - 1) + "]")),
-        ImplicitArrayCreationExpressionSyntax array => Agreed(array.Initializer.Expressions) is { } element ? element + "[]" : null,
-        ImplicitObjectCreationExpressionSyntax
-        {
-            Parent: EqualsValueClauseSyntax
-            {
-                Parent: VariableDeclaratorSyntax
-                { Parent: VariableDeclarationSyntax declaration }
-            }
-        } => declaration.Type.ToString(),
-        _ => null,
+        _ => ExpressionCreationTypes.Find(expression, Agreed) ?? CompositeType(expression),
     };
 
     private string? CompositeType(ExpressionSyntax expression) => expression switch
     {
+        RefExpressionSyntax reference => TypeOf(reference.Expression),
         ConditionalExpressionSyntax choice => Agreed([choice.WhenTrue, choice.WhenFalse]),
         BinaryExpressionSyntax { RawKind: (int)SyntaxKind.CoalesceExpression } coalesce =>
             Agreed([coalesce.Left, coalesce.Right]),
@@ -59,9 +43,15 @@ internal sealed class ExpressionTypes(CallableOwner owner)
     {
         var local = Binding(name);
         if (local?.Parent is VariableDeclarationSyntax declaration)
-            return declaration.Type.ToString() == "var" ? InitializerType(local) : declaration.Type.ToString();
+            return DeclaredType(local, declaration.Type);
         return owner.Method.Parameters.FirstOrDefault(p => p.Name == name.Identifier.Text)?.Type
             ?? owner.Method.Class?.Fields.FirstOrDefault(f => f.Name == name.Identifier.Text)?.Type;
+    }
+
+    private string? DeclaredType(VariableDeclaratorSyntax local, TypeSyntax type)
+    {
+        if (type is RefTypeSyntax reference) type = reference.Type;
+        return type.ToString() == "var" ? InitializerType(local) : type.ToString();
     }
 
     internal static VariableDeclaratorSyntax? Binding(IdentifierNameSyntax name) => name.Ancestors()
@@ -84,7 +74,7 @@ internal sealed class ExpressionTypes(CallableOwner owner)
     {
         if (invocation.Expression is MemberAccessExpressionSyntax member && Result(member) is { } known)
             return known;
-        var owners = CallableOwner.Gather(owner.Method.File);
+        var owners = callableOwners ?? CallableOwner.Gather(owner.Method.File);
         return new CallResolver(owners).Resolve(owner, invocation)?.Method.ReturnType;
     }
 
@@ -96,7 +86,7 @@ internal sealed class ExpressionTypes(CallableOwner owner)
         _ => null,
     };
 
-    private static string? Element(string? type)
+    internal static string? Element(string? type)
     {
         if (type is null) return null;
         if (type.EndsWith(']')) return type[..type.LastIndexOf('[')];

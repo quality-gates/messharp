@@ -62,6 +62,12 @@ internal sealed class StorageCell
                 Length = 0;
                 Appends.Clear();
                 break;
+            case StorageMutation.Clear:
+                Length = null;
+                break;
+            default:
+                new StorageSequenceEdits(this).Apply(mutation, weak);
+                break;
         }
     }
 

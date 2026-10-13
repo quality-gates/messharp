@@ -26,9 +26,9 @@ internal static class KnownExecutionOperations
     public static bool IsIterator(CallableOwner owner) => owner.Body is not null
         && BodyWalk.Nodes(owner.Body).OfType<YieldStatementSyntax>().Any();
 
-    public static bool IsSequence(CallableOwner owner, ExpressionSyntax receiver)
+    public static bool IsSequence(CallableOwner owner, ExpressionSyntax receiver, IReadOnlyList<CallableOwner>? owners = null)
     {
-        var type = new ExpressionTypes(owner).TypeOf(receiver);
+        var type = new ExpressionTypes(owner, owners).TypeOf(receiver);
         if (type is null || KnownTypeChecks.IsCustomType(owner, type)) return false;
         var name = type.Split('<')[0].Split('.').Last();
         return StorageTypes.IsMutable(type) || name is "IEnumerable" or "IReadOnlyList" or "IList" or "ICollection";
@@ -41,14 +41,14 @@ internal static class KnownExecutionOperations
             && !KnownTypeChecks.IsCustomType(owner, type);
     }
 
-    public static bool IsColdQuery(CallableOwner owner, InvocationExpressionSyntax call) =>
+    public static bool IsColdQuery(CallableOwner owner, InvocationExpressionSyntax call, IReadOnlyList<CallableOwner>? owners = null) =>
         call.Expression is MemberAccessExpressionSyntax member && HasTiming(member, ExecutionTiming.ColdQuery)
-        && IsSequence(owner, member.Expression);
+        && IsSequence(owner, member.Expression, owners);
 
-    public static bool IsEagerCallback(CallableOwner owner, InvocationExpressionSyntax call) =>
+    public static bool IsEagerCallback(CallableOwner owner, InvocationExpressionSyntax call, IReadOnlyList<CallableOwner>? owners = null) =>
         call.Expression is MemberAccessExpressionSyntax member
         && HasTiming(member, ExecutionTiming.EagerCallback)
-        && call.ArgumentList.Arguments.Count > 0 && IsSequence(owner, member.Expression);
+        && call.ArgumentList.Arguments.Count > 0 && IsSequence(owner, member.Expression, owners);
 
     public static bool IsSequenceForce(CallableOwner owner, InvocationExpressionSyntax call) =>
         call.Expression is MemberAccessExpressionSyntax member

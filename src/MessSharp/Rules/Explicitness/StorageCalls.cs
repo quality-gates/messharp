@@ -9,7 +9,6 @@ internal sealed class StorageCalls(StorageContext context, Func<ExpressionSyntax
     {
         var frame = StorageCallFrame.Resolve(context, origin, state, call);
         if (frame?.Target.Body is not { } body) return null;
-        if (KnownExecutionOperations.IsIterator(frame.Target)) return StorageOrigin.Private;
         return Execute(frame, body, call, call, weak);
     }
 
@@ -20,28 +19,31 @@ internal sealed class StorageCalls(StorageContext context, Func<ExpressionSyntax
     }
 
     private StorageOrigin Execute(StorageCallFrame frame, SyntaxNode body, InvocationExpressionSyntax call, SyntaxNode site, bool weak)
+        => Execute(frame.Target, body, site, weak, StorageCallBindings.Bind(context, frame, call, state, origin));
+
+    public StorageOrigin ExecuteDeferred(StorageDeferredWork work, SyntaxNode site, bool weak)
     {
-        var target = frame.Target;
+        if (work.Target.Body is not { } body) return StorageOrigin.Unknown;
+        var initial = work.Initial.Copy();
+        initial.Heap = state.Heap.Copy();
+        foreach (var pair in state.Deferred) initial.Deferred[pair.Key] = pair.Value;
+        return Execute(work.Target, body, site, weak, initial);
+    }
+
+    private StorageOrigin Execute(CallableOwner target, SyntaxNode body, SyntaxNode site, bool weak, StorageEnvironment initial)
+    {
         if (!context.Visiting.Add(target)) return StorageOrigin.Unknown;
         try
         {
-            var initial = StorageCallBindings.Bind(context, frame, call, state, origin);
             var flow = new StorageFlow(context.For(target, body, site, weak));
             var final = flow.Before(body, initial, true);
-            var returned = StorageOrigin.Private;
-            foreach (var expression in Returns(body))
-            {
-                var atReturn = flow.Before(expression, initial);
-                returned = returned.Join(flow.Origin(expression, atReturn));
-                final.Heap.Join(atReturn.Heap);
-            }
+            var returned = StorageResults.Collect(body, flow, initial, final, weak);
             if (weak) state.Heap.Join(final.Heap);
             else state.Heap = final.Heap.Copy();
+            foreach (var pair in final.Deferred) state.Deferred[pair.Key] = pair.Value;
             return returned;
         }
         finally { context.Visiting.Remove(target); }
     }
 
-    private static IEnumerable<ExpressionSyntax> Returns(SyntaxNode body) => body is ExpressionSyntax expression
-        ? [expression] : BodyWalk.Nodes(body).OfType<ReturnStatementSyntax>().Select(r => r.Expression).OfType<ExpressionSyntax>();
 }

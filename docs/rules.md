@@ -65,9 +65,10 @@ The analysis is syntax-only, so the supported calculation subset is explicit:
   non-override and non-extern methods, local functions, and lambdas until a
   fixed point. Recursive cycles terminate because summaries are finite sets of
   stable effect facts.
-* Statement arms guarded by literal `true` or `false` conditions are analyzed
-  according to the arm that can execute. General constant folding is not part
-  of the supported subset.
+* Statement and conditional-expression arms guarded by literal `true` or
+  `false` conditions are analyzed according to the arm that can execute.
+  Literal-false `while` and `for` bodies do not contribute effects or storage
+  writes. General constant folding is not part of the supported subset.
 * Deferred callback creation does not execute the callback. Invoking a
   resolved callback carries its effects to the caller, with callback arguments
   and lexical captures bound separately. Returned closures retain their
@@ -75,8 +76,9 @@ The analysis is syntax-only, so the supported calculation subset is explicit:
   unknown.
 * Recognized iterator methods, LINQ `Select` and `Where`, and `Lazy<T>` creation
   defer work. Enumeration, terminal sequence operations, or `Lazy<T>.Value`
-  transfer effects to the execution site. Recognized eager collection callbacks
-  execute at their call site.
+  transfer effects to the execution site and apply storage writes before later
+  reads. Recognized eager collection callbacks execute at their call site.
+  Known delegate signatures supply types for omitted callback parameters.
 * Argument ownership is tracked at each operation site. Direct aliases retain
   caller ownership. Rebinding to a fresh object detaches the outer storage. A
   fresh shallow copy keeps caller-owned reachable elements, so mutating an
@@ -86,6 +88,10 @@ The analysis is syntax-only, so the supported calculation subset is explicit:
   unconditional replacement of one known slot detaches its old value;
   conditional writes and uncertain indices join possible origins. Allocation
   sites and acyclic call contexts bound heap identity, and loops join storage.
+* A `ref` local to a proven field or standard array or collection element
+  retains that storage location, so writes through either alias are visible
+  through the other. Standard collection removal and reversal move known
+  element slots; uncertain removal or reordering joins possible elements.
 * Explicit and target-typed construction execute a resolved same-file
   constructor. A compiler-generated empty constructor is quiet only for a
   unique non-partial class without primary parameters, inheritance, a declared

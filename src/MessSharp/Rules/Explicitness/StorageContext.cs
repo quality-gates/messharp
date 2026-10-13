@@ -8,7 +8,7 @@ internal sealed record StorageContext(SyntaxNode Body, Func<ExpressionSyntax, st
 {
     public const string ThisBinding = "$this";
 
-    public string Identity(SyntaxNode site) => Scope + ":" + site.SpanStart;
+    public string Identity(SyntaxNode site) => Scope + ":" + site.SpanStart + ":" + site.Span.End + ":" + site.RawKind;
 
     public StorageContext For(CallableOwner target, SyntaxNode body, SyntaxNode call, bool weak) =>
         new(body, expression => StorageCallBindings.Root(target, expression), target, Owners,

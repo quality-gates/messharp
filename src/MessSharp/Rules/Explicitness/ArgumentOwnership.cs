@@ -22,7 +22,7 @@ internal sealed class ArgumentOwnership
         if (expression is not IdentifierNameSyntax and not ElementAccessExpressionSyntax and not InvocationExpressionSyntax)
             return null;
         if (IsAssignmentTarget(expression) && expression is IdentifierNameSyntax)
-            return _parameterName(expression);
+            return StorageRoots.Preferred(AssignmentOrigin(expression).Outer);
         return StorageRoots.Preferred(StorageAt(expression).Outer);
     }
 
@@ -30,10 +30,21 @@ internal sealed class ArgumentOwnership
 
     public IReadOnlyCollection<ResolvedState> MutationRoots(ExpressionSyntax expression)
     {
-        if (IsAssignmentTarget(expression) && expression is IdentifierNameSyntax)
-            return _parameterName(expression) is { } name ? [new ResolvedState(name)] : [];
-        var origin = StorageAt(expression);
+        var origin = IsAssignmentTarget(expression) && expression is IdentifierNameSyntax
+            ? AssignmentOrigin(expression) : StorageAt(expression);
         return origin.Outer.Select(root => new ResolvedState(root, origin.Deep.Contains(root))).ToList();
+    }
+
+    private StorageOrigin AssignmentOrigin(ExpressionSyntax expression)
+    {
+        if (expression.Parent is AssignmentExpressionSyntax { Right: RefExpressionSyntax }) return StorageOrigin.Private;
+        var state = _flow.Before(expression, new StorageEnvironment());
+        if (expression is IdentifierNameSyntax name && state.References.TryGetValue(name.Identifier.Text, out var reference))
+        {
+            var receiver = state.Heap.Materialize(reference.Receiver);
+            return receiver with { Deep = receiver.Deep.Union(receiver.Outer).ToHashSet() };
+        }
+        return _parameterName(expression) is { } parameter ? StorageOrigin.Shared(parameter) : StorageOrigin.Private;
     }
 
     public StorageOrigin StorageAt(ExpressionSyntax expression, SyntaxNode site)

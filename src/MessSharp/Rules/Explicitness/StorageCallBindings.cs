@@ -18,31 +18,14 @@ internal static class StorageCallBindings
     public static StorageEnvironment Bind(StorageContext context, StorageCallFrame frame, InvocationExpressionSyntax call,
         StorageEnvironment caller, Func<ExpressionSyntax, StorageOrigin> origin)
     {
-        var target = frame.Target;
         var state = caller.Copy();
         state.Bindings.Clear();
         state.Callables.Clear();
-        var callables = new StorageCallables(context, origin, caller);
-        var ownCount = target.Parent is null ? target.Method.Parameters.Count
-            : CallableOwner.Parameters(target.Method.Node).Count();
-        var parameterCount = target.Method.Parameters.Count;
-        for (var index = 0; index < parameterCount; index++)
-        {
-            var name = target.Method.Parameters[index].Name;
-            var actual = index >= ownCount ? Microsoft.CodeAnalysis.CSharp.SyntaxFactory.IdentifierName(name)
-                : CallArguments.Actual(call, name, index);
-            state.Bindings[name] = Bound(frame, name, index >= ownCount, actual, origin);
-            if (actual is not null && callables.Find(actual) is { } callable) state.Callables[name] = callable;
-        }
+        state.References.Clear();
+        new StorageParameterBindings(context, frame, call, caller, origin).Apply(state);
         state.Heap = caller.Heap.Copy();
         if (frame.Receiver is { } receiver) state.Bindings[StorageContext.ThisBinding] = receiver;
         return state;
     }
 
-    private static StorageOrigin Bound(StorageCallFrame frame, string name, bool capture,
-        ExpressionSyntax? actual, Func<ExpressionSyntax, StorageOrigin> origin)
-    {
-        if (capture && frame.Callable?.Captures.TryGetValue(name, out var bound) == true) return bound;
-        return actual is null ? StorageOrigin.Unknown : origin(actual);
-    }
 }

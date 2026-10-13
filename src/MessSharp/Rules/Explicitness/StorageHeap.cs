@@ -40,6 +40,18 @@ internal sealed class StorageHeap
         foreach (var cell in Cells(receiver)) cell.Change(mutation, weak || receiver.Objects.Count != 1);
     }
 
+    public void ReplaceElements(StorageOrigin receiver, StorageOrigin value, bool weak)
+    {
+        foreach (var cell in Cells(receiver))
+        {
+            if (weak || receiver.Objects.Count != 1) { Widen(cell, value); continue; }
+            foreach (var slot in cell.Slots.Keys.Where(key => !key.StartsWith(".", StringComparison.Ordinal)).ToList())
+                cell.Slots.Remove(slot);
+            cell.Default = value;
+            cell.Length = null;
+        }
+    }
+
     public StorageCell CopyElements(StorageOrigin source)
     {
         var cells = Cells(source).ToList();

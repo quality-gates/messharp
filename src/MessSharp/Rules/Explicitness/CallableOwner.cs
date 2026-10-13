@@ -13,10 +13,13 @@ internal sealed record CallableOwner(MethodModel Method, SyntaxNode? Body, Calla
         var owners = file.AllMethods.Select(m => new CallableOwner(m, m.EffectiveBody)).ToList();
         foreach (var owner in owners.ToList()) AddChildren(owner, owners);
         var globals = file.Root.DescendantNodes().OfType<GlobalStatementSyntax>().ToList();
-        if (globals.Count == 0) return owners;
-        var top = new CallableOwner(new MethodModel { Name = "<top-level>", Node = file.Root, File = file }, file.Root);
-        owners.Add(top);
-        AddChildren(top, owners);
+        if (globals.Count > 0)
+        {
+            var top = new CallableOwner(new MethodModel { Name = "<top-level>", Node = file.Root, File = file }, file.Root);
+            owners.Add(top);
+            AddChildren(top, owners);
+        }
+        CallableParameterTypes.Apply(owners);
         return owners;
     }
 
@@ -34,7 +37,7 @@ internal sealed record CallableOwner(MethodModel Method, SyntaxNode? Body, Calla
                 Node = p,
             }).ToList();
             parameters.AddRange(parent.Method.Parameters.Where(p => parameters.All(local => local.Name != p.Name)));
-            AddCaptures(parent, body, parameters);
+            AddCaptures(parent, body, parameters, owners);
             var method = new MethodModel
             {
                 Name = ChildName(parent, node),
@@ -59,7 +62,7 @@ internal sealed record CallableOwner(MethodModel Method, SyntaxNode? Body, Calla
         return creation is not null && KnownExecutionOperations.IsLazy(parent, creation) ? "<lazy>" : "<lambda>";
     }
 
-    private static void AddCaptures(CallableOwner parent, SyntaxNode body, List<ParameterModel> parameters)
+    private static void AddCaptures(CallableOwner parent, SyntaxNode body, List<ParameterModel> parameters, IReadOnlyList<CallableOwner> owners)
     {
         foreach (var name in BodyWalk.Nodes(body).OfType<IdentifierNameSyntax>())
         {
@@ -69,7 +72,7 @@ internal sealed record CallableOwner(MethodModel Method, SyntaxNode? Body, Calla
             parameters.Add(new ParameterModel
             {
                 Name = name.Identifier.Text,
-                Type = new ExpressionTypes(parent).TypeOf(name) ?? "",
+                Type = new ExpressionTypes(parent, owners).TypeOf(name) ?? "",
             });
         }
     }

@@ -18,6 +18,8 @@ internal sealed class StorageOriginResolver(StorageContext context, StorageEnvir
 
     private StorageOrigin? Named(ExpressionSyntax expression)
     {
+        if (expression is IdentifierNameSyntax reference && state.References.TryGetValue(reference.Identifier.Text, out var location))
+            return location.Read(state.Heap);
         if (expression is IdentifierNameSyntax name && state.Bindings.TryGetValue(name.Identifier.Text, out var bound)) return bound;
         if (OwnMember(expression) is { } own) return own;
         return context.Root(expression) is { } root ? state.Heap.Shared(root) : null;
@@ -39,7 +41,7 @@ internal sealed class StorageOriginResolver(StorageContext context, StorageEnvir
 
     private StorageOrigin? Composite(ExpressionSyntax expression) => expression switch
     {
-        ConditionalExpressionSyntax choice => Origin(choice.WhenTrue).Join(Origin(choice.WhenFalse)),
+        ConditionalExpressionSyntax choice => Choice(choice),
         BinaryExpressionSyntax { RawKind: (int)SyntaxKind.CoalesceExpression } coalesce =>
             Origin(coalesce.Left).Join(Origin(coalesce.Right)),
         BinaryExpressionSyntax { RawKind: (int)SyntaxKind.AsExpression } converted =>
@@ -49,5 +51,12 @@ internal sealed class StorageOriginResolver(StorageContext context, StorageEnvir
         SwitchExpressionSyntax choice => choice.Arms.Select(arm => Origin(arm.Expression))
             .Aggregate(StorageOrigin.Private, (current, next) => current.Join(next)),
         _ => null,
+    };
+
+    private StorageOrigin Choice(ConditionalExpressionSyntax choice) => LiteralControlFlow.Boolean(choice.Condition) switch
+    {
+        true => Origin(choice.WhenTrue),
+        false => Origin(choice.WhenFalse),
+        _ => Origin(choice.WhenTrue).Join(Origin(choice.WhenFalse)),
     };
 }
