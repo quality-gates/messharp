@@ -16,10 +16,21 @@ internal sealed class DeferredValueBindings(CallableOwner owner, SyntaxNode body
         foreach (var binding in Bindings(declaration, bindings).Where(b => bindings.Reaches(b, reference)))
         {
             if (!Matches(binding.Node, declaration)) continue;
-            if (!bindings.MayBeSkipped(binding)) values.Clear();
+            RemoveReplaced(values, binding, bindings);
             if (binding.Source is BindingSource.Value value) values.Add(value.Expression);
         }
         return values;
+    }
+
+    private static void RemoveReplaced(List<ExpressionSyntax> values, StorageBinding binding, BodyBindings bindings)
+    {
+        if (!bindings.MayBeSkipped(binding))
+        {
+            values.Clear();
+            return;
+        }
+        if (binding.Node.IsKind(SyntaxKind.CoalesceAssignmentExpression) && !bindings.MayBeSkipped(binding.Node))
+            values.RemoveAll(value => CallableSyntax.Unwrap(value).IsKind(SyntaxKind.NullLiteralExpression));
     }
 
     private IEnumerable<StorageBinding> Bindings(VariableDeclaratorSyntax declaration, BodyBindings bindings) =>

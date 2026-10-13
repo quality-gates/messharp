@@ -42,7 +42,8 @@ internal sealed record CallableOwner(MethodModel Method, SyntaxNode? Body, Calla
             var method = new MethodModel
             {
                 Name = ChildName(parent, node),
-                ReturnType = node is LocalFunctionStatementSyntax local ? local.ReturnType.ToString() : "",
+                ReturnType = node is LocalFunctionStatementSyntax local ? local.ReturnType.ToString()
+                    : new DelegateParameterTypes(parent, owners).ReturnType(node) ?? "",
                 Node = node,
                 Body = body as BlockSyntax,
                 File = parent.Method.File,

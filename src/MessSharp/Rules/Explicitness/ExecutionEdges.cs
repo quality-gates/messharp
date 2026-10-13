@@ -31,9 +31,11 @@ internal sealed class ExecutionEdges(RuleContext ctx, IReadOnlyList<CallableOwne
     private void Force(CallableOwner owner, EffectSummary summary, ExpressionSyntax value, SyntaxNode site, DeferredKind kind,
         SyntaxNode body)
     {
-        var work = _values.Resolve(owner, value, body).Where(w => w.Kind == kind).ToList();
-        foreach (var item in work) edges.Add(new CallEdge(owner, item.Target, item.Call, site, item.Bindings));
-        if (work.Count == 0 && KnownExecutionOperations.RequiresExecution(owner, value, kind))
-            summary.Add(new EffectFact(EffectKind.Unknown, "unresolved deferred execution"), site);
+        var resolution = _values.Resolve(owner, value, body, kind);
+        foreach (var item in resolution.Work.Where(work => work.Kind == kind))
+            edges.Add(new CallEdge(owner, item.Target, item.Call, site, item.Bindings));
+        if (!resolution.Complete && KnownExecutionOperations.RequiresExecution(owner, value, kind))
+            summary.Add(new EffectFact(EffectKind.Unknown, "unresolved deferred execution",
+                Deferred: DeferredExecution.From(owner, value, kind, body)), site);
     }
 }

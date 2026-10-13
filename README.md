@@ -79,7 +79,9 @@ scripts/dotnet.sh run --project src/MessSharp -- ./src text path/to/team-policy.
 Explicitness follows aliases through helpers, callbacks, returned closures,
 shallow copies, and values stored in fresh list, array, or field holders.
 Exact slot replacement keeps later private mutations quiet. Recognized iterators,
-LINQ queries, and `Lazy<T>` transfer effects when their work executes. Field
+LINQ queries, and `Lazy<T>` transfer effects when their work executes, including
+known lazy factories forced through same-file helpers. Factory bodies report
+their own effects separately from their creation sites. Field
 reads through the receiver are explicit inputs; changing receiver state is an
 implicit output. The strict ruleset also
 reports receiver reads. Unsupported dispatch produces `UnknownEffect`.

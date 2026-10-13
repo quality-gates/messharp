@@ -78,12 +78,17 @@ The analysis is syntax-only, so the supported calculation subset is explicit:
   defer work. Enumeration, terminal sequence operations, or `Lazy<T>.Value`
   transfer effects to the execution site and apply storage writes before later
   reads. Recognized eager collection callbacks execute at their call site.
-  Known delegate signatures supply types for omitted callback parameters.
+  Known delegate signatures supply callback parameter and return types.
   Explicit and target-typed lazy factories in declarations, assignments,
-  returns, and static fields have a separate `<lazy>` owner. Rebinding a lazy
-  variable preserves the factory retained by an earlier alias. Static field
-  initializer effects belong to `<module>`; their deferred factories stay quiet
-  until forced.
+  returns, switch-expression arms, and static fields have a separate `<lazy>`
+  owner. Named constructor arguments bind `valueFactory` by name, including
+  reordered thread-safety options. Rebinding a lazy variable preserves the
+  factory retained by an earlier alias. Resolved helpers that force an unchanged
+  lazy parameter transfer known factory effects at the call site. Unbound,
+  rebound, or partly known factory values retain `UnknownEffect`.
+  Each factory body has its own findings; creation does not transfer those
+  effects to the creator. Static initializer execution belongs to `<module>`,
+  while forcing its lazy value transfers factory effects to the forcing method.
 * Argument ownership is tracked at each operation site. Direct aliases retain
   caller ownership. Rebinding to a fresh object detaches the outer storage. A
   fresh shallow copy keeps caller-owned reachable elements, so mutating an

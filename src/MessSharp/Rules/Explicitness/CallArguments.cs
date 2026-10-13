@@ -16,12 +16,15 @@ internal static class CallArguments
         return Actual(edge.Call, name, parameter);
     }
 
-    public static ExpressionSyntax? Actual(InvocationExpressionSyntax call, string name, int position)
+    public static ExpressionSyntax? Actual(InvocationExpressionSyntax call, string name, int position) =>
+        Actual(call.ArgumentList, name, position);
+
+    public static ExpressionSyntax? Actual(ArgumentListSyntax arguments, string name, int position)
     {
-        var named = call.ArgumentList.Arguments.FirstOrDefault(a => a.NameColon?.Name.Identifier.Text == name);
+        var named = arguments.Arguments.FirstOrDefault(a => a.NameColon?.Name.Identifier.Text == name);
         if (named is not null) return named.Expression;
-        return position >= 0 && position < call.ArgumentList.Arguments.Count
-            ? call.ArgumentList.Arguments[position].Expression : null;
+        return position >= 0 && position < arguments.Arguments.Count
+            ? arguments.Arguments[position].Expression : null;
     }
 
     public static StorageOrigin Storage(RuleContext ctx, CallEdge edge, IReadOnlyList<CallableOwner> owners, string name,

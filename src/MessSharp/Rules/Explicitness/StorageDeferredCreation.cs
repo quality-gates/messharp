@@ -14,10 +14,16 @@ internal sealed class StorageDeferredCreation(StorageContext context, Func<Expre
 
     public void Lazy(BaseObjectCreationExpressionSyntax creation, StorageOrigin receiver)
     {
-        if (context.Owner is not { } owner || !KnownExecutionOperations.IsLazy(owner, creation)
-            || creation.ArgumentList?.Arguments.FirstOrDefault() is not { } argument) return;
-        var work = new StorageCallbackWork(context, origin, state).Create(argument.Expression, creation, StorageOrigin.Private);
+        if (LazyFactory(creation) is not { } callback) return;
+        var work = new StorageCallbackWork(context, origin, state).Create(callback, creation, StorageOrigin.Private);
         if (work is not null) Register(receiver, new StorageDeferredValue(DeferredKind.Lazy, [work]));
+    }
+
+    private ExpressionSyntax? LazyFactory(BaseObjectCreationExpressionSyntax creation)
+    {
+        if (context.Owner is not { } owner || !KnownExecutionOperations.IsLazy(owner, creation)
+            || creation.ArgumentList is not { } arguments) return null;
+        return CallArguments.Actual(arguments, "valueFactory", 0);
     }
 
     public StorageOrigin? Query(InvocationExpressionSyntax call)

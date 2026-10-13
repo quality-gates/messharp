@@ -1,3 +1,4 @@
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules.Explicitness;
@@ -51,6 +52,13 @@ internal sealed class CallResolver
 
 internal static class CallableSyntax
 {
+    public static IEnumerable<ExpressionSyntax> Returns(SyntaxNode? body) => body switch
+    {
+        null => [],
+        ExpressionSyntax expression => [expression],
+        _ => BodyWalk.Nodes(body).OfType<ReturnStatementSyntax>().Select(statement => statement.Expression).OfType<ExpressionSyntax>(),
+    };
+
     public static ExpressionSyntax Unwrap(ExpressionSyntax expression) => expression switch
     {
         ParenthesizedExpressionSyntax grouped => Unwrap(grouped.Expression),

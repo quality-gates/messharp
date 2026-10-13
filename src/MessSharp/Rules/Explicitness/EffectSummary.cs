@@ -10,7 +10,8 @@ internal readonly record struct EffectFact(
     EffectKind Kind,
     string What,
     bool Reachable = false,
-    CallbackInvocation? Callback = null);
+    CallbackInvocation? Callback = null,
+    DeferredExecution? Deferred = null);
 
 internal sealed class EffectSummary
 {
