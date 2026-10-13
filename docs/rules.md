@@ -81,6 +81,16 @@ The analysis is syntax-only, so the supported calculation subset is explicit:
   caller ownership. Rebinding to a fresh object detaches the outer storage. A
   fresh shallow copy keeps caller-owned reachable elements, so mutating an
   element can still be an output.
+* Fresh list, array, and proven field holders retain stored caller aliases,
+  including initializer values and eager helper writes or returns. Exact
+  unconditional replacement of one known slot detaches its old value;
+  conditional writes and uncertain indices join possible origins. Allocation
+  sites and acyclic call contexts bound heap identity, and loops join storage.
+* Explicit and target-typed construction execute a resolved same-file
+  constructor. A compiler-generated empty constructor is quiet only for a
+  unique non-partial class without primary parameters, inheritance, a declared
+  constructor, or field, event, or property initializers. Unmodeled default
+  initialization stays unknown.
 * Mutating a fresh private argument through a helper is a calculation when the
   helper has no ambient or unknown effects. Ambient and unknown effects are
   still propagated.

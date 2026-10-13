@@ -15,22 +15,19 @@ internal static class UnresolvedExecution
 
     private static string? Operation(CallableOwner owner, SyntaxNode node) => node switch
     {
+        AssignmentExpressionSyntax assignment when CapturedAssignments.IsRebinding(owner, assignment) => "captured binding overwrite",
         IdentifierNameSyntax name when PropertyDispatch.IsBare(owner, name) => "property access '" + name + "'",
         MemberAccessExpressionSyntax member when PropertyDispatch.IsMember(owner, member) => "property access '" + member + "'",
+        MemberBindingExpressionSyntax member when PropertyDispatch.IsConditional(owner, member) => "conditional property access '" + member + "'",
         ElementAccessExpressionSyntax element when PropertyDispatch.IsIndexer(owner, element.Expression) => "indexer dispatch",
-        BinaryExpressionSyntax binary when Overloaded(owner, binary.OperatorToken.Text, binary.Left, binary.Right) => "operator dispatch",
-        PrefixUnaryExpressionSyntax prefix when Overloaded(owner, prefix.OperatorToken.Text, prefix.Operand) => "operator dispatch",
-        PostfixUnaryExpressionSyntax postfix when Overloaded(owner, postfix.OperatorToken.Text, postfix.Operand) => "operator dispatch",
+        ElementBindingExpressionSyntax element when ConditionalIndexer(owner, element) => "conditional indexer dispatch",
+        _ when OperatorDispatch.RequiresExecution(owner, node) => "operator dispatch",
         _ => null,
     };
 
-    private static bool Overloaded(CallableOwner owner, string token, params ExpressionSyntax[] operands)
+    private static bool ConditionalIndexer(CallableOwner owner, ElementBindingExpressionSyntax element)
     {
-        var types = operands.Select(new ExpressionTypes(owner).TypeOf).OfType<string>().Select(TypeName).ToHashSet();
-        return owner.Method.File.Classes.Where(c => types.Contains(c.Name))
-            .SelectMany(c => c.Node.DescendantNodes().OfType<OperatorDeclarationSyntax>())
-            .Any(operation => operation.OperatorToken.Text == token);
+        var receiver = element.Ancestors().OfType<ConditionalAccessExpressionSyntax>().FirstOrDefault()?.Expression;
+        return receiver is null || PropertyDispatch.IsIndexer(owner, receiver);
     }
-
-    private static string TypeName(string type) => type.Split('<')[0].Split('.').Last();
 }

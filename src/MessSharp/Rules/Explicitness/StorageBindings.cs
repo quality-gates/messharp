@@ -38,6 +38,7 @@ internal static class StorageBindings
 
     private static IEnumerable<StorageBinding> Assigned(AssignmentExpressionSyntax assignment) => assignment switch
     {
+        { Parent: InitializerExpressionSyntax } => [],
         { Left: IdentifierNameSyntax target } when assignment.IsKind(SyntaxKind.SimpleAssignmentExpression) =>
             [new(target.Identifier.Text, assignment, assignment.Span.End, new BindingSource.Value(assignment.Right))],
         { Left: IdentifierNameSyntax target } when assignment.IsKind(SyntaxKind.CoalesceAssignmentExpression) =>

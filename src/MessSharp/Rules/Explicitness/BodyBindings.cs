@@ -15,15 +15,13 @@ internal sealed class BodyBindings
     };
     private readonly SyntaxNode _body;
     private readonly bool _jumps;
-    private readonly IReadOnlySet<StorageBinding> _captured;
 
     public BodyBindings(SyntaxNode body)
     {
         _body = body;
         var nodes = BodyWalk.Nodes(body).ToList();
         _jumps = nodes.Any(node => node is GotoStatementSyntax or LabeledStatementSyntax);
-        _captured = CapturedAssignments.Find(body).ToHashSet();
-        All = nodes.SelectMany(StorageBindings.Find).Concat(_captured).OrderBy(binding => binding.Position).ToList();
+        All = nodes.SelectMany(StorageBindings.Find).OrderBy(binding => binding.Position).ToList();
     }
 
     public IReadOnlyList<StorageBinding> All { get; }
@@ -31,9 +29,14 @@ internal sealed class BodyBindings
     public bool Reaches(StorageBinding binding, SyntaxNode site)
     {
         if (!InScope(binding, site)) return false;
-        return _captured.Contains(binding) || binding.Position <= site.SpanStart
+        return binding.Position <= site.SpanStart
             || RepetitionRegion(binding.Node) is { } region && region.Span.Contains(site.Span);
     }
+
+    public bool Reaches(StorageStep step, SyntaxNode site) => step is StorageStep.Bound bound
+        ? Reaches(bound.Binding, site)
+        : step.Position <= site.SpanStart
+            || RepetitionRegion(step.Node) is { } region && region.Span.Contains(site.Span);
 
     public SyntaxNode? RepetitionRegion(SyntaxNode node)
     {
@@ -44,7 +47,9 @@ internal sealed class BodyBindings
     }
 
     public bool MayBeSkipped(StorageBinding binding) =>
-        binding.Joins || binding.Node.Ancestors().TakeWhile(parent => parent != _body).Any(IsConditional);
+        binding.Joins || MayBeSkipped(binding.Node);
+
+    public bool MayBeSkipped(SyntaxNode node) => node.Ancestors().TakeWhile(parent => parent != _body).Any(IsConditional);
 
     private static bool IsConditional(SyntaxNode node) => ConditionalKinds.Contains(node.Kind());
 

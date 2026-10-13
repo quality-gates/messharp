@@ -4,7 +4,6 @@ namespace MessSharp.Rule;
 
 /// <summary>
 /// Handed to each rule during analysis. Rules append violations via helpers.
-/// Mirrors messgo's Context.
 /// </summary>
 public sealed class RuleContext
 {
@@ -20,7 +19,6 @@ public sealed class RuleContext
     /// </summary>
     public PartialTypeIndex Partials { get; }
 
-    /// <summary>Facts shared by all rules of the current engine analysis.</summary>
     internal AnalysisFacts Facts { get; }
     private readonly IRule _rule;
 

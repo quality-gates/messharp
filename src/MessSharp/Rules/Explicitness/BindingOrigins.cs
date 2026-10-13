@@ -5,38 +5,59 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace MessSharp.Rules.Explicitness;
 
 internal sealed class BindingOrigins(
-    SyntaxNode body, Func<ExpressionSyntax, Dictionary<string, StorageOrigin>, StorageOrigin> origin)
+    SyntaxNode body, Func<ExpressionSyntax, StorageEnvironment, StorageOrigin> origin,
+    Func<SyntaxNode, StorageEnvironment, bool, bool> execute, bool weak = false)
 {
     private readonly BodyBindings _bindings = new(body);
 
-    public Dictionary<string, StorageOrigin> Before(SyntaxNode site)
+    public StorageEnvironment Before(SyntaxNode site, StorageEnvironment initial, bool after = false)
     {
-        var reaching = _bindings.All.Where(binding => _bindings.Reaches(binding, site)).ToList();
+        var reaching = StorageSteps.Gather(body, _bindings.All).Where(step => after || _bindings.Reaches(step, site)).ToList();
         var loops = new Dictionary<SyntaxNode, Dictionary<string, StorageOrigin>>();
-        Dictionary<string, StorageOrigin> owners;
+        var heaps = new Dictionary<SyntaxNode, StorageHeap>();
+        StorageEnvironment state;
         bool changed;
         do
         {
-            owners = new Dictionary<string, StorageOrigin>(StringComparer.Ordinal);
+            state = initial.Copy();
             changed = false;
-            foreach (var binding in reaching)
-                changed |= Apply(binding, owners, loops);
+            foreach (var step in reaching)
+                changed |= Apply(step, state, loops, heaps);
         } while (changed);
-        return owners;
+        return state;
     }
 
-    private bool Apply(StorageBinding binding, Dictionary<string, StorageOrigin> owners,
+    private bool Apply(StorageStep step, StorageEnvironment state,
+        Dictionary<SyntaxNode, Dictionary<string, StorageOrigin>> loops, Dictionary<SyntaxNode, StorageHeap> heaps)
+    {
+        var loop = _bindings.RepetitionRegion(step.Node);
+        Carry(loop, state.Bindings, loops);
+        if (loop is not null && heaps.TryGetValue(loop, out var heap)) state.Heap.Join(heap);
+        var changed = false;
+        var skipped = step is StorageStep.Bound binding ? _bindings.MayBeSkipped(binding.Binding) : _bindings.MayBeSkipped(step.Node);
+        var handled = execute(step.Node, state, weak || skipped);
+        if (step is StorageStep.Bound bound && !handled) changed = ApplyBinding(bound.Binding, loop, state, loops);
+        return changed | JoinHeap(loop, state.Heap, heaps);
+    }
+
+    private bool ApplyBinding(StorageBinding binding, SyntaxNode? loop, StorageEnvironment state,
         Dictionary<SyntaxNode, Dictionary<string, StorageOrigin>> loops)
     {
-        var loop = _bindings.RepetitionRegion(binding.Node);
-        Carry(loop, owners, loops);
-        var next = Bound(binding, owners);
-        var previous = origin(SyntaxFactory.IdentifierName(binding.Name), owners);
-        owners[binding.Name] = _bindings.MayBeSkipped(binding) ? previous.Join(next) : next;
+        var next = Bound(binding, state);
+        var previous = origin(SyntaxFactory.IdentifierName(binding.Name), state);
+        state.Bindings[binding.Name] = _bindings.MayBeSkipped(binding) ? previous.Join(next) : next;
         if (loop is null || !IsCarried(binding, loop)) return false;
         if (!loops.TryGetValue(loop, out var carried))
             loops[loop] = carried = new Dictionary<string, StorageOrigin>(StringComparer.Ordinal);
-        return JoinLoop(carried, binding.Name, owners[binding.Name]);
+        return JoinLoop(carried, binding.Name, state.Bindings[binding.Name]);
+    }
+
+    private static bool JoinHeap(SyntaxNode? loop, StorageHeap heap, Dictionary<SyntaxNode, StorageHeap> heaps)
+    {
+        if (loop is null) return false;
+        if (heaps.TryGetValue(loop, out var carried)) return carried.Join(heap);
+        heaps[loop] = heap.Copy();
+        return true;
     }
 
     private static void Carry(SyntaxNode? loop, Dictionary<string, StorageOrigin> owners,
@@ -47,10 +68,10 @@ internal sealed class BindingOrigins(
             owners[name] = owners.GetValueOrDefault(name, StorageOrigin.Private).Join(storage);
     }
 
-    private StorageOrigin Bound(StorageBinding binding, Dictionary<string, StorageOrigin> owners) => binding.Source switch
+    private StorageOrigin Bound(StorageBinding binding, StorageEnvironment state) => binding.Source switch
     {
-        BindingSource.Value value => origin(value.Expression, owners),
-        BindingSource.Element element => origin(element.Expression, owners).Element(),
+        BindingSource.Value value => origin(value.Expression, state),
+        BindingSource.Element element => state.Heap.Read(origin(element.Expression, state), StorageCell.AnyElement),
         BindingSource.Unknown => StorageOrigin.Unknown,
         _ => StorageOrigin.Private,
     };

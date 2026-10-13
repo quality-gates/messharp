@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Retain caller aliases inserted into fresh list, array, and field holders, including helper writes and returns; preserve private storage after exact replacement.
+- Normalize sized array types, execute target-typed constructors, and report uncertainty for compound operators, custom conversions, and conditional property or indexer dispatch.
 - Ignore explicitness effects in statement arms guarded by literal `false`, while still analyzing the reachable arm of literal branches.
 - Preserve lexical identity when resolving callback arguments, and substitute callback parameter effects through the callback invocation's actual arguments before propagating them to callers.
 - Treat `Clone()` as a known shallow copy for explicitness ownership, so mutating a cloned array's outer storage does not become an unknown effect.

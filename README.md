@@ -77,9 +77,11 @@ scripts/dotnet.sh run --project src/MessSharp -- ./src text path/to/team-policy.
 ```
 
 Explicitness follows aliases through helpers, callbacks, returned closures,
-and shallow copies. Recognized iterators, LINQ queries, and `Lazy<T>` transfer
-effects when their work executes. Field reads through the receiver are explicit
-inputs; changing receiver state is an implicit output. The strict ruleset also
+shallow copies, and values stored in fresh list, array, or field holders.
+Exact slot replacement keeps later private mutations quiet. Recognized iterators,
+LINQ queries, and `Lazy<T>` transfer effects when their work executes. Field
+reads through the receiver are explicit inputs; changing receiver state is an
+implicit output. The strict ruleset also
 reports receiver reads. Unsupported dispatch produces `UnknownEffect`.
 See the [supported subset](docs/rules.md#explicitness) before treating a clean
 report as a calculation verdict.

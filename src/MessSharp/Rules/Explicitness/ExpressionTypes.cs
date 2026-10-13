@@ -14,6 +14,7 @@ internal sealed class ExpressionTypes(CallableOwner owner)
         CastExpressionSyntax cast => cast.Type.ToString(),
         MemberAccessExpressionSyntax member when member.Expression is ThisExpressionSyntax =>
             owner.Method.Class?.Fields.FirstOrDefault(f => f.Name == member.Name.Identifier.Text)?.Type,
+        MemberAccessExpressionSyntax member => FieldType(member),
         InvocationExpressionSyntax invocation => InvocationResult(invocation),
         _ => CreationType(expression) ?? CompositeType(expression),
     };
@@ -21,7 +22,8 @@ internal sealed class ExpressionTypes(CallableOwner owner)
     private string? CreationType(ExpressionSyntax expression) => expression switch
     {
         ObjectCreationExpressionSyntax creation => creation.Type.ToString(),
-        ArrayCreationExpressionSyntax array => array.Type.ToString(),
+        ArrayCreationExpressionSyntax array => array.Type.ElementType + string.Concat(array.Type.RankSpecifiers
+            .Select(rank => "[" + new string(',', rank.Rank - 1) + "]")),
         ImplicitArrayCreationExpressionSyntax array => Agreed(array.Initializer.Expressions) is { } element ? element + "[]" : null,
         ImplicitObjectCreationExpressionSyntax
         {
@@ -71,6 +73,13 @@ internal sealed class ExpressionTypes(CallableOwner owner)
     private string? InitializerType(VariableDeclaratorSyntax local) => local.Initializer is { } initializer
         ? TypeOf(initializer.Value) : null;
 
+    private string? FieldType(MemberAccessExpressionSyntax member)
+    {
+        var type = TypeOf(member.Expression)?.Split('<')[0].Split('.').Last();
+        return owner.Method.File.Classes.FirstOrDefault(c => c.Name == type)?.Fields
+            .FirstOrDefault(f => f.Name == member.Name.Identifier.Text)?.Type;
+    }
+
     private string? InvocationResult(InvocationExpressionSyntax invocation)
     {
         if (invocation.Expression is MemberAccessExpressionSyntax member && Result(member) is { } known)
@@ -90,7 +99,7 @@ internal sealed class ExpressionTypes(CallableOwner owner)
     private static string? Element(string? type)
     {
         if (type is null) return null;
-        if (type.EndsWith("[]", StringComparison.Ordinal)) return type[..^2];
+        if (type.EndsWith(']')) return type[..type.LastIndexOf('[')];
         var start = type.IndexOf('<');
         return start < 0 ? null : type[(start + 1)..type.LastIndexOf('>')];
     }

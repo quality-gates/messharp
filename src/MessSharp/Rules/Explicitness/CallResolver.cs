@@ -33,12 +33,8 @@ internal sealed class CallResolver
         return _lookup.SameClassMethod(caller, name, arity);
     }
 
-    private CallableOwner? BoundDelegate(CallableOwner caller, IdentifierNameSyntax name)
-    {
-        if (ExpressionTypes.Binding(name) is not { Initializer: { } initializer } binding) return null;
-        if (ReassignedBeforeUse(caller, name, binding)) return null;
-        return ResolveDelegateValue(caller, CallableSyntax.Unwrap(initializer.Value));
-    }
+    private CallableOwner? BoundDelegate(CallableOwner caller, IdentifierNameSyntax name) =>
+        CallableBindings.Value(caller, name) is { } value ? ResolveDelegateValue(caller, CallableSyntax.Unwrap(value)) : null;
 
     private CallableOwner? ResolveDelegateValue(CallableOwner caller, ExpressionSyntax value)
     {
@@ -51,20 +47,6 @@ internal sealed class CallResolver
     private CallableOwner? ResolveFactoryReturn(CallableOwner caller, InvocationExpressionSyntax factory) =>
         Resolve(caller, factory) is { } returnedFactory ? ReturnedCallableResolver.Find(returnedFactory) : null;
 
-    private static bool ReassignedBeforeUse(
-        CallableOwner caller, IdentifierNameSyntax name, VariableDeclaratorSyntax binding) =>
-        caller.Body is not null && caller.Body.DescendantNodes().OfType<AssignmentExpressionSyntax>().Any(a =>
-            a.Left is IdentifierNameSyntax target && target.Identifier.Text == name.Identifier.Text
-                && ExpressionTypes.Binding(target) == binding && a.SpanStart > binding.SpanStart
-                && (a.SpanStart < name.SpanStart || RepeatsAt(a, name) || Nested(a, caller)));
-
-    private static bool RepeatsAt(AssignmentExpressionSyntax assignment, IdentifierNameSyntax site) =>
-        assignment.Ancestors().Any(node => node is ForStatementSyntax or WhileStatementSyntax or DoStatementSyntax
-            && node.Span.Contains(site.Span));
-
-    private static bool Nested(AssignmentExpressionSyntax assignment, CallableOwner owner) =>
-        assignment.Ancestors().TakeWhile(node => node != owner.Body)
-            .Any(node => node is AnonymousFunctionExpressionSyntax or LocalFunctionStatementSyntax);
 }
 
 internal static class CallableSyntax

@@ -1,74 +1,53 @@
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules.Explicitness;
 
-internal sealed class StorageOriginResolver(
-    Func<ExpressionSyntax, string?> parameterName,
-    Dictionary<string, StorageOrigin> owners,
-    Func<InvocationExpressionSyntax, StorageOrigin?>? invocationOrigin = null)
+internal sealed class StorageOriginResolver(StorageContext context, StorageEnvironment state,
+    Func<ExpressionSyntax, StorageOrigin?> fresh, Func<InvocationExpressionSyntax, StorageOrigin?> invocation)
 {
     public StorageOrigin Origin(ExpressionSyntax expression)
     {
         expression = CallableSyntax.Unwrap(expression);
-        if (expression is IdentifierNameSyntax name) return Named(name.Identifier.Text);
-        if (parameterName(expression) is { } state) return StorageOrigin.Shared(state);
-        if (Receiver(expression) is { } receiver) return Origin(receiver).Element();
-        if (CompositeOrigin(expression) is { } composite) return composite;
-        return FreshOrigin(expression);
+        if (Named(expression) is { } named) return named;
+        if (Access(expression) is { } access) return access;
+        if (Composite(expression) is { } composite) return composite;
+        if (expression is InvocationExpressionSyntax call && invocation(call) is { } called) return called;
+        return fresh(expression) ?? StorageOrigin.Private;
     }
 
-    private StorageOrigin Named(string name) =>
-        owners.TryGetValue(name, out var owner) ? owner
-            : parameterName(Microsoft.CodeAnalysis.CSharp.SyntaxFactory.IdentifierName(name)) is { } original
-                ? StorageOrigin.Shared(original) : StorageOrigin.Private;
-
-    private StorageOrigin? CompositeOrigin(ExpressionSyntax expression) => expression switch
+    private StorageOrigin? Named(ExpressionSyntax expression)
     {
-        ConditionalExpressionSyntax choice => Origin(choice.WhenTrue).Join(Origin(choice.WhenFalse)),
-        BinaryExpressionSyntax { RawKind: (int)Microsoft.CodeAnalysis.CSharp.SyntaxKind.CoalesceExpression } coalesce =>
-            Origin(coalesce.Left).Join(Origin(coalesce.Right)),
-        BinaryExpressionSyntax { RawKind: (int)Microsoft.CodeAnalysis.CSharp.SyntaxKind.AsExpression } converted =>
-            Origin(converted.Left),
-        PostfixUnaryExpressionSyntax { RawKind: (int)Microsoft.CodeAnalysis.CSharp.SyntaxKind.SuppressNullableWarningExpression } forgiven =>
-            Origin(forgiven.Operand),
-        SwitchExpressionSyntax choice => choice.Arms.Select(arm => Origin(arm.Expression))
-            .Aggregate(StorageOrigin.Private, (current, next) => current.Join(next)),
-        CollectionExpressionSyntax collection => CollectionOrigin(collection),
+        if (expression is IdentifierNameSyntax name && state.Bindings.TryGetValue(name.Identifier.Text, out var bound)) return bound;
+        if (OwnMember(expression) is { } own) return own;
+        return context.Root(expression) is { } root ? state.Heap.Shared(root) : null;
+    }
+
+    private StorageOrigin? OwnMember(ExpressionSyntax expression)
+    {
+        if (!state.Bindings.TryGetValue(StorageContext.ThisBinding, out var receiver)) return null;
+        if (expression is ThisExpressionSyntax or BaseExpressionSyntax) return receiver;
+        return StorageMembers.OwnField(context, expression) is { } slot ? state.Heap.Read(receiver, slot) : null;
+    }
+
+    private StorageOrigin? Access(ExpressionSyntax expression) => expression switch
+    {
+        MemberAccessExpressionSyntax member => state.Heap.Read(Origin(member.Expression), "." + member.Name.Identifier.Text),
+        ElementAccessExpressionSyntax element => state.Heap.Read(Origin(element.Expression), StorageMembers.Index(element.ArgumentList)),
         _ => null,
     };
 
-    private StorageOrigin CollectionOrigin(CollectionExpressionSyntax collection) => collection.Elements
-        .Select(element => element switch
-        {
-            SpreadElementSyntax spread => Origin(spread.Expression).ShallowCopy(),
-            ExpressionElementSyntax item => StorageOrigin.Holding(Origin(item.Expression)),
-            _ => StorageOrigin.Unknown,
-        }).Aggregate(StorageOrigin.Private, (current, next) => current.Join(next));
-
-    private StorageOrigin FreshOrigin(ExpressionSyntax expression)
+    private StorageOrigin? Composite(ExpressionSyntax expression) => expression switch
     {
-        if (expression is InvocationExpressionSyntax invocation && invocationOrigin?.Invoke(invocation) is { } origin)
-            return origin;
-        return expression switch
-        {
-            ObjectCreationExpressionSyntax creation => CopyOrigin(creation.ArgumentList),
-            ImplicitObjectCreationExpressionSyntax creation => CopyOrigin(creation.ArgumentList),
-            InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax member } when IsShallowCopy(member) =>
-                Origin(member.Expression).ShallowCopy(),
-            _ => StorageOrigin.Private,
-        };
-    }
-
-    private StorageOrigin CopyOrigin(ArgumentListSyntax? arguments) =>
-        arguments?.Arguments.Count == 1 ? Origin(arguments.Arguments[0].Expression).ShallowCopy() : StorageOrigin.Private;
-
-    private static bool IsShallowCopy(MemberAccessExpressionSyntax member) =>
-        member.Name.Identifier.Text is "Clone" or "ToList" or "ToArray";
-
-    private static ExpressionSyntax? Receiver(ExpressionSyntax expression) => expression switch
-    {
-        MemberAccessExpressionSyntax member => member.Expression,
-        ElementAccessExpressionSyntax element => element.Expression,
+        ConditionalExpressionSyntax choice => Origin(choice.WhenTrue).Join(Origin(choice.WhenFalse)),
+        BinaryExpressionSyntax { RawKind: (int)SyntaxKind.CoalesceExpression } coalesce =>
+            Origin(coalesce.Left).Join(Origin(coalesce.Right)),
+        BinaryExpressionSyntax { RawKind: (int)SyntaxKind.AsExpression } converted =>
+            Origin(converted.Left),
+        PostfixUnaryExpressionSyntax { RawKind: (int)SyntaxKind.SuppressNullableWarningExpression } forgiven =>
+            Origin(forgiven.Operand),
+        SwitchExpressionSyntax choice => choice.Arms.Select(arm => Origin(arm.Expression))
+            .Aggregate(StorageOrigin.Private, (current, next) => current.Join(next)),
         _ => null,
     };
 }

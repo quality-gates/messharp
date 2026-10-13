@@ -155,6 +155,20 @@ public class ExplicitnessExecutionTests
         Assert.Empty(Owner(findings, "Fixed"));
     }
 
+    [Theory]
+    [InlineData("value += 1;")]
+    [InlineData("value = value + 1;")]
+    [InlineData("value++;")]
+    public void CapturedScalarUpdatesKeepTheirKnownEffects(string statement)
+    {
+        var findings = Analyze("class Probe { static Func<int> Make(int value) { return () => {\n"
+            + statement + "\nreturn value; }; } }");
+        Assert.Empty(Owner(findings, "Make"));
+        var closure = Owner(findings, "<lambda>").ToList();
+        Assert.Equal(new[] { "ImplicitInput", "ImplicitOutput" }, closure.Select(finding => finding.Rule.Name).OrderBy(name => name));
+        Assert.All(closure, finding => Assert.Equal(2, finding.BeginLine));
+    }
+
     [Fact]
     public void NestedCaptureRebindingCannotMakeALaterMutationLookPrivate()
     {

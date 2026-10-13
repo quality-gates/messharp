@@ -3,8 +3,7 @@ using MessSharp.Rule;
 namespace MessSharp.Rules.Explicitness;
 
 /// <summary>
-/// Explicitness ruleset rule factories, keyed by rule class name. These rules
-/// have no phpmd counterpart, so they use the MessSharp namespace.
+/// Explicitness ruleset rule factories, keyed by rule class name.
 /// </summary>
 public static class ExplicitnessRules
 {

@@ -5,21 +5,16 @@ namespace MessSharp.Rules.Explicitness;
 
 internal sealed class ArgumentOwnership
 {
-    private readonly BindingOrigins _bindings;
+    private readonly StorageFlow _flow;
     private readonly Func<ExpressionSyntax, string?> _parameterName;
-    private readonly CallableOwner? _callableOwner;
-    private readonly IReadOnlyList<CallableOwner>? _callableOwners;
-    private readonly HashSet<CallableOwner>? _visiting;
 
     public ArgumentOwnership(SyntaxNode body, Func<ExpressionSyntax, string?> parameterName,
         CallableOwner? callableOwner = null, IReadOnlyList<CallableOwner>? callableOwners = null,
         HashSet<CallableOwner>? visiting = null)
     {
         _parameterName = parameterName;
-        _callableOwner = callableOwner;
-        _callableOwners = callableOwners;
-        _visiting = visiting;
-        _bindings = new BindingOrigins(body, Origin);
+        _flow = new StorageFlow(new StorageContext(body, parameterName, callableOwner, callableOwners ?? [],
+            body.SpanStart.ToString(System.Globalization.CultureInfo.InvariantCulture), visiting ?? []));
     }
 
     public string? Resolve(ExpressionSyntax expression)
@@ -41,19 +36,10 @@ internal sealed class ArgumentOwnership
         return origin.Outer.Select(root => new ResolvedState(root, origin.Deep.Contains(root))).ToList();
     }
 
-    public StorageOrigin StorageAt(ExpressionSyntax expression, SyntaxNode site) =>
-        Origin(expression, _bindings.Before(site));
-
-    private StorageOrigin Origin(ExpressionSyntax expression, Dictionary<string, StorageOrigin> owners) =>
-        Resolver(owners).Origin(expression);
-
-    private StorageOriginResolver Resolver(Dictionary<string, StorageOrigin> owners)
+    public StorageOrigin StorageAt(ExpressionSyntax expression, SyntaxNode site)
     {
-        StorageOrigin? InvocationOrigin(InvocationExpressionSyntax invocation) =>
-            _callableOwner is null || _callableOwners is null
-                ? null : ReturnedStorageOriginResolver.Origin(_callableOwner, _callableOwners, invocation,
-                    expression => Origin(expression, owners), _visiting);
-        return new StorageOriginResolver(_parameterName, owners, InvocationOrigin);
+        var state = _flow.Before(site, new StorageEnvironment());
+        return state.Heap.Materialize(_flow.Origin(expression, state));
     }
 
     private static bool IsAssignmentTarget(ExpressionSyntax expression) =>

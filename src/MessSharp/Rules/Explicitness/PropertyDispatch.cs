@@ -12,7 +12,7 @@ internal static class PropertyDispatch
 
     public static bool IsBare(CallableOwner owner, IdentifierNameSyntax name)
     {
-        if (name.Parent is MemberAccessExpressionSyntax or TypeSyntax || owner.Method.Class is not { } cls) return false;
+        if (name.Parent is MemberAccessExpressionSyntax or MemberBindingExpressionSyntax or TypeSyntax || owner.Method.Class is not { } cls) return false;
         if (owner.Method.Parameters.Any(parameter => parameter.Name == name.Identifier.Text)
             || LocalShadowing.IsShadowedByLocal(name, name.Identifier.Text)) return false;
         return cls.Node.DescendantNodes().OfType<PropertyDeclarationSyntax>().Any(property => property.Identifier.Text == name.Identifier.Text);
@@ -28,7 +28,17 @@ internal static class PropertyDispatch
         var type = new ExpressionTypes(owner).TypeOf(member.Expression);
         if (type is null) return DeclaredProperty(owner, member);
         if (KnownExecutionOperations.IsLazy(owner, member.Expression) && member.Name.Identifier.Text == "Value") return false;
-        return RequiresDispatch(owner, member, type);
+        return RequiresDispatch(owner, member.Name.Identifier.Text, type);
+    }
+
+    public static bool IsConditional(CallableOwner owner, MemberBindingExpressionSyntax member)
+    {
+        if (member.Parent is InvocationExpressionSyntax) return false;
+        var receiver = member.Ancestors().OfType<ConditionalAccessExpressionSyntax>().FirstOrDefault()?.Expression;
+        if (receiver is null) return true;
+        if (KnownExecutionOperations.IsLazy(owner, receiver) && member.Name.Identifier.Text == "Value") return false;
+        var type = new ExpressionTypes(owner).TypeOf(receiver);
+        return type is null || RequiresDispatch(owner, member.Name.Identifier.Text, type);
     }
 
     public static bool IsIndexer(CallableOwner owner, ExpressionSyntax receiver)
@@ -37,12 +47,12 @@ internal static class PropertyDispatch
         return type is null || !TrustedValue(type) || KnownTypeChecks.IsCustomType(owner, type);
     }
 
-    private static bool RequiresDispatch(CallableOwner owner, MemberAccessExpressionSyntax member, string type)
+    private static bool RequiresDispatch(CallableOwner owner, string name, string type)
     {
         if (TrustedValue(type) && !KnownTypeChecks.IsCustomType(owner, type)) return false;
         var cls = owner.Method.File.Classes.FirstOrDefault(candidate => candidate.Name == TypeName(type));
         return cls is null || cls.Node.DescendantNodes().OfType<PropertyDeclarationSyntax>()
-            .Any(property => property.Identifier.Text == member.Name.Identifier.Text);
+            .Any(property => property.Identifier.Text == name);
     }
 
     private static bool DeclaredProperty(CallableOwner owner, MemberAccessExpressionSyntax member) => owner.Method.File.Classes

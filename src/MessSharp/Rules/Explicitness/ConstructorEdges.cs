@@ -1,6 +1,5 @@
 using MessSharp.Rule;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules.Explicitness;
@@ -16,22 +15,20 @@ internal sealed class ConstructorEdges(RuleContext ctx, IReadOnlyList<CallableOw
     {
         var body = owner.Body;
         if (body is null) return;
-        foreach (var creation in BodyWalk.Nodes(body).OfType<ObjectCreationExpressionSyntax>())
+        foreach (var creation in BodyWalk.Nodes(body).OfType<BaseObjectCreationExpressionSyntax>())
         {
-            var type = creation.Type.ToString();
-            if (Trusted(owner, type)) continue;
-            var name = type.Split('<')[0].Split('.').Last();
-            var targets = owners.Where(o => o.Method.IsConstructor && !o.Method.IsStaticConstructor()
-                && o.Method.Class?.Name == name && o.Method.Parameters.Count == (creation.ArgumentList?.Arguments.Count ?? 0))
-                .Take(2).ToList();
-            if (targets.Count == 1) AddEdge(owner, targets[0], creation, body);
+            var type = new ExpressionTypes(owner).TypeOf(creation) ?? "<target-typed>";
+            if (Trusted(owner, type) || ConstructorDefaults.IsEmpty(owner, type, creation)) continue;
+            if (ConstructorCall.Resolve(owners, creation, type) is { } constructor)
+                AddEdge(owner, constructor, creation, body);
             else summary.Add(new EffectFact(EffectKind.Unknown, "unresolved constructor '" + type + "'"), creation);
         }
     }
 
-    private void AddEdge(CallableOwner owner, CallableOwner target, ObjectCreationExpressionSyntax creation, SyntaxNode body)
+    private void AddEdge(CallableOwner owner, ConstructorCall constructor, BaseObjectCreationExpressionSyntax creation, SyntaxNode body)
     {
-        var call = SyntaxFactory.InvocationExpression(creation.Type, creation.ArgumentList ?? SyntaxFactory.ArgumentList());
+        var target = constructor.Target;
+        var call = constructor.Invocation;
         var storage = CallArguments.Ownership(ctx, owner, owners, body);
         var bindings = target.Method.Parameters.Select((p, index) => (p.Name,
                 Origin: storage.StorageAt(call.ArgumentList.Arguments[index].Expression, creation)))
