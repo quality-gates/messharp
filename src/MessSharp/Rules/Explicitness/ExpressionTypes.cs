@@ -43,8 +43,9 @@ internal sealed class ExpressionTypes(CallableOwner owner, IReadOnlyList<Callabl
         var local = Binding(name);
         if (local?.Parent is VariableDeclarationSyntax declaration)
             return DeclaredType(local, declaration.Type);
+        if (DesignationTypes.Find(name) is { } designated) return designated;
         return owner.Method.Parameters.FirstOrDefault(p => p.Name == name.Identifier.Text)?.Type
-            ?? owner.Method.Class?.Fields.FirstOrDefault(f => f.Name == name.Identifier.Text)?.Type;
+            ?? owner.Method.Class?.MemberType(name.Identifier.Text);
     }
 
     private string? DeclaredType(VariableDeclaratorSyntax local, TypeSyntax type)

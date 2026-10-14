@@ -13,8 +13,23 @@ internal static class CallArguments
         var ownCount = edge.Target.Parent is null ? edge.Target.Method.Parameters.Count
             : CallableOwner.Parameters(edge.Target.Method.Node).Count();
         if (parameter >= ownCount) return SyntaxFactory.IdentifierName(name);
-        return Actual(edge.Call, name, parameter);
+        return Actual(edge.Target, edge.Call, name, parameter);
     }
+
+    /// <summary>
+    /// The actual for parameter <paramref name="position"/> of <paramref name="target"/>. A reduced extension
+    /// call passes its receiver as the first parameter and shifts the written arguments by one.
+    /// </summary>
+    public static ExpressionSyntax? Actual(CallableOwner target, InvocationExpressionSyntax call, string name, int position)
+    {
+        if (!IsReducedExtension(target, call)) return Actual(call, name, position);
+        return position == 0 ? ((MemberAccessExpressionSyntax)call.Expression).Expression
+            : Actual(call.ArgumentList, name, position - 1);
+    }
+
+    public static bool IsReducedExtension(CallableOwner target, InvocationExpressionSyntax call) =>
+        ExtensionMethods.IsExtension(target) && call.Expression is MemberAccessExpressionSyntax member
+        && !(member.Expression is IdentifierNameSyntax type && type.Identifier.Text == target.Method.Class?.Name);
 
     public static ExpressionSyntax? Actual(InvocationExpressionSyntax call, string name, int position) =>
         Actual(call.ArgumentList, name, position);

@@ -21,9 +21,9 @@ internal sealed class StorageDeferredCreation(StorageContext context, Func<Expre
 
     private ExpressionSyntax? LazyFactory(BaseObjectCreationExpressionSyntax creation)
     {
-        if (context.Owner is not { } owner || !KnownExecutionOperations.IsLazy(owner, creation)
-            || creation.ArgumentList is not { } arguments) return null;
-        return CallArguments.Actual(arguments, "valueFactory", 0);
+        if (context.Owner is not { } owner || !KnownExecutionOperations.IsLazy(owner, creation)) return null;
+        var factory = LazyFactories.Select(owner, creation);
+        return factory.Kind == LazyFactoryKind.Factory ? factory.Expression : null;
     }
 
     public StorageOrigin? Query(InvocationExpressionSyntax call)

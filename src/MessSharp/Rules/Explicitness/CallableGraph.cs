@@ -9,10 +9,12 @@ internal sealed class CallableGraph
 {
     private readonly Dictionary<MethodModel, EffectSummary> _summaries = [];
     private readonly CallableEdges _edges;
+    private readonly IReadOnlySet<MethodModel> _shared;
     public IReadOnlyList<CallableOwner> Owners { get; }
 
     private CallableGraph(RuleContext ctx)
     {
+        _shared = ctx.File.AllMethods.ToHashSet();
         Owners = CallableOwner.Gather(ctx.File);
         _edges = new CallableEdges(ctx, Owners);
         foreach (var owner in Owners)
@@ -28,8 +30,8 @@ internal sealed class CallableGraph
 
     public EffectSummary Summary(MethodModel method) => _summaries.GetValueOrDefault(method) ?? new EffectSummary();
 
-    public IEnumerable<MethodModel> ExtraMethods => Owners.Where(o => o.Parent is not null
-        || o.Method.Name is "<top-level>" or "<module>").Select(o => o.Method);
+    /// <summary>Owners outside the shared model, which the per-method rule pass never visits.</summary>
+    public IEnumerable<MethodModel> ExtraMethods => Owners.Select(o => o.Method).Where(method => !_shared.Contains(method));
 
     private void Propagate(RuleContext ctx)
     {

@@ -26,8 +26,8 @@ internal static class PropertyDispatch
             return owner.Method.Class?.Node.DescendantNodes().OfType<PropertyDeclarationSyntax>()
                 .Any(property => property.Identifier.Text == member.Name.Identifier.Text) == true;
         var type = new ExpressionTypes(owner).TypeOf(member.Expression);
-        if (type is null) return DeclaredProperty(owner, member);
-        if (KnownExecutionOperations.IsLazy(owner, member.Expression) && member.Name.Identifier.Text == "Value") return false;
+        if (type is null) return DeclaredProperty(owner, member) || MayForceLazy(member);
+        if (KnownExecutionOperations.IsLazyValue(owner, member.Expression) && member.Name.Identifier.Text == "Value") return false;
         return RequiresDispatch(owner, member.Name.Identifier.Text, type);
     }
 
@@ -36,7 +36,7 @@ internal static class PropertyDispatch
         if (member.Parent is InvocationExpressionSyntax) return false;
         var receiver = member.Ancestors().OfType<ConditionalAccessExpressionSyntax>().FirstOrDefault()?.Expression;
         if (receiver is null) return true;
-        if (KnownExecutionOperations.IsLazy(owner, receiver) && member.Name.Identifier.Text == "Value") return false;
+        if (KnownExecutionOperations.IsLazyValue(owner, receiver) && member.Name.Identifier.Text == "Value") return false;
         var type = new ExpressionTypes(owner).TypeOf(receiver);
         return type is null || RequiresDispatch(owner, member.Name.Identifier.Text, type);
     }
@@ -54,6 +54,9 @@ internal static class PropertyDispatch
         return cls is null || cls.Node.DescendantNodes().OfType<PropertyDeclarationSyntax>()
             .Any(property => property.Identifier.Text == name);
     }
+
+    /// <summary>An untyped receiver may be a Lazy, and reading its Value runs an unknown factory.</summary>
+    private static bool MayForceLazy(MemberAccessExpressionSyntax member) => member.Name.Identifier.Text == "Value";
 
     private static bool DeclaredProperty(CallableOwner owner, MemberAccessExpressionSyntax member) => owner.Method.File.Classes
         .Where(candidate => candidate.Name == member.Expression.ToString())

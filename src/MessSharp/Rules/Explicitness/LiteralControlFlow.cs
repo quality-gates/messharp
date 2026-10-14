@@ -14,6 +14,7 @@ internal static class LiteralControlFlow
 
     private static IEnumerable<SyntaxNode> Skipped(SyntaxNode node) => node switch
     {
+        ConstructorDeclarationSyntax constructor => ConstructorBodies.Inert(constructor),
         IfStatementSyntax statement when Boolean(statement.Condition) is { } condition =>
             Optional(condition ? statement.Else : statement.Statement),
         WhileStatementSyntax statement when Boolean(statement.Condition) == false => [statement.Statement],

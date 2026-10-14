@@ -51,9 +51,9 @@ public class ExplicitnessLazyResolutionTests
     }
 
     [Theory]
-    [InlineData("Console.Read()", "7", 4)]
-    [InlineData("7", "Console.Read()", 7)]
-    public void ReboundLazyFormalsKeepUnresolvedExecution(string replacement, string original, int factoryLine)
+    [InlineData("Console.Read()", "7")]
+    [InlineData("7", "Console.Read()")]
+    public void ReboundLazyFormalsForceOnlyTheReplacement(string replacement, string original)
     {
         var findings = Analyze($$"""
             using System;
@@ -65,8 +65,9 @@ public class ExplicitnessLazyResolutionTests
                 static int Run() => Force(new Lazy<int>(() => {{original}}));
             }
             """);
-        var expected = new[] { ("Force", "UnknownEffect", 5), ("<lazy>", "ImplicitInput", factoryLine), ("Run", "UnknownEffect", 7) }
-            .OrderBy(f => f.Item3).ThenBy(f => f.Item1, StringComparer.Ordinal);
+        var expected = replacement == "7"
+            ? new[] { ("<lazy>", "ImplicitInput", 7) }
+            : new[] { ("<lazy>", "ImplicitInput", 4), ("Force", "ImplicitInput", 5), ("Run", "ImplicitInput", 7) };
         Assert.Equal(expected, findings.Select(f => (f.Method, f.Rule.Name, f.BeginLine))
             .OrderBy(f => f.BeginLine).ThenBy(f => f.Method, StringComparer.Ordinal));
     }
@@ -94,6 +95,7 @@ public class ExplicitnessLazyResolutionTests
         var caller = findings.Where(finding => finding.Method == "Run").ToList();
         Assert.Contains(caller, finding => finding.Rule.Name == "UnknownEffect" && finding.BeginLine == 8
             && finding.Description == "The method Run() has an unknown effect: unresolved deferred execution.");
-        Assert.DoesNotContain(caller, finding => finding.Rule.Name == "ImplicitInput");
+        // The rebinding runs before the force, so only a reading replacement reaches the caller.
+        Assert.Equal(replacement != "7", caller.Any(finding => finding.Rule.Name == "ImplicitInput"));
     }
 }

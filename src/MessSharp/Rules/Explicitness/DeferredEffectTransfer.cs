@@ -17,8 +17,8 @@ internal sealed class DeferredEffectTransfer(
             || edge.Caller.Body is not { } body) return [fact];
         var resolved = new DeferredValueResolver(ctx, owners).Resolve(edge.Caller, actual, body, execution.Kind);
         var effects = resolved.Work.Where(work => work.Kind == execution.Kind).SelectMany(MapWork).ToList();
-        if (!resolved.Complete)
-            effects.Add(fact with { Deferred = DeferredExecution.From(edge.Caller, actual, execution.Kind, body) });
+        if (!resolved.Resolved)
+            effects.Add(fact with { Deferred = DeferredExecution.From(resolved, execution.Kind) });
         return effects;
     }
 

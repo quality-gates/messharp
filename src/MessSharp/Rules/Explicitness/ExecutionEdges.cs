@@ -15,12 +15,19 @@ internal sealed class ExecutionEdges(RuleContext ctx, IReadOnlyList<CallableOwne
         {
             if (node is CommonForEachStatementSyntax loop)
                 Force(owner, summary, loop.Expression, loop, DeferredKind.Sequence, body);
-            if (node is MemberAccessExpressionSyntax member && member.Name.Identifier.Text == "Value"
-                && KnownExecutionOperations.IsLazy(owner, member.Expression))
-                Force(owner, summary, member.Expression, member, DeferredKind.Lazy, body);
+            if (LazyReceiver(node) is { } receiver && KnownExecutionOperations.IsLazyValue(owner, receiver))
+                Force(owner, summary, receiver, node, DeferredKind.Lazy, body);
             if (node is InvocationExpressionSyntax call) AddCall(owner, summary, call, body);
         }
     }
+
+    private static ExpressionSyntax? LazyReceiver(SyntaxNode node) => node switch
+    {
+        MemberAccessExpressionSyntax member when member.Name.Identifier.Text == "Value" => member.Expression,
+        MemberBindingExpressionSyntax member when member.Name.Identifier.Text == "Value" =>
+            member.Ancestors().OfType<ConditionalAccessExpressionSyntax>().FirstOrDefault()?.Expression,
+        _ => null,
+    };
 
     private void AddCall(CallableOwner owner, EffectSummary summary, InvocationExpressionSyntax call, SyntaxNode body)
     {
@@ -34,8 +41,8 @@ internal sealed class ExecutionEdges(RuleContext ctx, IReadOnlyList<CallableOwne
         var resolution = _values.Resolve(owner, value, body, kind);
         foreach (var item in resolution.Work.Where(work => work.Kind == kind))
             edges.Add(new CallEdge(owner, item.Target, item.Call, site, item.Bindings));
-        if (!resolution.Complete && KnownExecutionOperations.RequiresExecution(owner, value, kind))
+        if (!resolution.Resolved && KnownExecutionOperations.RequiresExecution(owner, value, kind))
             summary.Add(new EffectFact(EffectKind.Unknown, "unresolved deferred execution",
-                Deferred: DeferredExecution.From(owner, value, kind, body)), site);
+                Deferred: DeferredExecution.From(resolution, kind)), site);
     }
 }

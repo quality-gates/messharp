@@ -19,7 +19,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - Give explicit and target-typed `Lazy<T>` factories in declarations, assignments, returns, switch expressions, and typed delegate results the `<lazy>` owner. Bind reordered `valueFactory` arguments by name, follow reaching bindings at `.Value`, and preserve earlier aliases after replacement.
-- Transfer known lazy factory effects through helpers that force unchanged lazy parameters. Keep pure factories quiet while retaining uncertainty for unbound, rebound, or partly known factory values.
+- Resolve lazy factories through subclasses, identity helpers, static constructor assignments, `out` arguments, and non-virtual instance or extension force helpers. Direct parameter replacement forces only the replacement; partly known factory values retain uncertainty.
+- Transfer default Lazy value-constructor effects and conditional `.Value` effects at the forcing site. Keep scalar defaults quiet and retain property-dispatch uncertainty when a subclass hides `Value`.
+- Analyze expression-bodied properties, indexers, event accessors, and instance initializers. Keep lambdas nested inside a Lazy factory distinct from the `<lazy>` owner.
 - Preserve unseeded `Random` input when target-typed constructors infer their types from assignments or returns.
 - Preserve storage locations through `ref` locals and collection removal or reordering, and apply deferred iterator, LINQ callback, and `Lazy<T>` storage writes when the work executes.
 - Resolve omitted callback parameter types from known delegate contexts, and prune literal-false loop bodies and conditional-expression arms without general constant folding.

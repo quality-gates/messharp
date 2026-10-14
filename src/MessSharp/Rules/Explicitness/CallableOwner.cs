@@ -10,8 +10,9 @@ internal sealed record CallableOwner(MethodModel Method, SyntaxNode? Body, Calla
 
     public static List<CallableOwner> Gather(SourceFile file)
     {
-        var owners = file.AllMethods.Select(m => new CallableOwner(m, m.EffectiveBody)).ToList();
+        var owners = file.AllMethods.Select(m => new CallableOwner(m, ConstructorBodies.BodyOf(m))).ToList();
         owners.AddRange(FieldInitializerOwners.Gather(file));
+        owners.AddRange(MemberFormOwners.Gather(file));
         foreach (var owner in owners.ToList()) AddChildren(owner, owners);
         var globals = file.Root.DescendantNodes().OfType<GlobalStatementSyntax>().ToList();
         if (globals.Count > 0)
@@ -60,8 +61,7 @@ internal sealed record CallableOwner(MethodModel Method, SyntaxNode? Body, Calla
     private static string ChildName(CallableOwner parent, SyntaxNode node)
     {
         if (node is LocalFunctionStatementSyntax local) return local.Identifier.Text;
-        var creation = node.Ancestors().OfType<BaseObjectCreationExpressionSyntax>().FirstOrDefault();
-        return creation is not null && KnownExecutionOperations.IsLazy(parent, creation) ? "<lazy>" : "<lambda>";
+        return LazyFactories.IsFactory(parent, node) ? "<lazy>" : "<lambda>";
     }
 
     private static void AddCaptures(CallableOwner parent, SyntaxNode body, List<ParameterModel> parameters, IReadOnlyList<CallableOwner> owners)

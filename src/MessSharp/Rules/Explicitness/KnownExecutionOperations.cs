@@ -37,9 +37,11 @@ internal static class KnownExecutionOperations
     public static bool IsLazy(CallableOwner owner, ExpressionSyntax value)
     {
         var type = new ExpressionTypes(owner).TypeOf(value);
-        return type is not null && type.Split('<')[0].Split('.').Last() == "Lazy"
-            && !KnownTypeChecks.IsCustomType(owner, type);
+        return type is not null && LazyTypes.IsLazy(owner, type);
     }
+
+    public static bool IsLazyValue(CallableOwner owner, ExpressionSyntax value) =>
+        new ExpressionTypes(owner).TypeOf(value) is { } type && LazyTypes.HasStandardValue(owner, type);
 
     public static bool IsColdQuery(CallableOwner owner, InvocationExpressionSyntax call, IReadOnlyList<CallableOwner>? owners = null) =>
         call.Expression is MemberAccessExpressionSyntax member && HasTiming(member, ExecutionTiming.ColdQuery)

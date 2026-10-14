@@ -83,12 +83,24 @@ The analysis is syntax-only, so the supported calculation subset is explicit:
   returns, switch-expression arms, and static fields have a separate `<lazy>`
   owner. Named constructor arguments bind `valueFactory` by name, including
   reordered thread-safety options. Rebinding a lazy variable preserves the
-  factory retained by an earlier alias. Resolved helpers that force an unchanged
-  lazy parameter transfer known factory effects at the call site. Unbound,
-  rebound, or partly known factory values retain `UnknownEffect`.
+  factory retained by an earlier alias. Resolved helpers, including non-virtual
+  instance and extension methods, transfer known factory effects at the call site.
+  Direct parameter replacement forces the replacement rather than the original
+  argument. Unbound or partly known factory values retain `UnknownEffect`.
+  Lazy values retain provenance through identity returns, static constructor
+  assignments, and known `out` or `ref` writes. Writing an `out` parameter is an
+  output even when the assigned Lazy has a pure factory.
+  A Lazy without a factory constructs its value when forced. Known same-file
+  constructor effects transfer at `.Value`; unresolved value construction stays
+  unknown. Ordinary scalar defaults are quiet. Inherited Lazy properties use
+  the base factory, but a subclass hiding `Value` keeps property-dispatch
+  uncertainty. Conditional `.Value` access transfers the possible factory effects.
   Each factory body has its own findings; creation does not transfer those
   effects to the creator. Static initializer execution belongs to `<module>`,
   while forcing its lazy value transfers factory effects to the forcing method.
+  Expression-bodied properties, indexers, and event accessors own their bodies.
+  Anonymous bodies nested inside a factory keep their `<lambda>` owner rather
+  than inheriting the factory's `<lazy>` name.
 * Argument ownership is tracked at each operation site. Direct aliases retain
   caller ownership. Rebinding to a fresh object detaches the outer storage. A
   fresh shallow copy keeps caller-owned reachable elements, so mutating an

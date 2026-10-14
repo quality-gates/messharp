@@ -16,7 +16,7 @@ internal sealed class StorageParameterBindings(StorageContext context, StorageCa
         {
             var name = target.Method.Parameters[index].Name;
             var capture = index >= ownCount;
-            var actual = capture ? SyntaxFactory.IdentifierName(name) : CallArguments.Actual(call, name, index);
+            var actual = capture ? SyntaxFactory.IdentifierName(name) : CallArguments.Actual(target, call, name, index);
             state.Bindings[name] = Bound(name, capture, actual);
             CaptureReference(state, name, capture);
             if (actual is not null && callables.Find(actual) is { } callable) state.Callables[name] = callable;
