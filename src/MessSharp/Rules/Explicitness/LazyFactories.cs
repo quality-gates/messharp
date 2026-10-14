@@ -100,17 +100,24 @@ internal sealed class LazyArguments(CallableOwner owner, string lazyType, Func<E
             return new LazyFactory(LazyFactoryKind.Factory, named.Expression);
         if (arguments.Count == 0) return LazyFactory.Default;
         if (arguments[0].NameColon is { } name)
-            return name.Name.Identifier.Text == "value" ? LazyFactory.None : LazyFactory.Default;
-        var first = arguments[0].Expression;
-        if (IsSetting(first)) return LazyFactory.Default;
-        if (IsValue(first)) return LazyFactory.None;
+            return name.Name.Identifier.Text == "value"
+                ? new LazyFactory(LazyFactoryKind.None, arguments[0].Expression) : LazyFactory.Default;
+        return Positional(arguments[0].Expression);
+    }
+
+    private LazyFactory Positional(ExpressionSyntax first)
+    {
+        var shape = new ValueShapes(owner, typeOf).For(first);
+        if (shape == ValueShape.Boolean || IsSetting(first)) return LazyFactory.Default;
+        if (shape == ValueShape.Value || IsValue(first)) return new LazyFactory(LazyFactoryKind.None, first);
         return ValueIsDelegate() ? LazyFactory.Unresolved : new LazyFactory(LazyFactoryKind.Factory, first);
     }
 
     private bool IsSetting(ExpressionSyntax value)
     {
         value = CallableSyntax.Unwrap(value);
-        if (value is LiteralExpressionSyntax) return true;
+        if (value is LiteralExpressionSyntax { RawKind: (int)SyntaxKind.NullLiteralExpression or (int)SyntaxKind.DefaultLiteralExpression })
+            return true;
         if (value is MemberAccessExpressionSyntax member && LazyTypes.Name(member.Expression.ToString()) == "LazyThreadSafetyMode")
             return true;
         return typeOf(value) is { } type && (type is "bool" or "Boolean" or "System.Boolean"
@@ -118,7 +125,7 @@ internal sealed class LazyArguments(CallableOwner owner, string lazyType, Func<E
     }
 
     private bool IsValue(ExpressionSyntax value) =>
-        ExpressionTypes.Element(lazyType) is { } element && typeOf(value) == element && !ValueIsDelegate();
+        ExpressionTypes.Element(lazyType) is { } element && typeOf(value) == element;
 
     private bool ValueIsDelegate()
     {

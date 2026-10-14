@@ -6,9 +6,10 @@ namespace MessSharp.Rules.Explicitness;
 internal sealed record DeferredExit(DeferredValueContext Context, IReadOnlyList<DeferredSource> Sources);
 
 /// <summary>Follows an <c>out</c> or <c>ref</c> argument into the resolved callee that writes it.</summary>
-internal sealed class DeferredArgumentExits(IReadOnlyList<CallableOwner> owners)
+internal static class DeferredArgumentExits
 {
-    public DeferredExit? Find(DeferredValueContext context, ArgumentSyntax argument)
+    public static DeferredExit? Find(IReadOnlyList<CallableOwner> owners, DeferredValueContext context,
+        ArgumentSyntax argument)
     {
         if (argument.Parent?.Parent is not InvocationExpressionSyntax call
             || new CallResolver(owners).Resolve(context.Owner, call) is not { Body: { } body } target

@@ -15,7 +15,8 @@ internal static class UnresolvedExecution
 
     private static string? Operation(CallableOwner owner, SyntaxNode node) => node switch
     {
-        RefExpressionSyntax reference when !StorageReferences.Supports(owner, reference.Expression) => "reference location",
+        RefExpressionSyntax reference when !RefAliasCache.For(owner.Body!).Initializes(reference)
+            && !StorageReferences.Supports(owner, reference.Expression) => "reference location",
         AssignmentExpressionSyntax assignment when CapturedAssignments.IsRebinding(owner, assignment) => "captured binding overwrite",
         IdentifierNameSyntax name when PropertyDispatch.IsBare(owner, name) => "property access '" + name + "'",
         MemberAccessExpressionSyntax member when PropertyDispatch.IsMember(owner, member) => "property access '" + member + "'",

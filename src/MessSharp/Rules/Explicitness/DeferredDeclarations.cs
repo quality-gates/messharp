@@ -22,6 +22,8 @@ internal sealed class DeferredDeclarations(CallableOwner owner)
     private SyntaxNode? Identifier(IdentifierNameSyntax name)
     {
         var variable = Local(name);
+        if (variable is VariableDeclaratorSyntax declarator && owner.Body is { } body
+            && RefAliasCache.For(body).Aliased(declarator) is { } aliased) return Find(aliased);
         if (variable is not null && !IsShared(variable)) return variable;
         return (SyntaxNode?)Parameter(name) ?? variable ?? Member(name.Identifier.Text);
     }
@@ -53,6 +55,8 @@ internal sealed class DeferredDeclarations(CallableOwner owner)
     public bool IsWrittenBy(SyntaxNode node, SyntaxNode declaration) => node switch
     {
         VariableDeclaratorSyntax or SingleVariableDesignationSyntax => node == declaration,
+        AssignmentExpressionSyntax { Left: TupleExpressionSyntax tuple } =>
+            DeconstructionBindings.Targets(tuple).Any(target => Find(target) == declaration),
         AssignmentExpressionSyntax assignment => Find(assignment.Left) == declaration,
         ArgumentSyntax { RefKindKeyword.RawKind: (int)SyntaxKind.RefKeyword or (int)SyntaxKind.OutKeyword } argument =>
             Find(argument.Expression) == declaration,

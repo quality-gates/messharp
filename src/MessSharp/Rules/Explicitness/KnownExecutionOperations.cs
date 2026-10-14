@@ -62,7 +62,7 @@ internal static class KnownExecutionOperations
 
     public static bool RequiresExecution(CallableOwner owner, ExpressionSyntax value, DeferredKind kind)
     {
-        if (kind == DeferredKind.Lazy) return true;
+        if (kind != DeferredKind.Sequence) return true;
         var type = new ExpressionTypes(owner).TypeOf(value);
         return type is null || !StorageTypes.IsMutable(type);
     }

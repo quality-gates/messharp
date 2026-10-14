@@ -6,7 +6,8 @@ namespace MessSharp.Rules.Explicitness;
 
 internal sealed class BindingOrigins(
     SyntaxNode body, Func<ExpressionSyntax, StorageEnvironment, StorageOrigin> origin,
-    Func<SyntaxNode, StorageEnvironment, bool, bool> execute, bool weak = false)
+    Func<SyntaxNode, StorageEnvironment, bool, bool> execute,
+    Func<ExpressionSyntax, StorageEnvironment, StorageCallable?> callable, bool weak = false)
 {
     private readonly BodyBindings _bindings = new(body);
 
@@ -15,6 +16,7 @@ internal sealed class BindingOrigins(
         var reaching = StorageSteps.Gather(body, _bindings.All).Where(step => after || _bindings.Reaches(step, site)).ToList();
         var loops = new Dictionary<SyntaxNode, Dictionary<string, StorageOrigin>>();
         var heaps = new Dictionary<SyntaxNode, StorageHeap>();
+        var callables = new StorageCallableFlow(_bindings, body, callable);
         StorageEnvironment state;
         bool changed;
         do
@@ -22,23 +24,34 @@ internal sealed class BindingOrigins(
             state = initial.Copy();
             changed = false;
             foreach (var step in reaching)
-                changed |= Apply(step, state, loops, heaps);
+                changed |= Apply(step, state, loops, heaps, callables);
         } while (changed);
         return state;
     }
 
-    private bool Apply(StorageStep step, StorageEnvironment state,
-        Dictionary<SyntaxNode, Dictionary<string, StorageOrigin>> loops, Dictionary<SyntaxNode, StorageHeap> heaps)
+    private bool Apply(StorageStep step, StorageEnvironment state, Dictionary<SyntaxNode, Dictionary<string, StorageOrigin>> loops,
+        Dictionary<SyntaxNode, StorageHeap> heaps, StorageCallableFlow callables)
     {
         var loop = _bindings.RepetitionRegion(step.Node);
-        Carry(loop, state.Bindings, loops);
-        if (loop is not null && heaps.TryGetValue(loop, out var heap)) state.Heap.Join(heap);
-        var changed = false;
-        var skipped = step is StorageStep.Bound binding ? _bindings.MayBeSkipped(binding.Binding) : _bindings.MayBeSkipped(step.Node);
-        var handled = execute(step.Node, state, weak || skipped);
-        if (step is StorageStep.Bound bound && !handled) changed = ApplyBinding(bound.Binding, loop, state, loops);
+        EnterLoop(loop, state, loops, heaps, callables);
+        var handled = execute(step.Node, state, weak || IsSkipped(step));
+        if (step is not StorageStep.Bound bound) return JoinHeap(loop, state.Heap, heaps);
+        var changed = !handled && ApplyBinding(bound.Binding, loop, state, loops);
+        changed |= callables.Bind(bound.Binding, loop, loop is not null && IsCarried(bound.Binding, loop), state);
         return changed | JoinHeap(loop, state.Heap, heaps);
     }
+
+    private void EnterLoop(SyntaxNode? loop, StorageEnvironment state,
+        Dictionary<SyntaxNode, Dictionary<string, StorageOrigin>> loops, Dictionary<SyntaxNode, StorageHeap> heaps,
+        StorageCallableFlow callables)
+    {
+        Carry(loop, state.Bindings, loops);
+        callables.Carry(loop, state);
+        if (loop is not null && heaps.TryGetValue(loop, out var heap)) state.Heap.Join(heap);
+    }
+
+    private bool IsSkipped(StorageStep step) =>
+        step is StorageStep.Bound binding ? _bindings.MayBeSkipped(binding.Binding) : _bindings.MayBeSkipped(step.Node);
 
     private bool ApplyBinding(StorageBinding binding, SyntaxNode? loop, StorageEnvironment state,
         Dictionary<SyntaxNode, Dictionary<string, StorageOrigin>> loops)

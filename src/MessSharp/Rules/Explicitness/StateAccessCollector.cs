@@ -47,20 +47,30 @@ internal sealed class StateAccessCollector : IBodyVisitor
     }
 
     public static StateAccessCollector MutationsOf(
-        Func<ExpressionSyntax, IReadOnlyCollection<ResolvedState>> resolve, Func<SyntaxNodeCall, bool> knownMutation) =>
-        new(resolve, null, knownMutation, recordsReads: false, readsMutations: false);
+        Func<ExpressionSyntax, IReadOnlyCollection<ResolvedState>> resolve, Func<SyntaxNodeCall, bool> knownMutation,
+        IReadOnlySet<SyntaxNode> accessorCalls) =>
+        new(resolve, null, knownMutation, recordsReads: false, readsMutations: false) { AccessorCalls = accessorCalls };
+
+    /// <summary>Event subscriptions that run an accessor instead of writing the event's storage.</summary>
+    public IReadOnlySet<SyntaxNode> AccessorCalls { private get; init; } = new HashSet<SyntaxNode>();
 
     public List<StateAccess> Accesses() => [.. _mutations, .. _reads];
 
     public void Visit(SyntaxNode node)
     {
-        foreach (var (target, isPureWrite) in MutationTargets.Find(node))
-            AddMutation(target, isPureWrite);
+        if (!AccessorCalls.Contains(node))
+            foreach (var (target, isPureWrite) in MutationTargets.Find(node))
+                AddMutation(target, isPureWrite);
         if (CollectionCall(node) is { } call && IsMutation(call))
         {
             AddAll(ResolveChain(call.Receiver), AccessKind.Change, node);
             if (!_readsMutations) ExcludeReads(call.Receiver);
         }
+        RecordRead(node);
+    }
+
+    private void RecordRead(SyntaxNode node)
+    {
         if (_recordsReads && node is ExpressionSyntax expr && !_pureWrites.Contains(expr))
             foreach (var state in _resolve(expr))
                 _reads.Add(new StateAccess(state.Name, AccessKind.Read, expr));

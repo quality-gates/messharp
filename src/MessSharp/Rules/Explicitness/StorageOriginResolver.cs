@@ -16,13 +16,16 @@ internal sealed class StorageOriginResolver(StorageContext context, StorageEnvir
         return fresh(expression) ?? StorageOrigin.Private;
     }
 
-    private StorageOrigin? Named(ExpressionSyntax expression)
+    private StorageOrigin? Named(ExpressionSyntax expression) => Local(expression) ?? OwnMember(expression)
+        ?? (context.Root(expression) is { } root ? state.Heap.Shared(root) : null);
+
+    /// <summary>The origin a local holds, read through its <c>ref</c> location when it has one.</summary>
+    private StorageOrigin? Local(ExpressionSyntax expression)
     {
-        if (expression is IdentifierNameSyntax reference && state.References.TryGetValue(reference.Identifier.Text, out var location))
-            return location.Read(state.Heap);
-        if (expression is IdentifierNameSyntax name && state.Bindings.TryGetValue(name.Identifier.Text, out var bound)) return bound;
-        if (OwnMember(expression) is { } own) return own;
-        return context.Root(expression) is { } root ? state.Heap.Shared(root) : null;
+        if (expression is not IdentifierNameSyntax name) return null;
+        var local = RefAliasCache.For(context.Body).Canonical(name.Identifier.Text);
+        if (state.References.TryGetValue(local, out var location)) return location.Read(state.Heap);
+        return state.Bindings.TryGetValue(local, out var bound) ? bound : null;
     }
 
     private StorageOrigin? OwnMember(ExpressionSyntax expression)

@@ -70,7 +70,8 @@ internal sealed class ExpressionTypes(CallableOwner owner, IReadOnlyList<Callabl
         if (invocation.Expression is MemberAccessExpressionSyntax member && Result(member) is { } known)
             return known;
         var owners = callableOwners ?? CallableOwner.Gather(owner.Method.File);
-        return new CallResolver(owners).Resolve(owner, invocation)?.Method.ReturnType;
+        if (new CallResolver(owners).Resolve(owner, invocation) is { } target) return target.Method.ReturnType;
+        return DelegateCallee.Value(invocation) is { } callee ? DelegateParameterTypes.Result(TypeOf(callee)) : null;
     }
 
     private string? Result(MemberAccessExpressionSyntax member) => member.Name.Identifier.Text switch

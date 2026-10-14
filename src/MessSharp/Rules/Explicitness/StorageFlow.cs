@@ -6,7 +6,10 @@ namespace MessSharp.Rules.Explicitness;
 internal sealed class StorageFlow(StorageContext context)
 {
     public StorageEnvironment Before(SyntaxNode site, StorageEnvironment initial, bool after = false) =>
-        new BindingOrigins(context.Body, Origin, Execute, context.Weak).Before(site, initial, after);
+        new BindingOrigins(context.Body, Origin, Execute, Callable, context.Weak).Before(site, initial, after);
+
+    private StorageCallable? Callable(ExpressionSyntax value, StorageEnvironment state) =>
+        new StorageCallables(context, expression => Origin(expression, state), state).Find(value);
 
     public StorageOrigin Origin(ExpressionSyntax expression, StorageEnvironment state)
     {
@@ -19,17 +22,23 @@ internal sealed class StorageFlow(StorageContext context)
         return new StorageOriginResolver(context, state, evaluation.Fresh, Call).Origin(expression);
     }
 
-    private bool Execute(SyntaxNode node, StorageEnvironment state, bool weak)
+    private bool Execute(SyntaxNode node, StorageEnvironment state, bool weak) =>
+        StorageStepExecutor.Execute(context, expression => Origin(expression, state), node, state, weak);
+}
+
+internal static class StorageStepExecutor
+{
+    public static bool Execute(StorageContext context, Func<ExpressionSyntax, StorageOrigin> origin, SyntaxNode node,
+        StorageEnvironment state, bool weak)
     {
-        if (new StorageReferences(context, expression => Origin(expression, state), state).Bind(node, weak)) return true;
-        if (new StorageDeferred(context, expression => Origin(expression, state), state).Execute(node, weak)) return true;
+        if (new StorageReferences(context, origin, state).Bind(node, weak)) return true;
+        if (new StorageDeferred(context, origin, state).Execute(node, weak)) return true;
         if (node is InvocationExpressionSyntax call)
         {
-            new StorageEvaluations(context, expression => Origin(expression, state), state).Invoke(call, weak);
+            new StorageEvaluations(context, origin, state).Invoke(call, weak);
             return true;
         }
         return node is AssignmentExpressionSyntax assignment
-            && new StorageWrites(context, expression => Origin(expression, state), state).Assign(assignment, weak);
+            && new StorageWrites(context, origin, state).Assign(assignment, weak);
     }
-
 }

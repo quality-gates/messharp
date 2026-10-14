@@ -6,17 +6,13 @@ namespace MessSharp.Rules.Explicitness;
 
 internal sealed class CallbackResolver(IReadOnlyList<CallableOwner> owners)
 {
-    public CallableOwner? Find(CallableOwner caller, ExpressionSyntax actual) => Resolve(caller, actual, new HashSet<ExpressionSyntax>());
-
-    private CallableOwner? Resolve(CallableOwner caller, ExpressionSyntax actual, HashSet<ExpressionSyntax> visiting)
+    /// <summary>The callable <paramref name="actual"/> names directly; a variable holding a delegate names none.</summary>
+    public CallableOwner? Find(CallableOwner caller, ExpressionSyntax actual)
     {
         actual = CallableSyntax.Unwrap(actual);
-        if (!visiting.Add(actual)) return null;
         if (actual is not IdentifierNameSyntax name) return CallableNodeLookup.Find(owners, actual);
         if (new CallableLookup(owners).VisibleLocal(caller, name, null) is { } local) return local;
-        if (LocalShadowing.IsShadowedByLocal(name, name.Identifier.Text))
-            return CallableBindings.Value(caller, name) is { } value ? Resolve(caller, value, visiting) : null;
-        return Method(caller, name);
+        return LocalShadowing.IsShadowedByLocal(name, name.Identifier.Text) ? null : Method(caller, name);
     }
 
     private CallableOwner? Method(CallableOwner caller, IdentifierNameSyntax name)

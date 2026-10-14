@@ -8,11 +8,12 @@ namespace MessSharp.Rules.Explicitness;
 /// One resolution of a deferred value: follows bindings, calls, branches, elements, parameter entries and
 /// written arguments to the work they hold. A value revisited while it is being resolved is unknown.
 /// </summary>
-internal sealed class DeferredValueWalk(IReadOnlyList<CallableOwner> owners)
+internal sealed class DeferredValueWalk(IReadOnlyList<CallableOwner> owners, int arity = 0,
+    HashSet<SyntaxNode>? visiting = null)
 {
     private static readonly DeferredResolution Unknown = new([], false);
     private static readonly DeferredResolution Nothing = new([], true);
-    private readonly HashSet<SyntaxNode> _visiting = [];
+    private readonly HashSet<SyntaxNode> _visiting = visiting ?? [];
 
     public DeferredResolution Resolve(DeferredValueContext context, ExpressionSyntax value, DeferredKind kind)
     {
@@ -26,7 +27,7 @@ internal sealed class DeferredValueWalk(IReadOnlyList<CallableOwner> owners)
         value switch
         {
             IdentifierNameSyntax or MemberAccessExpressionSyntax => ResolveBindings(context, value, kind),
-            InvocationExpressionSyntax call => new DeferredCallResolver(owners, Resolve).Resolve(context, call, kind),
+            InvocationExpressionSyntax call => new DeferredCallResolver(owners, Resolve, Callables).Resolve(context, call, kind),
             ElementAccessExpressionSyntax element => ResolveElements(context, element.Expression, kind),
             LiteralExpressionSyntax { RawKind: (int)SyntaxKind.NullLiteralExpression } or DefaultExpressionSyntax => Nothing,
             _ when Branches(value) is { } branches => Merge(context, branches, kind),
@@ -51,9 +52,9 @@ internal sealed class DeferredValueWalk(IReadOnlyList<CallableOwner> owners)
     private DeferredResolution ResolveBindings(DeferredValueContext context, ExpressionSyntax value, DeferredKind kind)
     {
         var sources = context.Values(value);
-        return sources is { Count: > 0 }
-            ? DeferredResolution.Merge(sources.Select(source => ResolveSource(context, source, kind)))
-            : new DeferredResolution([], !KnownExecutionOperations.RequiresExecution(context.Owner, value, kind));
+        if (sources is { Count: > 0 }) return DeferredResolution.Merge(sources.Select(source => ResolveSource(context, source, kind)));
+        if (sources is null && kind == DeferredKind.Call) return CallableWork.Group(owners, context, value, arity);
+        return new DeferredResolution([], !KnownExecutionOperations.RequiresExecution(context.Owner, value, kind));
     }
 
     private DeferredResolution ResolveSource(DeferredValueContext context, DeferredSource source, DeferredKind kind) =>
@@ -63,7 +64,9 @@ internal sealed class DeferredValueWalk(IReadOnlyList<CallableOwner> owners)
             DeferredSource.Value { Owner.Body: not null } value => Resolve(context.For(value.Owner), value.Expression, kind),
             DeferredSource.Entry entry => ResolveEntry(context, entry.Parameter, kind),
             DeferredSource.Element element => ResolveElements(context, element.Collection, kind),
-            DeferredSource.Written written => ResolveWritten(context, written.Argument, kind),
+            DeferredSource.Written written => DeferredArgumentExits.Find(owners, context, written.Argument) is { } exit
+                ? DeferredResolution.Merge(exit.Sources.Select(item => ResolveSource(exit.Context, item, kind)))
+                : Unknown,
             _ => Unknown,
         };
 
@@ -76,15 +79,14 @@ internal sealed class DeferredValueWalk(IReadOnlyList<CallableOwner> owners)
         return context.Caller is null && !context.Foreign ? DeferredResolution.Parameter(parameter) : Unknown;
     }
 
-    /// <summary>Follows a value a callee leaves in an <c>out</c> or <c>ref</c> argument back to its writes.</summary>
-    private DeferredResolution ResolveWritten(DeferredValueContext context, ArgumentSyntax argument, DeferredKind kind) =>
-        new DeferredArgumentExits(owners).Find(context, argument) is { } exit
-            ? DeferredResolution.Merge(exit.Sources.Select(source => ResolveSource(exit.Context, source, kind)))
-            : Unknown;
-
     private DeferredResolution ResolveCreation(DeferredValueContext context, ExpressionSyntax value, DeferredKind kind)
     {
-        if (LazyValueResolver.Resolve(owners, context, value) is { } lazy) return lazy;
+        if (kind == DeferredKind.Call) return CallableWork.Creation(owners, context, value);
+        if (LazyValueResolver.Resolve(owners, context, value, Callables) is { } lazy) return lazy;
         return new DeferredResolution([], !KnownExecutionOperations.RequiresExecution(context.Owner, value, kind));
     }
+
+    /// <summary>The callables a delegate value holds, resolved within this walk so a revisited value stays unknown.</summary>
+    private DeferredResolution Callables(DeferredValueContext context, ExpressionSyntax value, int callArity) =>
+        new DeferredValueWalk(owners, callArity, _visiting).Resolve(context, value, DeferredKind.Call);
 }

@@ -10,10 +10,11 @@ internal sealed record StorageCallFrame(CallableOwner Target, StorageOrigin? Rec
         if (context.Owner is not { } owner) return null;
         var receiver = call.Expression is MemberAccessExpressionSyntax member ? origin(member.Expression)
             : state.Bindings.GetValueOrDefault(StorageContext.ThisBinding);
-        if (call.Expression is IdentifierNameSyntax name && state.Callables.TryGetValue(name.Identifier.Text, out var bound))
+        var callables = new StorageCallables(context, origin, state);
+        if (call.Expression is IdentifierNameSyntax name && callables.Bound(name) is { } bound)
             return new StorageCallFrame(bound.Target, receiver, bound);
         if (new CallResolver(context.Owners).Resolve(owner, call) is not { } target) return null;
-        var callable = target.Parent is null ? null : new StorageCallables(context, origin, state).Capture(target);
+        var callable = target.Parent is null ? null : callables.Capture(target);
         return new StorageCallFrame(target, receiver, callable);
     }
 }

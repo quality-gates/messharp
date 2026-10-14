@@ -47,6 +47,8 @@ internal sealed class AmbientApi
         "Process.Start",
     ]);
 
+    public static readonly AmbientApi Predicates = new(["File.Exists", "Directory.Exists", "Console.KeyAvailable"]);
+
     private readonly HashSet<string> _members;
 
     private AmbientApi(IEnumerable<string> members) =>

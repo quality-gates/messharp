@@ -42,16 +42,18 @@ internal static class MethodEffectAnalyzer
         var method = owner.Method;
         var names = StateInScope.For(ctx, method);
         bool Mutation(SyntaxNodeCall call) => KnownMutations.IsCollectionMutation(owner, call);
-        var statics = new StateAccessCollector(names.Statics.Resolve, knownMutation: Mutation);
-        var instance = new StateAccessCollector(names.Instance.Resolve, knownMutation: Mutation);
+        var accessorCalls = EventSubscriptions.Assignments(owner, owners, body);
+        var statics = new StateAccessCollector(names.Statics.Resolve, knownMutation: Mutation) { AccessorCalls = accessorCalls };
+        var instance = new StateAccessCollector(names.Instance.Resolve, knownMutation: Mutation) { AccessorCalls = accessorCalls };
         string? Root(ExpressionSyntax expression) => names.Parameters.Resolve(expression)
             ?? (names.Statics.Resolve(expression) is { } stat ? StorageRoots.Static(stat) : null)
             ?? (names.Instance.Resolve(expression) is { } member ? StorageRoots.Member(member) : null);
         var ownership = new ArgumentOwnership(body, Root, owner, owners);
         var mutableParameters = method.Parameters.Where(p => StorageTypes.IsMutable(p.Type))
             .Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
-        var parameters = new StateAccessCollector(ownership.Resolve, mutableParameters, Mutation, readsMutations: false);
-        var mutations = StateAccessCollector.MutationsOf(ownership.MutationRoots, Mutation);
+        var parameters = new StateAccessCollector(ownership.Resolve, mutableParameters, Mutation, readsMutations: false)
+        { AccessorCalls = accessorCalls };
+        var mutations = StateAccessCollector.MutationsOf(ownership.MutationRoots, Mutation, accessorCalls);
         var ambient = new AmbientUses(owner);
         BodyWalk.Run(body, [statics, instance, parameters, mutations, ambient]);
         return new MethodEffects

@@ -4,7 +4,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules.Explicitness;
 
-internal sealed class ConstructorEdges(RuleContext ctx, IReadOnlyList<CallableOwner> owners, List<CallEdge> edges)
+internal sealed class ConstructorEdges(RuleContext ctx, IReadOnlyList<CallableOwner> owners, List<CallEdge> edges,
+    ConstructorChainEdges chains)
 {
     public void Add(CallableOwner owner, EffectSummary summary)
     {
@@ -16,6 +17,8 @@ internal sealed class ConstructorEdges(RuleContext ctx, IReadOnlyList<CallableOw
             if (ConstructorTypes.Trusted(owner, type) || ConstructorDefaults.IsEmpty(owner, type, creation)) continue;
             if (ConstructorCall.Resolve(owners, creation, type) is { } constructor)
                 AddEdge(owner, constructor, creation, body);
+            else if (ConstructorTypes.ImplicitlyConstructed(owner, type, creation) is { } cls)
+                chains.AddImplicit(owner, summary, cls, creation);
             else summary.Add(new EffectFact(EffectKind.Unknown, "unresolved constructor '" + type + "'"), creation);
         }
     }

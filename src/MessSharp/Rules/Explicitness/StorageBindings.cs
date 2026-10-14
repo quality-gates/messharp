@@ -43,18 +43,9 @@ internal static class StorageBindings
             [new(target.Identifier.Text, assignment, assignment.Span.End, new BindingSource.Value(assignment.Right))],
         { Left: IdentifierNameSyntax target } when assignment.IsKind(SyntaxKind.CoalesceAssignmentExpression) =>
             [new(target.Identifier.Text, assignment, assignment.Span.End, new BindingSource.Value(assignment.Right), Joins: true)],
-        { Left: TupleExpressionSyntax tuple } => TupleTargets(tuple)
-            .Select(target => new StorageBinding(target.Identifier.Text, assignment, assignment.Span.End, new BindingSource.Unknown())),
+        { Left: TupleExpressionSyntax tuple } => DeconstructionBindings.Assigned(assignment, tuple),
         _ => [],
     };
-
-    private static IEnumerable<IdentifierNameSyntax> TupleTargets(TupleExpressionSyntax tuple) =>
-        tuple.Arguments.SelectMany(argument => argument.Expression switch
-        {
-            TupleExpressionSyntax nested => TupleTargets(nested),
-            IdentifierNameSyntax { Identifier.Text: not "_" } name => [name],
-            _ => [],
-        });
 
     private static StorageBinding Designated(SingleVariableDesignationSyntax designation)
     {
@@ -68,6 +59,8 @@ internal static class StorageBindings
                 new(name, designation, tested.Span.End, new BindingSource.Value(tested.Expression)),
             DeclarationExpressionSyntax { Parent: ArgumentSyntax argument } when ArgumentBindings.TriedValueSource(argument) is { } source =>
                 new(name, designation, argument.Span.End, new BindingSource.Element(source)),
+            _ when DeconstructionBindings.Deconstructing(designation) is { } assignment =>
+                new(name, designation, assignment.Span.End, DeconstructionBindings.Source(assignment, designation)),
             _ => new(name, designation, designation.Span.End, new BindingSource.Unknown()),
         };
     }

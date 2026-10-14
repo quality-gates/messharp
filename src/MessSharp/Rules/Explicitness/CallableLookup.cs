@@ -6,41 +6,49 @@ namespace MessSharp.Rules.Explicitness;
 
 internal sealed class CallableLookup(IReadOnlyList<CallableOwner> owners)
 {
-    public CallableOwner? VisibleLocal(CallableOwner caller, IdentifierNameSyntax name, int? arity)
+    public CallableOwner? VisibleLocal(CallableOwner caller, IdentifierNameSyntax name, CallShape? shape)
     {
         for (var scope = caller; scope is not null; scope = scope.Parent)
         {
-            var local = Unique(scope.Children.Where(o => IsMatchingLocal(o, name, arity)));
+            var locals = scope.Children.Where(o => IsMatchingLocal(o, name));
+            var local = shape is null ? Unique(locals) : shape.Best(locals);
             if (local is not null) return local;
         }
         return null;
     }
 
-    public CallableOwner? SameClassMethod(CallableOwner caller, IdentifierNameSyntax name, int arity) =>
-        Unique(owners.Where(o => o.Parent is null && o.Method.Class == caller.Method.Class
-            && o.Method.Name == name.Identifier.Text && o.Method.Parameters.Count == arity && Safe(o)));
+    /// <summary>The callable a method group names when converted to a delegate taking <paramref name="arity"/> arguments.</summary>
+    public CallableOwner? Group(CallableOwner caller, ExpressionSyntax group, int arity) => group switch
+    {
+        IdentifierNameSyntax name => VisibleLocal(caller, name, new CallShape(arity)) ?? SameClassMethod(caller, name, new CallShape(arity)),
+        MemberAccessExpressionSyntax member => MemberTarget(caller, member, new CallShape(arity)),
+        _ => null,
+    };
 
-    public CallableOwner? MemberTarget(CallableOwner caller, MemberAccessExpressionSyntax member, int arity)
+    public CallableOwner? SameClassMethod(CallableOwner caller, IdentifierNameSyntax name, CallShape shape) =>
+        shape.Best(owners.Where(o => o.Parent is null && o.Method.Class == caller.Method.Class
+            && o.Method.Name == name.Identifier.Text && Safe(o)));
+
+    public CallableOwner? MemberTarget(CallableOwner caller, MemberAccessExpressionSyntax member, CallShape shape)
     {
         var candidates = owners.Where(o => o.Parent is null && o.Method.Name == member.Name.Identifier.Text && Safe(o)).ToList();
-        var direct = candidates.Where(o => o.Method.Parameters.Count == arity).ToList();
         if (member.Expression is ThisExpressionSyntax)
-            return Unique(direct.Where(o => o.Method.Class == caller.Method.Class));
-        return StaticTarget(member.Expression, direct) ?? ReceiverTarget(caller, member.Expression, candidates, arity);
+            return shape.Best(candidates.Where(o => o.Method.Class == caller.Method.Class));
+        return StaticTarget(member.Expression, candidates, shape) ?? ReceiverTarget(caller, member.Expression, candidates, shape);
     }
 
-    private static CallableOwner? StaticTarget(ExpressionSyntax receiver, List<CallableOwner> direct) =>
+    private static CallableOwner? StaticTarget(ExpressionSyntax receiver, List<CallableOwner> candidates, CallShape shape) =>
         receiver is IdentifierNameSyntax type && !LocalShadowing.IsShadowedByLocal(type, type.Identifier.Text)
-            ? Unique(direct.Where(o => o.Method.IsStatic() && o.Method.DeclaringTypeName == type.Identifier.Text))
+            ? shape.Best(candidates.Where(o => o.Method.IsStatic() && o.Method.DeclaringTypeName == type.Identifier.Text))
             : null;
 
     /// <summary>An instance method of the receiver's type, or else an extension method on it.</summary>
     private CallableOwner? ReceiverTarget(CallableOwner caller, ExpressionSyntax expression, List<CallableOwner> candidates,
-        int arity)
+        CallShape shape)
     {
         if (new ExpressionTypes(caller, owners).TypeOf(expression) is not { } receiver) return null;
-        return Unique(candidates.Where(o => o.Method.Parameters.Count == arity && IsInstanceOf(o, receiver)))
-            ?? Unique(candidates.Where(o => o.Method.Parameters.Count == arity + 1 && IsExtensionOf(o, receiver)));
+        return shape.Best(candidates.Where(o => IsInstanceOf(o, receiver)))
+            ?? shape.Best(candidates.Where(o => IsExtensionOf(o, receiver)), 1);
     }
 
     /// <summary>A non-virtual instance method of the receiver's own class binds statically.</summary>
@@ -51,10 +59,9 @@ internal sealed class CallableLookup(IReadOnlyList<CallableOwner> owners)
     private static bool IsExtensionOf(CallableOwner owner, string receiver) => ExtensionMethods.IsExtension(owner)
         && ExtensionMethods.ReceiverType(owner) is { } declared && TypeNames.Simple(declared) == TypeNames.Simple(receiver);
 
-    private static bool IsMatchingLocal(CallableOwner owner, IdentifierNameSyntax name, int? arity) =>
+    private static bool IsMatchingLocal(CallableOwner owner, IdentifierNameSyntax name) =>
         owner.Method.Node is LocalFunctionStatementSyntax function
         && function.Identifier.Text == name.Identifier.Text
-        && (arity is null || function.ParameterList.Parameters.Count == arity)
         && Visible(function, name);
 
     private static bool Visible(SyntaxNode declaration, SyntaxNode site) =>

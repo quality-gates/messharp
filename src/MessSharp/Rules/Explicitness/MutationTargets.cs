@@ -13,6 +13,8 @@ internal static class MutationTargets
             .Select(target => (target, assignment.IsKind(SyntaxKind.SimpleAssignmentExpression))),
         PrefixUnaryExpressionSyntax prefix when IsIncrementOrDecrement(prefix.Kind()) => [(prefix.Operand, false)],
         PostfixUnaryExpressionSyntax postfix when IsIncrementOrDecrement(postfix.Kind()) => [(postfix.Operand, false)],
+        ArgumentSyntax { RefKindKeyword.RawKind: (int)SyntaxKind.OutKeyword, Expression: not DeclarationExpressionSyntax } argument =>
+            [(argument.Expression, true)],
         _ => [],
     };
 

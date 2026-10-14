@@ -8,9 +8,21 @@ internal sealed class StorageCallables(StorageContext context, Func<ExpressionSy
     public StorageCallable? Find(ExpressionSyntax actual)
     {
         actual = CallableSyntax.Unwrap(actual);
-        if (actual is IdentifierNameSyntax name && state.Callables.TryGetValue(name.Identifier.Text, out var bound)) return bound;
+        if (actual is IdentifierNameSyntax name && Bound(name) is { } bound) return bound;
         if (context.Owner is not { } owner || new CallbackResolver(context.Owners).Find(owner, actual) is not { } target) return null;
         return Capture(target);
+    }
+
+    /// <summary>
+    /// The callable a local or parameter holds. A callable declared in this body reads its captured variables
+    /// where it is used, since a later write to them is visible to it.
+    /// </summary>
+    public StorageCallable? Bound(IdentifierNameSyntax name)
+    {
+        var local = RefAliasCache.For(context.Body).Canonical(name.Identifier.Text);
+        if (!state.Callables.TryGetValue(local, out var bound)) return null;
+        return bound.Target.Parent?.Body is { } declaring && declaring.SyntaxTree == name.SyntaxTree
+            && declaring.Span.Contains(name.Span) ? Capture(bound.Target) : bound;
     }
 
     public StorageCallable Capture(CallableOwner target)

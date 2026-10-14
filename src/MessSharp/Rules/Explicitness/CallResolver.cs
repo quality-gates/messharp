@@ -3,51 +3,26 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules.Explicitness;
 
-internal sealed class CallResolver
+/// <summary>
+/// The declared callable an invocation names: a local function, a method or a member. A call through a delegate
+/// value resolves elsewhere, from the callables the value can hold at the call.
+/// </summary>
+internal sealed class CallResolver(IReadOnlyList<CallableOwner> owners)
 {
-    private readonly IReadOnlyList<CallableOwner> _owners;
-    private readonly CallableLookup _lookup;
+    private readonly CallableLookup _lookup = new(owners);
 
-    public CallResolver(IReadOnlyList<CallableOwner> owners)
+    public CallableOwner? Resolve(CallableOwner caller, InvocationExpressionSyntax call) => call.Expression switch
     {
-        _owners = owners;
-        _lookup = new CallableLookup(owners);
-    }
+        IdentifierNameSyntax bare => ResolveBare(caller, bare, CallShape.From(call.ArgumentList)),
+        MemberAccessExpressionSyntax member => _lookup.MemberTarget(caller, member, CallShape.From(call.ArgumentList)),
+        _ => null,
+    };
 
-    public CallableOwner? Resolve(CallableOwner caller, InvocationExpressionSyntax call)
+    private CallableOwner? ResolveBare(CallableOwner caller, IdentifierNameSyntax name, CallShape shape)
     {
-        if (call.Expression is IdentifierNameSyntax bare)
-            return ResolveBare(caller, bare, call.ArgumentList.Arguments.Count);
-        if (call.Expression is ParenthesizedExpressionSyntax grouped)
-            return CallableNodeLookup.Find(_owners, grouped);
-        if (call.Expression is InvocationExpressionSyntax factory)
-            return ResolveFactoryReturn(caller, factory);
-        return call.Expression is MemberAccessExpressionSyntax member
-            ? _lookup.MemberTarget(caller, member, call.ArgumentList.Arguments.Count) : null;
+        if (_lookup.VisibleLocal(caller, name, shape) is { } local) return local;
+        return LocalShadowing.IsShadowedByLocal(name, name.Identifier.Text) ? null : _lookup.SameClassMethod(caller, name, shape);
     }
-
-    private CallableOwner? ResolveBare(CallableOwner caller, IdentifierNameSyntax name, int arity)
-    {
-        if (_lookup.VisibleLocal(caller, name, arity) is { } local) return local;
-        if (LocalShadowing.IsShadowedByLocal(name, name.Identifier.Text))
-            return BoundDelegate(caller, name);
-        return _lookup.SameClassMethod(caller, name, arity);
-    }
-
-    private CallableOwner? BoundDelegate(CallableOwner caller, IdentifierNameSyntax name) =>
-        CallableBindings.Value(caller, name) is { } value ? ResolveDelegateValue(caller, CallableSyntax.Unwrap(value)) : null;
-
-    private CallableOwner? ResolveDelegateValue(CallableOwner caller, ExpressionSyntax value)
-    {
-        if (value is IdentifierNameSyntax method) return ResolveBare(caller, method, 0);
-        if (value is InvocationExpressionSyntax factory)
-            return ResolveFactoryReturn(caller, factory);
-        return CallableNodeLookup.Find(_owners, value);
-    }
-
-    private CallableOwner? ResolveFactoryReturn(CallableOwner caller, InvocationExpressionSyntax factory) =>
-        Resolve(caller, factory) is { } returnedFactory ? ReturnedCallableResolver.Find(returnedFactory) : null;
-
 }
 
 internal static class CallableSyntax

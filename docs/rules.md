@@ -71,9 +71,15 @@ The analysis is syntax-only, so the supported calculation subset is explicit:
   writes. General constant folding is not part of the supported subset.
 * Deferred callback creation does not execute the callback. Invoking a
   resolved callback carries its effects to the caller, with callback arguments
-  and lexical captures bound separately. Returned closures retain their
-  factory arguments and captured storage. Injected or rebound callbacks stay
-  unknown.
+  and lexical captures bound separately. Delegate values follow reaching
+  bindings across loops, tuple deconstruction, `ref` local aliases, `out`
+  arguments, and captured variables, and select method-group overloads by
+  arity. Returned closures retain their factory arguments and captured storage.
+  Injected or unresolved callbacks stay unknown.
+* Same-file calls select overloads by argument count, named arguments, `ref`,
+  `out`, and `in` modifiers, and predefined literal compatibility. Each printed
+  owner reports one designated effect line per rule, at the earliest site in
+  source order.
 * Recognized iterator methods, LINQ `Select` and `Where`, and `Lazy<T>` creation
   defer work. Enumeration, terminal sequence operations, or `Lazy<T>.Value`
   transfer effects to the execution site and apply storage writes before later
@@ -82,7 +88,9 @@ The analysis is syntax-only, so the supported calculation subset is explicit:
   Explicit and target-typed lazy factories in declarations, assignments,
   returns, switch-expression arms, and static fields have a separate `<lazy>`
   owner. Named constructor arguments bind `valueFactory` by name, including
-  reordered thread-safety options. Rebinding a lazy variable preserves the
+  reordered thread-safety options. Preset `Lazy<T>` values, including
+  calculated values and typed delegate presets, do not run as factories when
+  forced, and `.Value` forwards the preset value. Rebinding a lazy variable preserves the
   factory retained by an earlier alias. Resolved helpers, including non-virtual
   instance and extension methods, transfer known factory effects at the call site.
   Direct parameter replacement forces the replacement rather than the original
@@ -99,6 +107,9 @@ The analysis is syntax-only, so the supported calculation subset is explicit:
   effects to the creator. Static initializer execution belongs to `<module>`,
   while forcing its lazy value transfers factory effects to the forcing method.
   Expression-bodied properties, indexers, and event accessors own their bodies.
+  Same-file custom event subscriptions (`+=` and `-=`) run the `add` or `remove`
+  accessor with `value` bound to the handler, field-like events are tracked as
+  storage, and virtual, override, or abstract events report `UnknownEffect`.
   Anonymous bodies nested inside a factory keep their `<lambda>` owner rather
   than inheriting the factory's `<lazy>` name.
 * Argument ownership is tracked at each operation site. Direct aliases retain
@@ -110,15 +121,15 @@ The analysis is syntax-only, so the supported calculation subset is explicit:
   unconditional replacement of one known slot detaches its old value;
   conditional writes and uncertain indices join possible origins. Allocation
   sites and acyclic call contexts bound heap identity, and loops join storage.
-* A `ref` local to a proven field or standard array or collection element
-  retains that storage location, so writes through either alias are visible
-  through the other. Standard collection removal and reversal move known
-  element slots; uncertain removal or reordering joins possible elements.
-* Explicit and target-typed construction execute a resolved same-file
-  constructor. A compiler-generated empty constructor is quiet only for a
-  unique non-partial class without primary parameters, inheritance, a declared
-  constructor, or field, event, or property initializers. Unmodeled default
-  initialization stays unknown.
+* A `ref` local to a single-declaration local, parameter, proven field, or
+  standard array or collection element retains that storage location, so writes
+  through either alias are visible through the other. Standard collection
+  removal and reversal move known element slots; uncertain removal or
+  reordering joins possible elements.
+* Explicit, target-typed, and implicit parameterless construction of a unique
+  non-partial same-file class execute its instance initializers and same-file
+  base constructor chain, anchored at the call or `: base(...)` / `: this(...)`
+  initializer. Unmodeled external base constructors stay unknown.
 * Mutating a fresh private argument through a helper is a calculation when the
   helper has no ambient or unknown effects. Ambient and unknown effects are
   still propagated.

@@ -57,14 +57,15 @@ public class ExplicitnessDispatchTests
             + creation + "; } }"));
 
     [Theory]
-    [InlineData("class Holder { public int Value = Console.Read(); }")]
-    [InlineData("class Holder { public int Value { get; } = Console.Read(); }")]
-    [InlineData("class Base { public Base() { Console.WriteLine(1); } } class Holder : Base {}")]
-    public void UnmodeledDefaultInitializationRemainsUnknown(string declaration)
+    [InlineData("class Holder { public int Value = Console.Read(); }", "ImplicitInput")]
+    [InlineData("class Holder { public int Value { get; } = Console.Read(); }", "ImplicitInput")]
+    [InlineData("class Base { public Base() { Console.WriteLine(1); } } class Holder : Base {}", "ImplicitOutput")]
+    [InlineData("class Holder : ExternalBase {}", "UnknownEffect")]
+    public void TargetTypedDefaultInitializationTransfersMemberAndBaseEffects(string declaration, string expectedRule)
     {
         var findings = Run(declaration + "\nclass Probe { static void Run() { Holder value = new(); } }");
-        var unknown = Assert.Single(findings);
-        Assert.Equal("UnknownEffect", unknown.Rule.Name);
-        Assert.Equal(2, unknown.BeginLine);
+        var finding = Assert.Single(findings);
+        Assert.Equal(expectedRule, finding.Rule.Name);
+        Assert.Equal(2, finding.BeginLine);
     }
 }

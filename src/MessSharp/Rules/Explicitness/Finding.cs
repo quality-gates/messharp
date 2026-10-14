@@ -13,23 +13,20 @@ internal readonly record struct Finding(SyntaxNode Site, string What)
         _ => $"changes the object in {noun} '{access.Name}'",
     });
 
-    public static void ReportAll(RuleContext ctx, MethodModel method, IEnumerable<Finding> findings)
+    /// <summary>
+    /// Reports each distinct finding once per printed owner, all on the earliest site among every callable printed alike.
+    /// The first of those callables reports for all of them.
+    /// </summary>
+    public static void ReportAll(RuleContext ctx, MethodModel method, Func<MethodModel, IEnumerable<Finding>> findings)
     {
+        var alike = CallableGraph.For(ctx).PrintedAlike(method).DefaultIfEmpty(method).ToList();
+        if (alike[0] != method) return;
+        var all = alike.SelectMany(findings).OrderBy(f => f.Site.SpanStart).ToList();
+        if (all.Count == 0) return;
         var kind = method.IsConstructor ? "constructor" : "method";
-        var reported = method.IsStaticConstructor() ? new MethodModel
-        {
-            Name = "<module>",
-            Class = method.Class,
-            Interface = method.Interface,
-            Node = method.Node,
-            File = method.File,
-        } : method;
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var finding in findings.OrderBy(f => f.Site.SpanStart))
-        {
-            if (!seen.Add(finding.What)) continue;
-            var line = finding.Site.SyntaxTree.GetLineSpan(finding.Site.Span).StartLinePosition.Line + 1;
-            ctx.ReportMethodAt(reported, line, line, kind, reported.Name, finding.What);
-        }
+        var reported = ReportedOwner.Printed(method);
+        var line = all[0].Site.SyntaxTree.GetLineSpan(all[0].Site.Span).StartLinePosition.Line + 1;
+        foreach (var what in all.Select(f => f.What).Distinct(StringComparer.Ordinal))
+            ctx.ReportMethodAt(reported, line, line, kind, reported.Name, what);
     }
 }

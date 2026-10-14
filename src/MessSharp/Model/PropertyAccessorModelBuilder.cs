@@ -66,7 +66,7 @@ internal static class PropertyAccessorModelBuilder
                 Name = "value",
                 Type = propertyType,
                 Line = line,
-                Node = SyntaxFactory.Parameter(SyntaxFactory.Identifier("value")),
+                Node = AccessorValue.Parameter(accessor),
             },
         };
     }

@@ -13,20 +13,22 @@ internal sealed class EagerCallbackEdges(RuleContext ctx, IReadOnlyList<Callable
             if (KnownExecutionOperations.IsEagerCallback(owner, call)) AddCall(owner, summary, call, body);
     }
 
+    /// <summary>A standard operation runs every callable its callback can hold on each element of the receiver.</summary>
     private void AddCall(CallableOwner owner, EffectSummary summary, InvocationExpressionSyntax call, SyntaxNode body)
     {
         var actual = call.ArgumentList.Arguments[0].Expression;
         var member = (MemberAccessExpressionSyntax)call.Expression;
         var argument = CallArguments.Ownership(ctx, owner, owners, body).StorageAt(member.Expression, call).Element();
-        if (new CallbackResolver(owners).Find(owner, actual) is not { } callback)
+        var held = new DeferredValueResolver(ctx, owners).Callables(owner, actual, body, 1);
+        foreach (var work in held.Work)
         {
-            var invocation = actual is IdentifierNameSyntax name && owner.Method.Parameters.Any(p => p.Name == name.Identifier.Text)
-                ? new CallbackInvocation(name.Identifier.Text, call, [argument]) : null;
-            summary.Add(new EffectFact(EffectKind.Unknown, "unresolved standard callback", Callback: invocation), call);
-            return;
+            var bindings = work.Captured(call);
+            foreach (var parameter in work.Target.OwnParameters()) bindings[parameter] = argument;
+            edges.Add(new CallEdge(owner, work.Target, call, call, bindings));
         }
-        var count = callback.Parent is null ? callback.Method.Parameters.Count : CallableOwner.Parameters(callback.Method.Node).Count();
-        var bindings = callback.Method.Parameters.Take(count).ToDictionary(parameter => parameter.Name, _ => argument);
-        edges.Add(new CallEdge(owner, callback, call, call, bindings));
+        if (!held.Complete) summary.Add(new EffectFact(EffectKind.Unknown, "unresolved standard callback"), call);
+        foreach (var parameter in held.Pending)
+            summary.Add(new EffectFact(EffectKind.Unknown, "unresolved standard callback",
+                Callback: new CallbackInvocation(parameter, call, [argument])), call);
     }
 }

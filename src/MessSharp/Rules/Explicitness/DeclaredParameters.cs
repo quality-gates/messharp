@@ -1,3 +1,4 @@
+using MessSharp.Model;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -10,8 +11,17 @@ internal static class DeclaredParameters
     {
         BaseMethodDeclarationSyntax method => method.ParameterList.Parameters,
         IndexerDeclarationSyntax indexer => indexer.ParameterList.Parameters,
+        AccessorDeclarationSyntax accessor => Accessor(accessor),
         _ => CallableOwner.Parameters(node),
     };
+
+    /// <summary>An indexer accessor's index parameters, then the implicit <c>value</c> of a writing accessor.</summary>
+    private static IEnumerable<ParameterSyntax> Accessor(AccessorDeclarationSyntax accessor)
+    {
+        IEnumerable<ParameterSyntax> indexes =
+            accessor.Parent?.Parent is IndexerDeclarationSyntax indexer ? indexer.ParameterList.Parameters : [];
+        return AccessorValue.Takes(accessor) ? indexes.Append(AccessorValue.Parameter(accessor)) : indexes;
+    }
 
     /// <summary>The parameter of <paramref name="target"/> that <paramref name="argument"/> of <paramref name="call"/> binds.</summary>
     public static ParameterSyntax? Bound(CallableOwner target, InvocationExpressionSyntax call, ArgumentSyntax argument)

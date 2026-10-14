@@ -11,6 +11,8 @@ internal static class KnownQueries
     public static bool IsCollectionQuery(string name) => CollectionQueries.Contains(name);
 
     public static bool IsStringCalculation(string type, string name) =>
-        type is "string" or "System.String" && name is "Contains" or "StartsWith" or "EndsWith"
-            or "Substring" or "Trim" or "ToUpperInvariant" or "ToLowerInvariant";
+        type is "string" or "System.String" && (IsStringPredicate(name)
+            || name is "Substring" or "Trim" or "ToUpperInvariant" or "ToLowerInvariant");
+
+    public static bool IsStringPredicate(string name) => name is "Contains" or "StartsWith" or "EndsWith";
 }

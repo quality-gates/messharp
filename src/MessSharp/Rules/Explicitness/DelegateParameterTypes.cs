@@ -6,10 +6,12 @@ namespace MessSharp.Rules.Explicitness;
 
 internal sealed class DelegateParameterTypes(CallableOwner parent, IReadOnlyList<CallableOwner> owners)
 {
-    public string? ReturnType(SyntaxNode node)
+    public string? ReturnType(SyntaxNode node) => Result(Expected(node));
+
+    /// <summary>What invoking a value of the standard delegate type <paramref name="type"/> returns.</summary>
+    public static string? Result(string? type)
     {
-        var expected = Expected(node);
-        var generic = expected is null ? null : Generic(SyntaxFactory.ParseTypeName(expected));
+        var generic = type is null ? null : Generic(SyntaxFactory.ParseTypeName(type));
         return generic?.Identifier.Text switch
         {
             "Func" => generic.TypeArgumentList.Arguments.LastOrDefault()?.ToString(),

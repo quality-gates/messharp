@@ -10,7 +10,7 @@ namespace MessSharp.Rules.Explicitness;
 public sealed class ImplicitInstanceOutputRule : BaseRule, IMethodRule, IFileRule
 {
     public void Apply(RuleContext ctx, MethodModel method) =>
-        Finding.ReportAll(ctx, method, CallableGraph.For(ctx).Summary(method).Findings(EffectKind.InstanceOutput));
+        Finding.ReportAll(ctx, method, owner => CallableGraph.For(ctx).Summary(owner).Findings(EffectKind.InstanceOutput));
 
     public void Apply(RuleContext ctx)
     {

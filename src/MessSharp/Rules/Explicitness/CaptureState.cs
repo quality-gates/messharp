@@ -11,7 +11,7 @@ internal static class CaptureState
     {
         if (owner.Parent is not { } parent) return false;
         if (parent.Method.Parameters.Any(p => p.Name == name && StorageTypes.IsMutable(p.Type))) return true;
-        return owners.Where(o => Within(o, parent)).Any(o => Changes(o, name));
+        return owners.Where(o => Within(o, parent)).Any(o => Changes(o, name, owners));
     }
 
     private static bool Within(CallableOwner owner, CallableOwner parent)
@@ -21,12 +21,13 @@ internal static class CaptureState
         return false;
     }
 
-    private static bool Changes(CallableOwner owner, string name)
+    private static bool Changes(CallableOwner owner, string name, IReadOnlyList<CallableOwner> owners)
     {
         if (owner.Body is null) return false;
         var names = StateNames.Parameters(new HashSet<string> { name });
         var accesses = new StateAccessCollector(names.Resolve,
-            knownMutation: call => KnownMutations.IsCollectionMutation(owner, call));
+            knownMutation: call => KnownMutations.IsCollectionMutation(owner, call))
+        { AccessorCalls = EventSubscriptions.Assignments(owner, owners, owner.Body) };
         BodyWalk.Run(owner.Body, [accesses]);
         return accesses.Accesses().Any(a => a.Kind != AccessKind.Read);
     }

@@ -21,7 +21,8 @@ internal sealed class BodyBindings
         _body = body;
         var nodes = BodyWalk.Nodes(body).ToList();
         _jumps = nodes.Any(node => node is GotoStatementSyntax or LabeledStatementSyntax);
-        All = nodes.SelectMany(StorageBindings.Find).OrderBy(binding => binding.Position).ToList();
+        var aliases = RefAliasCache.For(body);
+        All = nodes.SelectMany(StorageBindings.Find).Select(aliases.Rebound).OrderBy(binding => binding.Position).ToList();
     }
 
     public IReadOnlyList<StorageBinding> All { get; }

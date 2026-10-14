@@ -7,7 +7,7 @@ namespace MessSharp.Rules.Explicitness;
 public sealed class UnknownEffectRule : BaseRule, IMethodRule, IFileRule
 {
     public void Apply(RuleContext ctx, MethodModel method) => Finding.ReportAll(ctx, method,
-        CallableGraph.For(ctx).Summary(method).Findings(EffectKind.Unknown));
+        owner => CallableGraph.For(ctx).Summary(owner).Findings(EffectKind.Unknown));
 
     public void Apply(RuleContext ctx)
     {

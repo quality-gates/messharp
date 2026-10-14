@@ -1,4 +1,3 @@
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules.Explicitness;
@@ -10,7 +9,8 @@ internal static class LazyValueResolver
     /// without a factory constructs its value when forced; an unresolvable factory stays incomplete.
     /// </summary>
     public static DeferredResolution? Resolve(IReadOnlyList<CallableOwner> owners,
-        DeferredValueContext context, ExpressionSyntax value)
+        DeferredValueContext context, ExpressionSyntax value,
+        Func<DeferredValueContext, ExpressionSyntax, int, DeferredResolution> callables)
     {
         if (value is not BaseObjectCreationExpressionSyntax creation
             || !KnownExecutionOperations.IsLazy(context.Owner, creation)) return null;
@@ -19,18 +19,16 @@ internal static class LazyValueResolver
         {
             LazyFactoryKind.None => new DeferredResolution([], true),
             LazyFactoryKind.Default => LazyDefaultConstruction.Resolve(owners, context, creation),
-            LazyFactoryKind.Factory => ResolveFactory(owners, context, factory.Expression),
+            LazyFactoryKind.Factory when factory.Expression is { } callback => ResolveFactory(context, callback, callables),
             _ => new DeferredResolution([], false),
         };
     }
 
-    private static DeferredResolution ResolveFactory(IReadOnlyList<CallableOwner> owners,
-        DeferredValueContext context, ExpressionSyntax? expression)
+    /// <summary>Every callable the factory can hold runs when the value is forced; a factory parameter stays unknown.</summary>
+    private static DeferredResolution ResolveFactory(DeferredValueContext context, ExpressionSyntax callback,
+        Func<DeferredValueContext, ExpressionSyntax, int, DeferredResolution> callables)
     {
-        if (expression is not { } callback
-            || new CallbackResolver(owners).Find(context.Owner, callback) is not { } target)
-            return new DeferredResolution([], false);
-        return new DeferredResolution([new DeferredWork(DeferredKind.Lazy, target,
-            SyntaxFactory.InvocationExpression(callback), context.Captures(target))], true);
+        var held = callables(context, callback, 0);
+        return new DeferredResolution(held.Work.Select(work => work with { Kind = DeferredKind.Lazy }).ToList(), held.Resolved);
     }
 }

@@ -91,11 +91,11 @@ public class ExplicitnessLazyResolutionTests
         Assert.Contains(findings, finding => finding.Method == "<lazy>" && finding.Rule.Name == "ImplicitInput"
             && finding.BeginLine == factoryLine);
         Assert.Contains(findings, finding => finding.Method == "Force" && finding.Rule.Name == "UnknownEffect"
-            && finding.BeginLine == 6);
+            && finding.BeginLine == 5
+            && finding.Description == "The method Force() has an unknown effect: unresolved deferred execution.");
         var caller = findings.Where(finding => finding.Method == "Run").ToList();
         Assert.Contains(caller, finding => finding.Rule.Name == "UnknownEffect" && finding.BeginLine == 8
             && finding.Description == "The method Run() has an unknown effect: unresolved deferred execution.");
-        // The rebinding runs before the force, so only a reading replacement reaches the caller.
         Assert.Equal(replacement != "7", caller.Any(finding => finding.Rule.Name == "ImplicitInput"));
     }
 }

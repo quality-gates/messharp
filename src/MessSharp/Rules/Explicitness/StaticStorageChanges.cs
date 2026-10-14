@@ -15,7 +15,7 @@ internal static class StaticStorageChanges
             if (owner.Body is not { } body) continue;
             var ownership = new ArgumentOwnership(body, Root, owner, owners);
             var changes = StateAccessCollector.MutationsOf(ownership.MutationRoots,
-                call => KnownMutations.IsCollectionMutation(owner, call));
+                call => KnownMutations.IsCollectionMutation(owner, call), EventSubscriptions.Assignments(owner, owners, body));
             BodyWalk.Run(body, [changes]);
             foreach (var access in changes.Accesses())
                 if (access.Name.StartsWith("static:", StringComparison.Ordinal) && names.Contains(access.Name[7..]))

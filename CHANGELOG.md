@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Resolve delegate values through reaching bindings across loops, tuple deconstruction, `ref` local aliases, `out` arguments, and captured variables, and select method-group and same-file call overloads by arity, named arguments, `ref`/`out`/`in` modifiers, and literal types.
+- Execute implicit parameterless same-file constructors, instance initializers, and base constructor chains at the call or initializer line, run custom event accessors on `+=` and `-=` subscriptions, treat preset `Lazy<T>` values as non-factories while forwarding delegate presets through `.Value`, treat `out` arguments as write-only targets, and deduplicate findings per printed owner and rule at the earliest site.
 - Give explicit and target-typed `Lazy<T>` factories in declarations, assignments, returns, switch expressions, and typed delegate results the `<lazy>` owner. Bind reordered `valueFactory` arguments by name, follow reaching bindings at `.Value`, and preserve earlier aliases after replacement.
 - Resolve lazy factories through subclasses, identity helpers, static constructor assignments, `out` arguments, and non-virtual instance or extension force helpers. Direct parameter replacement forces only the replacement; partly known factory values retain uncertainty.
 - Transfer default Lazy value-constructor effects and conditional `.Value` effects at the forcing site. Keep scalar defaults quiet and retain property-dispatch uncertainty when a subclass hides `Value`.

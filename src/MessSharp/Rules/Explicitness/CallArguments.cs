@@ -9,6 +9,7 @@ internal static class CallArguments
 {
     public static ExpressionSyntax? Actual(CallEdge edge, string name)
     {
+        if (edge.Actuals?.TryGetValue(name, out var given) == true) return given;
         var parameter = edge.Target.Method.Parameters.FindIndex(p => p.Name == name);
         var ownCount = edge.Target.Parent is null ? edge.Target.Method.Parameters.Count
             : CallableOwner.Parameters(edge.Target.Method.Node).Count();

@@ -20,9 +20,9 @@ internal static class MemberFormOwners
             PropertyDeclarationSyntax { ExpressionBody: { } arrow } property =>
                 [Owner(file, cls, "get_" + property.Identifier.Text, property, arrow.Expression, [], property.Type)],
             IndexerDeclarationSyntax { ExpressionBody: { } arrow } indexer =>
-                [Owner(file, cls, "get_Item", indexer, arrow.Expression, Parameters(indexer.ParameterList), indexer.Type)],
+                [Owner(file, cls, "get_Item", indexer, arrow.Expression, MemberFormParameters.Declared(indexer.ParameterList), indexer.Type)],
             IndexerDeclarationSyntax { AccessorList: { } list } indexer =>
-                Accessors(file, cls, list, "Item", Parameters(indexer.ParameterList), indexer.Type),
+                Accessors(file, cls, list, "Item", MemberFormParameters.Declared(indexer.ParameterList), indexer.Type),
             EventDeclarationSyntax { AccessorList: { } list } declared =>
                 Accessors(file, cls, list, declared.Identifier.Text, [], declared.Type),
             _ => [],
@@ -33,7 +33,7 @@ internal static class MemberFormOwners
         list.Accessors.Where(accessor => accessor.Body is not null || accessor.ExpressionBody is not null).Select(accessor =>
         {
             var getter = accessor.Keyword.IsKind(SyntaxKind.GetKeyword);
-            var all = getter ? parameters : [.. parameters, Value(type)];
+            var all = getter ? parameters : [.. parameters, MemberFormParameters.Value(type, accessor)];
             return Owner(file, cls, accessor.Keyword.Text + "_" + name, accessor,
                 (SyntaxNode?)accessor.Body ?? accessor.ExpressionBody!.Expression, all, getter ? type : null);
         });
@@ -55,21 +55,4 @@ internal static class MemberFormOwners
             File = file,
         }, body);
     }
-
-    private static List<ParameterModel> Parameters(BaseParameterListSyntax list) => list.Parameters.Select(parameter =>
-        new ParameterModel
-        {
-            Name = parameter.Identifier.Text,
-            Type = parameter.Type?.ToString() ?? "",
-            IsOut = parameter.Modifiers.Any(SyntaxKind.OutKeyword),
-            IsRef = parameter.Modifiers.Any(SyntaxKind.RefKeyword),
-            Node = parameter,
-        }).ToList();
-
-    private static ParameterModel Value(TypeSyntax type) => new()
-    {
-        Name = "value",
-        Type = type.ToString(),
-        Node = SyntaxFactory.Parameter(SyntaxFactory.Identifier("value")),
-    };
 }

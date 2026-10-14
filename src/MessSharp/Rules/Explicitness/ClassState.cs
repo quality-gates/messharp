@@ -47,14 +47,15 @@ internal sealed class ClassState
 
         foreach (var member in ModelBuilderHelpers.MembersOf(node))
         {
-            if (member is FieldDeclarationSyntax field)
+            if (member is BaseFieldDeclarationSyntax field)
                 AddField(field);
             else if (member is PropertyDeclarationSyntax property)
                 AddProperty(property);
         }
     }
 
-    private void AddField(FieldDeclarationSyntax field)
+    /// <summary>A field, or a field-like event whose subscriptions combine into a compiler-generated field.</summary>
+    private void AddField(BaseFieldDeclarationSyntax field)
     {
         var mods = field.Modifiers;
         if (mods.Any(SyntaxKind.ConstKeyword)) return;

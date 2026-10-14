@@ -32,11 +32,17 @@ internal sealed class EffectTransfer(
     {
         if (root == StorageOrigin.UnknownRoot) return [new EffectFact(EffectKind.Unknown, "unresolved storage binding")];
         if (fact.Kind == EffectKind.ParameterChange) return [StorageRoots.Change(root, fact.Reachable || deep)];
-        if (fact.Kind == EffectKind.CaptureRead)
-            return CaptureState.Contains(edge.Caller, root) ? [fact with { What = root, Reachable = deep }]
-                : StorageRoots.IsExternal(root) ? [StorageRoots.Read(root)] : [];
-        if (StorageRoots.IsExternal(root)) return [StorageRoots.Write(root)];
+        return fact.Kind == EffectKind.CaptureRead ? MapCaptureRead(fact, root, deep) : [MapWrite(root, deep)];
+    }
+
+    private IEnumerable<EffectFact> MapCaptureRead(EffectFact fact, string root, bool deep) =>
+        CaptureState.Contains(edge.Caller, root) ? [fact with { What = root, Reachable = deep }]
+            : StorageRoots.IsExternal(root) ? [StorageRoots.Read(root)] : [];
+
+    private EffectFact MapWrite(string root, bool deep)
+    {
+        if (StorageRoots.IsExternal(root)) return deep ? StorageRoots.Change(root, true) : StorageRoots.Write(root);
         var kind = CaptureState.Contains(edge.Caller, root) ? EffectKind.CaptureWrite : EffectKind.ParameterWrite;
-        return [new EffectFact(kind, root, deep)];
+        return new EffectFact(kind, root, deep);
     }
 }
