@@ -4,7 +4,6 @@ namespace MessSharp.Rule;
 
 /// <summary>
 /// Handed to each rule during analysis. Rules append violations via helpers.
-/// Mirrors messgo's Context.
 /// </summary>
 public sealed class RuleContext
 {
@@ -20,7 +19,6 @@ public sealed class RuleContext
     /// </summary>
     public PartialTypeIndex Partials { get; }
 
-    /// <summary>Facts shared by all rules of the current engine analysis.</summary>
     internal AnalysisFacts Facts { get; }
     private readonly IRule _rule;
 
@@ -47,6 +45,10 @@ public sealed class RuleContext
 
     public void ReportMethod(MethodModel method, params object[] args) =>
         AppendViolation(method.Line, method.EndLine,
+            method.DeclaringTypeName, method.Name, "", method.Namespace, args);
+
+    internal void ReportMethodAt(MethodModel method, int beginLine, int endLine, params object[] args) =>
+        AppendViolation(beginLine, endLine,
             method.DeclaringTypeName, method.Name, "", method.Namespace, args);
 
     public void ReportClass(ClassModel cls, params object[] args) =>

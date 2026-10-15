@@ -6,34 +6,37 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules.Explicitness;
 
-/// <summary>
-/// The data members that a class declares across all its partial parts.
-/// Constants are not state. Static members are fields and auto-properties;
-/// instance members are fields, properties and primary constructor parameters.
-/// </summary>
 internal sealed class ClassState
 {
     private readonly HashSet<string> _statics = new(StringComparer.Ordinal);
     private readonly HashSet<string> _mutableStatics = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _readonlyCollections = new(StringComparer.Ordinal);
     private readonly HashSet<string> _instance = new(StringComparer.Ordinal);
 
-    /// <summary>All static state, also readonly fields whose object can change.</summary>
     public IReadOnlySet<string> Statics => _statics;
 
-    /// <summary>Static state that can get a new value after type initialization.</summary>
     public IReadOnlySet<string> MutableStatics => _mutableStatics;
 
     public IReadOnlySet<string> Instance => _instance;
 
-    /// <summary>The class's state, gathered once per analysis.</summary>
     public static ClassState For(RuleContext ctx, ClassModel cls) =>
         ctx.Facts.Get(cls, () => Gather(ctx, cls));
 
     private static ClassState Gather(RuleContext ctx, ClassModel cls)
     {
         var state = new ClassState();
-        foreach (var part in ctx.Partials.PartsInOtherFiles(cls).Prepend(cls))
+        var parts = ctx.Partials.PartsInOtherFiles(cls).Prepend(cls).ToList();
+        foreach (var part in parts)
             state.AddPart(part.Node);
+        var writes = new StateAccessCollector(
+            StateNames.StaticMembers(state._readonlyCollections, cls.Name).Resolve, state._readonlyCollections);
+        foreach (var part in parts)
+            foreach (var node in part.Node.DescendantNodes(n => n is not ConstructorDeclarationSyntax constructor
+                || !constructor.Modifiers.Any(SyntaxKind.StaticKeyword)))
+                writes.Visit(node);
+        state._mutableStatics.UnionWith(writes.Accesses().Where(a => a.Kind != AccessKind.Read).Select(a => a.Name));
+        foreach (var part in parts)
+            state._mutableStatics.UnionWith(StaticStorageChanges.Find(part, state._readonlyCollections));
         return state;
     }
 
@@ -44,14 +47,15 @@ internal sealed class ClassState
 
         foreach (var member in ModelBuilderHelpers.MembersOf(node))
         {
-            if (member is FieldDeclarationSyntax field)
+            if (member is BaseFieldDeclarationSyntax field)
                 AddField(field);
             else if (member is PropertyDeclarationSyntax property)
                 AddProperty(property);
         }
     }
 
-    private void AddField(FieldDeclarationSyntax field)
+    /// <summary>A field, or a field-like event whose subscriptions combine into a compiler-generated field.</summary>
+    private void AddField(BaseFieldDeclarationSyntax field)
     {
         var mods = field.Modifiers;
         if (mods.Any(SyntaxKind.ConstKeyword)) return;
@@ -64,6 +68,12 @@ internal sealed class ClassState
         _statics.UnionWith(names);
         if (!mods.Any(SyntaxKind.ReadOnlyKeyword))
             _mutableStatics.UnionWith(names);
+        else if (StorageTypes.IsMutable(field.Declaration.Type.ToString()))
+        {
+            _readonlyCollections.UnionWith(names);
+            if (mods.Any(SyntaxKind.PublicKeyword) || mods.Any(SyntaxKind.InternalKeyword) || mods.Any(SyntaxKind.ProtectedKeyword))
+                _mutableStatics.UnionWith(names);
+        }
     }
 
     private void AddProperty(PropertyDeclarationSyntax property)
@@ -78,6 +88,12 @@ internal sealed class ClassState
         _statics.Add(name);
         if (HasSetter(property))
             _mutableStatics.Add(name);
+        else if (StorageTypes.IsMutable(property.Type.ToString()))
+        {
+            _readonlyCollections.Add(name);
+            if (property.Modifiers.Any(SyntaxKind.PublicKeyword) || property.Modifiers.Any(SyntaxKind.InternalKeyword)
+                || property.Modifiers.Any(SyntaxKind.ProtectedKeyword)) _mutableStatics.Add(name);
+        }
     }
 
     private static bool HasSetter(PropertyDeclarationSyntax property) =>

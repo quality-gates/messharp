@@ -13,7 +13,7 @@ phpmd-format ruleset XML file.
 | `design` | ExitExpression, GotoStatement, CountInLoopExpression, DevelopmentCodeFragment, EmptyCatchBlock, CouplingBetweenObjects, GlobalVariable, LackOfCohesionOfMethods |
 | `controversial` | CamelCaseClassName, CamelCaseMethodName, CamelCasePropertyName, CamelCaseParameterName, CamelCaseVariableName — adapted to C# conventions (PascalCase types/members, camelCase locals/params) |
 | `opinionated` | **Opt-in.** Rules the `csharp` ruleset deliberately drops because they fight common C# practice. |
-| `explicitness` | **Opt-in.** ImplicitInput, ImplicitOutput — data that enters a method other than through its arguments, or leaves it other than through its return value. See [Explicitness](#explicitness). |
+| `explicitness` | **Opt-in.** ImplicitInput, ImplicitOutput, UnknownEffect. Tracks recognized implicit inputs, implicit outputs, and unresolved calls. See [Explicitness](#explicitness). |
 | `explicitness-strict` | **Opt-in.** `explicitness` plus ImplicitInstanceInput, ImplicitInstanceOutput, which also treat an instance method's own fields and properties as implicit. |
 
 Rules with a direct C# analog reproduce phpmd's behavior and message templates;
@@ -36,13 +36,17 @@ is a compile error).
 
 The `explicitness` rulesets apply the idea of implicit inputs and outputs from
 Eric Normand's *Grokking Simplicity*. A method's explicit inputs are its
-arguments; its explicit output is its return value. Everything else is
-implicit, and makes the method an action rather than a calculation.
+arguments, including the receiver's fields; its explicit output is its return
+value. Mutations visible to callers and reads of other changing state are
+implicit effects. These syntax rules classify the supported syntax subset. A clean
+report is a calculation verdict only inside that subset, not a proof about
+arbitrary runtime behavior.
 
 | Rule | Reports |
 | :--- | :--- |
-| `ImplicitInput` | Reads of the class's own mutable static fields and static auto-properties; the clock (`DateTime.Now`, `Stopwatch`), environment, console input, file and directory reads, `Guid.NewGuid()`, and `Random.Shared` or unseeded `new Random()`. |
-| `ImplicitOutput` | Writes to the class's own static state, and changes to the objects it holds (including `static readonly` collections); changes to an argument's object; writes to `ref` and `out` parameters; console, `Debug` and `Trace` output; file and directory writes; environment changes, `Environment.Exit` and `Process.Start`. |
+| `ImplicitInput` | Reads of the class's own mutable static fields and static auto-properties, including readonly collections with observed writes or exported aliases; reads of mutable captured state; the clock (`DateTime.Now`, `Stopwatch`), environment, console input, file and directory reads, `Guid.NewGuid()`, and `Random.Shared` or unseeded `new Random()`. |
+| `ImplicitOutput` | Writes to the class's own static or instance state, and changes to the objects it holds (including `static readonly` collections); changes to an argument's object or captured storage; writes to `ref` and `out` parameters; console, `Debug` and `Trace` output; file and directory writes; environment changes, `Environment.Exit` and `Process.Start`. |
+| `UnknownEffect` | Effects whose dispatch or storage binding is not established, including injected or rebound callbacks, opaque external calls, custom properties, indexers, operators, and events. |
 | `ImplicitInstanceInput` | (strict) Reads of the instance's own fields, properties and primary constructor parameters, bare or through `this`/`base`. |
 | `ImplicitInstanceOutput` | (strict) Writes to the instance's own fields and properties, and changes to the objects they hold. |
 
@@ -51,25 +55,91 @@ Static constructors are exempt from the static-state checks; constructors and
 static methods are exempt from the strict rules. Assigning a new value to a
 by-value parameter is not an output.
 
-The analysis is syntax-only, so it has limits:
+The analysis is syntax-only, so the supported calculation subset is explicit:
 
-* Only the class's own static state is tracked. Static state of other classes,
-  and members called through `using static`, are not.
-* Effects are not followed through method calls: calling a method that writes
-  to the console does not make the caller an action.
-* A call whose result is discarded counts as a change to its receiver. That
-  is a call statement such as `items.Add(x);`, or the expression body of a
-  member that returns nothing, such as `void Add(int x) => items.Add(x);`.
-  Calls made only for an `out` value, such as
-  `map.TryGetValue(k, out var v);`, and calls on struct arguments can
-  therefore be reported.
-* Lambdas and local functions count toward their enclosing method. A lambda's
-  expression body, such as `x => sink.Add(x)`, is not taken as discarded,
-  because its delegate type is not known.
-* Raised events and thrown exceptions are not reported.
-* Like every method rule, these rules do not see expression-bodied properties
-  (`int X => _x;`), indexers or top-level statements, which the method model
-  does not include.
+* Plain built-in numeric, boolean, string, array, and collection operations are
+  trusted only when their standard binding is not shadowed by a local symbol
+  or user-defined type in the analyzed file. A method name alone does not make
+  a custom method pure.
+* Effects propagate through resolved same-file, non-virtual, non-abstract,
+  non-override and non-extern methods, local functions, and lambdas until a
+  fixed point. Recursive cycles terminate because summaries are finite sets of
+  stable effect facts.
+* Statement and conditional-expression arms guarded by literal `true` or
+  `false` conditions are analyzed according to the arm that can execute.
+  Literal-false `while` and `for` bodies do not contribute effects or storage
+  writes. General constant folding is not part of the supported subset.
+* Deferred callback creation does not execute the callback. Invoking a
+  resolved callback carries its effects to the caller, with callback arguments
+  and lexical captures bound separately. Delegate values follow reaching
+  bindings across loops, tuple deconstruction, `ref` local aliases, `out`
+  arguments, and captured variables, and select method-group overloads by
+  arity. Returned closures retain their factory arguments and captured storage.
+  Injected or unresolved callbacks stay unknown.
+* Same-file calls select overloads by argument count, named arguments, `ref`,
+  `out`, and `in` modifiers, and predefined literal compatibility. Each printed
+  owner reports one designated effect line per rule, at the earliest site in
+  source order.
+* Recognized iterator methods, LINQ `Select` and `Where`, and `Lazy<T>` creation
+  defer work. Enumeration, terminal sequence operations, or `Lazy<T>.Value`
+  transfer effects to the execution site and apply storage writes before later
+  reads. Recognized eager collection callbacks execute at their call site.
+  Known delegate signatures supply callback parameter and return types.
+  Explicit and target-typed lazy factories in declarations, assignments,
+  returns, switch-expression arms, and static fields have a separate `<lazy>`
+  owner. Named constructor arguments bind `valueFactory` by name, including
+  reordered thread-safety options. Preset `Lazy<T>` values, including
+  calculated values and typed delegate presets, do not run as factories when
+  forced, and `.Value` forwards the preset value. Rebinding a lazy variable preserves the
+  factory retained by an earlier alias. Resolved helpers, including non-virtual
+  instance and extension methods, transfer known factory effects at the call site.
+  Direct parameter replacement forces the replacement rather than the original
+  argument. Unbound or partly known factory values retain `UnknownEffect`.
+  Lazy values retain provenance through identity returns, static constructor
+  assignments, and known `out` or `ref` writes. Writing an `out` parameter is an
+  output even when the assigned Lazy has a pure factory.
+  A Lazy without a factory constructs its value when forced. Known same-file
+  constructor effects transfer at `.Value`; unresolved value construction stays
+  unknown. Ordinary scalar defaults are quiet. Inherited Lazy properties use
+  the base factory, but a subclass hiding `Value` keeps property-dispatch
+  uncertainty. Conditional `.Value` access transfers the possible factory effects.
+  Each factory body has its own findings; creation does not transfer those
+  effects to the creator. Static initializer execution belongs to `<module>`,
+  while forcing its lazy value transfers factory effects to the forcing method.
+  Expression-bodied properties, indexers, and event accessors own their bodies.
+  Same-file custom event subscriptions (`+=` and `-=`) run the `add` or `remove`
+  accessor with `value` bound to the handler, field-like events are tracked as
+  storage, and virtual, override, or abstract events report `UnknownEffect`.
+  Anonymous bodies nested inside a factory keep their `<lambda>` owner rather
+  than inheriting the factory's `<lazy>` name.
+* Argument ownership is tracked at each operation site. Direct aliases retain
+  caller ownership. Rebinding to a fresh object detaches the outer storage. A
+  fresh shallow copy keeps caller-owned reachable elements, so mutating an
+  element can still be an output.
+* Fresh list, array, and proven field holders retain stored caller aliases,
+  including initializer values and eager helper writes or returns. Exact
+  unconditional replacement of one known slot detaches its old value;
+  conditional writes and uncertain indices join possible origins. Allocation
+  sites and acyclic call contexts bound heap identity, and loops join storage.
+* A `ref` local to a single-declaration local, parameter, proven field, or
+  standard array or collection element retains that storage location, so writes
+  through either alias are visible through the other. Standard collection
+  removal and reversal move known element slots; uncertain removal or
+  reordering joins possible elements.
+* Explicit, target-typed, and implicit parameterless construction of a unique
+  non-partial same-file class execute its instance initializers and same-file
+  base constructor chain, anchored at the call or `: base(...)` / `: this(...)`
+  initializer. Unmodeled external base constructors stay unknown.
+* Mutating a fresh private argument through a helper is a calculation when the
+  helper has no ambient or unknown effects. Ambient and unknown effects are
+  still propagated.
+* Readonly collection reads are considered stable only within the analyzed
+  closed-world subset. External aliases, reflection, dynamic dispatch, partial
+  files outside the analyzed inputs, and unmodeled writes retain uncertainty
+  rather than proving immutability.
+* Async scheduling, unsupported deferred APIs, dynamic dispatch, event raising,
+  thrown exceptions, expression trees, reflection, and external dependencies
+  are not proved pure. Unsupported dispatch produces `UnknownEffect`.
 
 ## Custom rulesets
 

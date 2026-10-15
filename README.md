@@ -54,8 +54,9 @@ docker run --rm -v "$PWD":/code messharp /code text csharp --ignore-tests
 
 Start with `csharp`. Add `opinionated` when you want the stricter checks the
 recommended set leaves out. Add `explicitness` (or `explicitness-strict`) to
-find implicit inputs and outputs, the side effects that make a method an action. Point at a custom XML ruleset when thresholds or
-membership need to live in the repo:
+find implicit inputs, implicit outputs, and unresolved effects in the supported
+syntax-only functional-core subset. Point at a custom XML ruleset when
+thresholds or membership need to live in the repo:
 
 ```xml
 <ruleset name="team policy">
@@ -74,6 +75,18 @@ membership need to live in the repo:
 ```console
 scripts/dotnet.sh run --project src/MessSharp -- ./src text path/to/team-policy.xml --ignore-tests
 ```
+
+Explicitness follows aliases through helpers, callbacks, returned closures,
+shallow copies, and values stored in fresh list, array, or field holders.
+Exact slot replacement keeps later private mutations quiet. Recognized iterators,
+LINQ queries, and `Lazy<T>` transfer effects when their work executes, including
+known lazy factories forced through same-file helpers. Factory bodies report
+their own effects separately from their creation sites. Field
+reads through the receiver are explicit inputs; changing receiver state is an
+implicit output. The strict ruleset also
+reports receiver reads. Unsupported dispatch produces `UnknownEffect`.
+See the [supported subset](docs/rules.md#explicitness) before treating a clean
+report as a calculation verdict.
 
 ## Suppress one intentional exception
 

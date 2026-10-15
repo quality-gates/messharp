@@ -6,6 +6,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Add `UnknownEffect` to the explicitness ruleset and propagate same-file callable effect summaries to a fixed point, including local functions, lambdas, recursive cycles, and simple returned-callback factories.
+- Track iterator, LINQ, and `Lazy<T>` execution separately from deferred creation, and transfer recognized callback and constructor effects to their execution sites.
+
+### Changed
+
+- Document the explicitness ruleset's supported calculation subset and uncertainty boundaries, including shallow-copy reachable ownership and unresolved dynamic behavior.
+- Treat receiver field reads as explicit inputs and receiver mutations as implicit outputs in the default explicitness ruleset. The strict ruleset retains its instance-state findings.
+- Speed up explicitness storage analysis by reusing callee executions that start from the same environment, and by indexing per-file declarations, writes, and callable owners once. Mutually recursive helpers no longer take minutes per file.
+
+### Fixed
+
+- Resolve delegate values through reaching bindings across loops, tuple deconstruction, `ref` local aliases, `out` arguments, and captured variables, and select method-group and same-file call overloads by arity, named arguments, `ref`/`out`/`in` modifiers, and literal types.
+- Execute implicit parameterless same-file constructors, instance initializers, and base constructor chains at the call or initializer line, run custom event accessors on `+=` and `-=` subscriptions, treat preset `Lazy<T>` values as non-factories while forwarding delegate presets through `.Value`, treat `out` arguments as write-only targets, and deduplicate findings per printed owner and rule at the earliest site.
+- Give explicit and target-typed `Lazy<T>` factories in declarations, assignments, returns, switch expressions, and typed delegate results the `<lazy>` owner. Bind reordered `valueFactory` arguments by name, follow reaching bindings at `.Value`, and preserve earlier aliases after replacement.
+- Resolve lazy factories through subclasses, identity helpers, static constructor assignments, `out` arguments, and non-virtual instance or extension force helpers. Direct parameter replacement forces only the replacement; partly known factory values retain uncertainty.
+- Transfer default Lazy value-constructor effects and conditional `.Value` effects at the forcing site. Keep scalar defaults quiet and retain property-dispatch uncertainty when a subclass hides `Value`.
+- Analyze expression-bodied properties, indexers, event accessors, and instance initializers. Keep lambdas nested inside a Lazy factory distinct from the `<lazy>` owner.
+- Preserve unseeded `Random` input when target-typed constructors infer their types from assignments or returns.
+- Preserve storage locations through `ref` locals and collection removal or reordering, and apply deferred iterator, LINQ callback, and `Lazy<T>` storage writes when the work executes.
+- Resolve omitted callback parameter types from known delegate contexts, and prune literal-false loop bodies and conditional-expression arms without general constant folding.
+- Retain caller aliases inserted into fresh list, array, and field holders, including helper writes and returns; preserve private storage after exact replacement.
+- Report a callee's `ref` or `out` write through a caller parameter's field or element, such as `Set(ref box.Slot)`, as a change to the object holding that slot. Writes into a private copy's slot, such as `Set(ref clone[0])` or a `ref` local into a helper's cloned argument, stay quiet.
+- Bind a method group's own parameters to the delegate call's arguments, so `Setter s = Set; s(ref xs[0]);` and `Action<int[]> drain = Drain; drain(xs);` report changes to `xs`.
+- Normalize sized array types, execute target-typed constructors, and report uncertainty for compound operators, custom conversions, and conditional property or indexer dispatch.
+- Ignore explicitness effects in statement arms guarded by literal `false`, while still analyzing the reachable arm of literal branches.
+- Preserve lexical identity when resolving callback arguments, and substitute callback parameter effects through the callback invocation's actual arguments before propagating them to callers.
+- Treat `Clone()` as a known shallow copy for explicitness ownership, so mutating a cloned array's outer storage does not become an unknown effect.
+- Populate explicitness JSON metadata with the actual callable owner, including callbacks, instead of only embedding the callable name in the description.
+- Preserve outer and reachable storage origins through shallow copies, conditional bindings, loop-carried aliases, and returned closures; keep captured bindings distinct from callback arguments.
+- Recognize mutable readonly static storage changed through returned aliases, and report uncertainty for unsupported property, indexer, operator, and event dispatch.
+
 ## [0.2.21] - 2026-10-04
 
 ### Fixed

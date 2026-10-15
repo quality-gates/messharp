@@ -13,7 +13,14 @@ implicit input, and changing them is an implicit output. Constructors and
 static methods are exempt.
     </description>
 
-    <rule ref="explicitness" />
+    <rule ref="explicitness">
+        <exclude name="ImplicitOutput" />
+    </rule>
+    <rule ref="explicitness/ImplicitOutput">
+        <properties>
+            <property name="receiver-effects-established" value="true" />
+        </properties>
+    </rule>
 
     <rule name="ImplicitInstanceInput"
           since="0.2.17"
@@ -34,7 +41,7 @@ object rather than the argument list. Pass it in, or make the method static.
 class Account {
     private decimal _balance;
     public decimal WithInterest(decimal rate) {
-        return _balance * (1 + rate);  // implicit input: member _balance
+        return _balance * (1 + rate);
     }
 }
             ]]>
@@ -61,8 +68,8 @@ class Account {
     private decimal _balance;
     private readonly List<decimal> _history = new();
     public void Deposit(decimal amount) {
-        _balance += amount;     // implicit output: member _balance
-        _history.Add(amount);   // implicit output: member _history
+        _balance += amount;
+        _history.Add(amount);
     }
 }
             ]]>
