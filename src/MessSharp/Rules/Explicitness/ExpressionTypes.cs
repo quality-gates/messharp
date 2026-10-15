@@ -56,9 +56,8 @@ internal sealed class ExpressionTypes(CallableOwner owner, IReadOnlyList<Callabl
 
     internal static VariableDeclaratorSyntax? Binding(IdentifierNameSyntax name) => name.Ancestors()
         .Where(n => n is BlockSyntax or CompilationUnitSyntax)
-        .SelectMany(scope => scope.DescendantNodes().OfType<VariableDeclaratorSyntax>()
-            .Where(v => v.Ancestors().FirstOrDefault(n => n is BlockSyntax or CompilationUnitSyntax) == scope))
-        .FirstOrDefault(v => v.Identifier.Text == name.Identifier.Text && v.SpanStart < name.SpanStart
+        .SelectMany(scope => DeclaratorScopes.Named(scope, name.Identifier.Text))
+        .FirstOrDefault(v => v.SpanStart < name.SpanStart
             && v.Ancestors().OfType<BaseTypeDeclarationSyntax>().FirstOrDefault()
                 == name.Ancestors().OfType<BaseTypeDeclarationSyntax>().FirstOrDefault());
 
@@ -69,7 +68,7 @@ internal sealed class ExpressionTypes(CallableOwner owner, IReadOnlyList<Callabl
     {
         if (invocation.Expression is MemberAccessExpressionSyntax member && Result(member) is { } known)
             return known;
-        var owners = callableOwners ?? CallableOwner.Gather(owner.Method.File);
+        var owners = callableOwners ?? CallableOwnerCache.For(owner.Method.File);
         if (new CallResolver(owners).Resolve(owner, invocation) is { } target) return target.Method.ReturnType;
         return DelegateCallee.Value(invocation) is { } callee ? DelegateParameterTypes.Result(TypeOf(callee)) : null;
     }

@@ -131,7 +131,6 @@ internal sealed class LazyArguments(CallableOwner owner, string lazyType, Func<E
     {
         if (ExpressionTypes.Element(lazyType) is not { } element) return true;
         var name = LazyTypes.Name(element);
-        return Delegates.Contains(name) || owner.Method.File.Root.DescendantNodes().OfType<DelegateDeclarationSyntax>()
-            .Any(declared => declared.Identifier.Text == name);
+        return Delegates.Contains(name) || FileDelegateNames.Declares(owner.Method.File.Root, name);
     }
 }

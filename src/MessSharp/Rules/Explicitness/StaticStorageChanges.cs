@@ -7,7 +7,7 @@ internal static class StaticStorageChanges
 {
     public static IEnumerable<string> Find(ClassModel part, IReadOnlySet<string> names)
     {
-        var owners = CallableOwner.Gather(part.File);
+        var owners = CallableOwnerCache.For(part.File);
         var statics = StateNames.StaticMembers(names, part.Name);
         string? Root(ExpressionSyntax expression) => statics.Resolve(expression) is { } name ? StorageRoots.Static(name) : null;
         foreach (var owner in owners.Where(o => o.Method.Class == part && !o.Method.IsStaticConstructor()))

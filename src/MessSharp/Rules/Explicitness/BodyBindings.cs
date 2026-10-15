@@ -15,6 +15,7 @@ internal sealed class BodyBindings
     };
     private readonly SyntaxNode _body;
     private readonly bool _jumps;
+    private IReadOnlyList<StorageStep>? _steps;
 
     public BodyBindings(SyntaxNode body)
     {
@@ -26,6 +27,8 @@ internal sealed class BodyBindings
     }
 
     public IReadOnlyList<StorageBinding> All { get; }
+
+    public IReadOnlyList<StorageStep> Steps => _steps ??= StorageSteps.Gather(_body, All);
 
     public bool Reaches(StorageBinding binding, SyntaxNode site)
     {

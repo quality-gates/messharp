@@ -4,6 +4,8 @@ internal sealed class StorageHeap
 {
     private readonly Dictionary<string, StorageCell> _cells = new(StringComparer.Ordinal);
 
+    public IReadOnlyDictionary<string, StorageCell> Contents => _cells;
+
     public StorageOrigin Allocate(string identity, StorageCell cell, bool weak = false)
     {
         if (weak && _cells.TryGetValue(identity, out var previous)) previous.Join(cell);

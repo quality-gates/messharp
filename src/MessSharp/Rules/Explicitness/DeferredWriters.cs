@@ -31,9 +31,8 @@ internal sealed class DeferredWriters(CallableOwner owner, SyntaxNode body, IRea
         .Any(parent => parent is AnonymousFunctionExpressionSyntax or LocalFunctionStatementSyntax);
 
     private IEnumerable<DeferredSource> Writers(SyntaxNode declaration, Func<SyntaxNode, bool> where) =>
-        owner.Method.File.Root.DescendantNodes()
-            .Where(node => node is AssignmentExpressionSyntax or ArgumentSyntax && where(node)
-                && declarations.IsWrittenBy(node, declaration))
+        FileWriteSites.For(owner.Method.File.Root)
+            .Where(node => where(node) && declarations.IsWrittenBy(node, declaration))
             .Select(Written);
 
     private DeferredSource Written(SyntaxNode node) => node is AssignmentExpressionSyntax

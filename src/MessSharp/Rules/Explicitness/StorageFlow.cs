@@ -13,12 +13,12 @@ internal sealed class StorageFlow(StorageContext context)
 
     public StorageOrigin Origin(ExpressionSyntax expression, StorageEnvironment state)
     {
-        var weak = context.Weak || new BodyBindings(context.Body).MayBeSkipped(expression);
+        var weak = context.Weak || BodyBindingsCache.For(context.Body).MayBeSkipped(expression);
         if (new StorageDeferred(context, item => Origin(item, state), state).Value(CallableSyntax.Unwrap(expression), weak) is { } deferred)
             return deferred;
         var evaluation = new StorageEvaluations(context, item => Origin(item, state), state);
         StorageOrigin? Call(InvocationExpressionSyntax call) => evaluation.Invoke(call,
-            context.Weak || new BodyBindings(context.Body).MayBeSkipped(call));
+            context.Weak || BodyBindingsCache.For(context.Body).MayBeSkipped(call));
         return new StorageOriginResolver(context, state, evaluation.Fresh, Call).Origin(expression);
     }
 

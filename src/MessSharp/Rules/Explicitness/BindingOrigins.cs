@@ -9,11 +9,11 @@ internal sealed class BindingOrigins(
     Func<SyntaxNode, StorageEnvironment, bool, bool> execute,
     Func<ExpressionSyntax, StorageEnvironment, StorageCallable?> callable, bool weak = false)
 {
-    private readonly BodyBindings _bindings = new(body);
+    private readonly BodyBindings _bindings = BodyBindingsCache.For(body);
 
     public StorageEnvironment Before(SyntaxNode site, StorageEnvironment initial, bool after = false)
     {
-        var reaching = StorageSteps.Gather(body, _bindings.All).Where(step => after || _bindings.Reaches(step, site)).ToList();
+        var reaching = _bindings.Steps.Where(step => after || _bindings.Reaches(step, site)).ToList();
         var loops = new Dictionary<SyntaxNode, Dictionary<string, StorageOrigin>>();
         var heaps = new Dictionary<SyntaxNode, StorageHeap>();
         var callables = new StorageCallableFlow(_bindings, body, callable);

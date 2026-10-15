@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Document the explicitness ruleset's supported calculation subset and uncertainty boundaries, including shallow-copy reachable ownership and unresolved dynamic behavior.
 - Treat receiver field reads as explicit inputs and receiver mutations as implicit outputs in the default explicitness ruleset. The strict ruleset retains its instance-state findings.
+- Speed up explicitness storage analysis by reusing callee executions that start from the same environment, and by indexing per-file declarations, writes, and callable owners once. Mutually recursive helpers no longer take minutes per file.
 
 ### Fixed
 

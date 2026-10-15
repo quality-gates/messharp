@@ -32,18 +32,11 @@ internal sealed class StorageCalls(StorageContext context, Func<ExpressionSyntax
 
     private StorageOrigin Execute(CallableOwner target, SyntaxNode body, SyntaxNode site, bool weak, StorageEnvironment initial)
     {
-        if (!context.Visiting.Add(target)) return StorageOrigin.Unknown;
-        try
-        {
-            var flow = new StorageFlow(context.For(target, body, site, weak));
-            var final = flow.Before(body, initial, true);
-            var returned = StorageResults.Collect(body, flow, initial, final, weak);
-            if (weak) state.Heap.Join(final.Heap);
-            else state.Heap = final.Heap.Copy();
-            foreach (var pair in final.Deferred) state.Deferred[pair.Key] = pair.Value;
-            return returned;
-        }
-        finally { context.Visiting.Remove(target); }
+        if (context.Visiting.Contains(target)) return StorageOrigin.Unknown;
+        var result = StorageCallMemo.For(context.For(target, body, site, weak), target, weak, initial);
+        if (weak) state.Heap.Join(result.Heap);
+        else state.Heap = result.Heap.Copy();
+        foreach (var pair in result.Deferred) state.Deferred[pair.Key] = pair.Value;
+        return result.Returned;
     }
-
 }

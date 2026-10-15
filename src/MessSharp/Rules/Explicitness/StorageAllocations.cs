@@ -5,7 +5,7 @@ namespace MessSharp.Rules.Explicitness;
 internal sealed class StorageAllocations(StorageContext context, StorageEnvironment state)
 {
     public StorageOrigin Allocate(ExpressionSyntax expression, StorageCell cell) =>
-        state.Heap.Allocate(context.Identity(expression), cell, context.Weak || new BodyBindings(context.Body).MayBeSkipped(expression));
+        state.Heap.Allocate(context.Identity(expression), cell, context.Weak || BodyBindingsCache.For(context.Body).MayBeSkipped(expression));
 
     public StorageOrigin Object(BaseObjectCreationExpressionSyntax creation, Func<ExpressionSyntax, StorageOrigin> origin)
     {
