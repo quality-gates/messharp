@@ -41,7 +41,8 @@ internal sealed class EffectTransfer(
 
     private EffectFact MapWrite(string root, bool deep)
     {
-        if (StorageRoots.IsExternal(root)) return deep ? StorageRoots.Change(root, true) : StorageRoots.Write(root);
+        if (deep) return StorageRoots.Change(root, true);
+        if (StorageRoots.IsExternal(root)) return StorageRoots.Write(root);
         var kind = CaptureState.Contains(edge.Caller, root) ? EffectKind.CaptureWrite : EffectKind.ParameterWrite;
         return new EffectFact(kind, root, deep);
     }

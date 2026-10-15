@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Preserve storage locations through `ref` locals and collection removal or reordering, and apply deferred iterator, LINQ callback, and `Lazy<T>` storage writes when the work executes.
 - Resolve omitted callback parameter types from known delegate contexts, and prune literal-false loop bodies and conditional-expression arms without general constant folding.
 - Retain caller aliases inserted into fresh list, array, and field holders, including helper writes and returns; preserve private storage after exact replacement.
+- Report a callee's `ref` or `out` write through a caller parameter's field or element, such as `Set(ref box.Slot)`, as a change to that argument.
 - Normalize sized array types, execute target-typed constructors, and report uncertainty for compound operators, custom conversions, and conditional property or indexer dispatch.
 - Ignore explicitness effects in statement arms guarded by literal `false`, while still analyzing the reachable arm of literal branches.
 - Preserve lexical identity when resolving callback arguments, and substitute callback parameter effects through the callback invocation's actual arguments before propagating them to callers.

@@ -233,4 +233,25 @@ public class ExplicitnessStorageTests
             + " class Probe { static void Run(List<int> values) { var box = new Holder(values);\nbox.Value.Add(1); } }");
         Assert.Equal("ImplicitOutput", Assert.Single(findings).Rule.Name);
     }
+
+    private const string RefSlot = "class Box { public int Slot; } class Probe { static void Set(ref int slot) { slot = 7; } static void Keep(ref int slot) { } ";
+
+    [Theory]
+    [InlineData("Box box", "Set(ref box.Slot);", "box")]
+    [InlineData("Box[] boxes", "Set(ref boxes[0].Slot);", "boxes")]
+    [InlineData("Box[] boxes", "var copy = (Box[])boxes.Clone(); Set(ref copy[0].Slot);", "boxes")]
+    public void CalleeRefWritesThroughCallerStorageChangeTheArgument(string parameter, string body, string argument)
+    {
+        var output = Assert.Single(Run(RefSlot + "static void Run(" + parameter + ") {\n" + body + " } }"));
+        Assert.Equal("ImplicitOutput", output.Rule.Name);
+        Assert.Equal(2, output.BeginLine);
+        Assert.Equal($"The method Run() has an implicit output: changes argument '{argument}'.", output.Description);
+    }
+
+    [Theory]
+    [InlineData("Box box", "Keep(ref box.Slot);")]
+    [InlineData("Box[] boxes", "var copy = (Box[])boxes.Clone(); Keep(ref copy[0].Slot);")]
+    [InlineData("Box box", "var local = new Box(); Set(ref local.Slot);")]
+    public void RefCalleesThatDoNotWriteCallerStorageRemainQuiet(string parameter, string body) =>
+        Assert.Empty(Run(RefSlot + "static void Run(" + parameter + ") { " + body + " } }"));
 }
