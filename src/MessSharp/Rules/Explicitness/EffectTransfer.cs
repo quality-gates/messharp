@@ -23,7 +23,13 @@ internal sealed class EffectTransfer(
         var targetParameter = edge.Target.Method.Parameters.FirstOrDefault(p => p.Name == fact.What);
         if (fact.Kind == EffectKind.ParameterWrite && targetParameter?.WritesReachCaller != true) return [];
         if (edge.Caller.Body is not { } body) return [];
-        var storage = CallArguments.Storage(ctx, edge, owners, fact.What, body);
+        if (fact.Kind == EffectKind.ParameterWrite && CallArguments.Location(ctx, edge, owners, fact.What, body) is { } holder)
+            return MapStorage(fact with { Kind = EffectKind.ParameterChange }, holder);
+        return MapStorage(fact, CallArguments.Storage(ctx, edge, owners, fact.What, body));
+    }
+
+    private IEnumerable<EffectFact> MapStorage(EffectFact fact, StorageOrigin storage)
+    {
         var origins = fact.Reachable ? storage.Reachable : storage.Outer;
         return origins.SelectMany(root => MapRoot(fact, root, storage.Deep.Contains(root)));
     }
@@ -41,8 +47,7 @@ internal sealed class EffectTransfer(
 
     private EffectFact MapWrite(string root, bool deep)
     {
-        if (deep) return StorageRoots.Change(root, true);
-        if (StorageRoots.IsExternal(root)) return StorageRoots.Write(root);
+        if (StorageRoots.IsExternal(root)) return deep ? StorageRoots.Change(root, true) : StorageRoots.Write(root);
         var kind = CaptureState.Contains(edge.Caller, root) ? EffectKind.CaptureWrite : EffectKind.ParameterWrite;
         return new EffectFact(kind, root, deep);
     }

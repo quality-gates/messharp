@@ -5,7 +5,7 @@ namespace MessSharp.Rules.Explicitness;
 
 internal sealed class ArgumentOwnership
 {
-    private readonly StorageFlow _flow;
+    private readonly StorageLocations _locations;
     private readonly Func<ExpressionSyntax, string?> _parameterName;
 
     public ArgumentOwnership(SyntaxNode body, Func<ExpressionSyntax, string?> parameterName,
@@ -13,7 +13,7 @@ internal sealed class ArgumentOwnership
         HashSet<CallableOwner>? visiting = null)
     {
         _parameterName = parameterName;
-        _flow = new StorageFlow(new StorageContext(body, parameterName, callableOwner, callableOwners ?? [],
+        _locations = new StorageLocations(new StorageContext(body, parameterName, callableOwner, callableOwners ?? [],
             body.SpanStart.ToString(System.Globalization.CultureInfo.InvariantCulture), visiting ?? []));
     }
 
@@ -30,30 +30,33 @@ internal sealed class ArgumentOwnership
 
     public IReadOnlyCollection<ResolvedState> MutationRoots(ExpressionSyntax expression)
     {
-        var origin = IsAssignmentTarget(expression) && expression is IdentifierNameSyntax
-            ? AssignmentOrigin(expression) : StorageAt(expression);
-        return origin.Outer.Select(root => new ResolvedState(root, origin.Deep.Contains(root))).ToList();
+        if (!IsAssignmentTarget(expression) || expression is not IdentifierNameSyntax) return Roots(StorageAt(expression), false);
+        if (IsRefRebinding(expression)) return [];
+        return LocationAt(expression, expression) is { } location ? Roots(location, true) : Roots(VariableOrigin(expression), false);
     }
 
-    private StorageOrigin AssignmentOrigin(ExpressionSyntax expression)
-    {
-        if (expression.Parent is AssignmentExpressionSyntax { Right: RefExpressionSyntax }) return StorageOrigin.Private;
-        var state = _flow.Before(expression, new StorageEnvironment());
-        if (expression is IdentifierNameSyntax name && state.References.TryGetValue(name.Identifier.Text, out var reference))
-        {
-            var receiver = state.Heap.Materialize(reference.Receiver);
-            return receiver with { Deep = receiver.Deep.Union(receiver.Outer).ToHashSet() };
-        }
-        return _parameterName(expression) is { } parameter ? StorageOrigin.Shared(parameter) : StorageOrigin.Private;
-    }
+    private static IReadOnlyCollection<ResolvedState> Roots(StorageOrigin origin, bool location) =>
+        origin.Outer.Select(root => new ResolvedState(root, origin.Deep.Contains(root), location)).ToList();
 
-    public StorageOrigin StorageAt(ExpressionSyntax expression, SyntaxNode site)
-    {
-        var state = _flow.Before(site, new StorageEnvironment());
-        return state.Heap.Materialize(_flow.Origin(expression, state));
-    }
+    private StorageOrigin AssignmentOrigin(ExpressionSyntax expression) => IsRefRebinding(expression)
+        ? StorageOrigin.Private : LocationAt(expression, expression) ?? VariableOrigin(expression);
+
+    private StorageOrigin VariableOrigin(ExpressionSyntax expression) =>
+        _parameterName(expression) is { } parameter ? StorageOrigin.Shared(parameter) : StorageOrigin.Private;
+
+    public StorageOrigin StorageAt(ExpressionSyntax expression, SyntaxNode site) => _locations.Value(expression, site);
+
+    /// <summary>
+    /// The objects holding the field, element or <c>ref</c> local target that <paramref name="expression"/> names;
+    /// null when it names a variable, whose write rebinds it rather than changing an object.
+    /// </summary>
+    public StorageOrigin? LocationAt(ExpressionSyntax expression, SyntaxNode site) =>
+        _parameterName(expression) is null ? _locations.Holder(expression, site) : null;
 
     private static bool IsAssignmentTarget(ExpressionSyntax expression) =>
         expression.Parent is AssignmentExpressionSyntax assignment && assignment.Left == expression;
+
+    private static bool IsRefRebinding(ExpressionSyntax expression) =>
+        expression.Parent is AssignmentExpressionSyntax { Right: RefExpressionSyntax };
 
 }

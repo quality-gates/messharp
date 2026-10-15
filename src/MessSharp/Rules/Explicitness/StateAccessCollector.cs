@@ -14,7 +14,11 @@ internal enum AccessKind
 
 internal readonly record struct StateAccess(string Name, AccessKind Kind, SyntaxNode Site, bool Deep = false);
 
-internal readonly record struct ResolvedState(string Name, bool Deep = false);
+/// <summary>
+/// State a target reaches. <paramref name="Location"/> marks a target that is a slot of the state's object, so writing
+/// it changes that object rather than rebinding the state.
+/// </summary>
+internal readonly record struct ResolvedState(string Name, bool Deep = false, bool Location = false);
 
 internal sealed class StateAccessCollector : IBodyVisitor
 {
@@ -94,7 +98,7 @@ internal sealed class StateAccessCollector : IBodyVisitor
     }
 
     private static AccessKind MutationKind(ResolvedState state) =>
-        state.Deep ? AccessKind.Change : AccessKind.Write;
+        state.Deep || state.Location ? AccessKind.Change : AccessKind.Write;
 
     private void ExcludeReads(ExpressionSyntax target)
     {

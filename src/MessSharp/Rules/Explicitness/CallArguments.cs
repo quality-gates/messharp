@@ -51,6 +51,14 @@ internal static class CallArguments
             : StorageOrigin.Unknown;
     }
 
+    /// <summary>The objects holding the location passed for <paramref name="name"/>; null when a variable is passed.</summary>
+    public static StorageOrigin? Location(RuleContext ctx, CallEdge edge, IReadOnlyList<CallableOwner> owners, string name,
+        SyntaxNode body)
+    {
+        if (edge.Bindings?.ContainsKey(name) == true || Actual(edge, name) is not { } actual) return null;
+        return Ownership(ctx, edge.Caller, owners, body).LocationAt(actual, edge.Site);
+    }
+
     public static StorageOrigin Project(RuleContext ctx, CallEdge edge, IReadOnlyList<CallableOwner> owners,
         StorageOrigin relative, SyntaxNode body) => StorageProjection.Apply(relative,
         root => root.Contains(':', StringComparison.Ordinal) || root == StorageOrigin.UnknownRoot

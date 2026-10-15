@@ -254,4 +254,39 @@ public class ExplicitnessStorageTests
     [InlineData("Box box", "var local = new Box(); Set(ref local.Slot);")]
     public void RefCalleesThatDoNotWriteCallerStorageRemainQuiet(string parameter, string body) =>
         Assert.Empty(Run(RefSlot + "static void Run(" + parameter + ") { " + body + " } }"));
+
+    private const string RefElement = "delegate void Setter(ref int slot); class Probe { static void Set(ref int slot) { slot = 7; } "
+        + "static void Keep(ref int slot) { } static void Drain(int[] ys) { Set(ref ys[0]); } "
+        + "static IEnumerable<int> Walk(int[] ys) { Set(ref ys[0]); yield return ys[0]; } "
+        + "static void Fill(int[] ys) { ref var slot = ref ys[0]; slot = 9; } ";
+
+    [Theory]
+    [InlineData("Set(ref xs[0]);")]
+    [InlineData("var ys = xs; Set(ref ys[0]);")]
+    [InlineData("Drain(xs);")]
+    [InlineData("Fill(xs);")]
+    [InlineData("foreach (var x in Walk(xs)) { }")]
+    [InlineData("void Poke() { Set(ref xs[0]); } Poke();")]
+    [InlineData("Setter s = Set; s(ref xs[0]);")]
+    [InlineData("var ys = xs; Setter s = Set; s(ref ys[0]);")]
+    [InlineData("Action<int[]> drain = Drain; drain(xs);")]
+    public void RefWritesToCallerElementsChangeTheArgument(string body)
+    {
+        var output = Assert.Single(Run(RefElement + "static void Run(int[] xs) {\n" + body + " } }"));
+        Assert.Equal("ImplicitOutput", output.Rule.Name);
+        Assert.Equal(2, output.BeginLine);
+        Assert.Equal("The method Run() has an implicit output: changes argument 'xs'.", output.Description);
+    }
+
+    [Theory]
+    [InlineData("var c = (int[])xs.Clone(); Set(ref c[0]);")]
+    [InlineData("Drain((int[])xs.Clone());")]
+    [InlineData("Fill((int[])xs.Clone());")]
+    [InlineData("foreach (var x in Walk((int[])xs.Clone())) { }")]
+    [InlineData("var c = (int[])xs.Clone(); void Poke() { Set(ref c[0]); } Poke();")]
+    [InlineData("Setter s = Keep; s(ref xs[0]);")]
+    [InlineData("var c = (int[])xs.Clone(); Setter s = Set; s(ref c[0]);")]
+    [InlineData("Action<int[]> drain = Drain; drain((int[])xs.Clone());")]
+    public void RefWritesToPrivateElementsRemainQuiet(string body) =>
+        Assert.Empty(Run(RefElement + "static void Run(int[] xs) { " + body + " } }"));
 }

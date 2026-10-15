@@ -10,7 +10,7 @@ internal static class DeferredCaptures
     /// as seen from the context.
     /// </summary>
     public static Dictionary<string, StorageOrigin> Captures(this DeferredValueContext context, CallableOwner target) =>
-        target.Method.Parameters.Skip(CallableOwner.Parameters(target.Method.Node).Count()).ToDictionary(
+        target.Method.Parameters.Skip(target.OwnParameters().Count()).ToDictionary(
             parameter => parameter.Name,
             parameter => context.Bindings.GetValueOrDefault(parameter.Name)
                 ?? context.Storage(SyntaxFactory.IdentifierName(parameter.Name)));
