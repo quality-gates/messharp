@@ -44,7 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Known limitations
 
-- `GlobalVariable` can miss static field writes outside a catch when the catch variable has the same name ([#258](https://github.com/quality-gates/messharp/issues/258)).
+- Since 0.2.21, `GlobalVariable` can miss static field writes when a catch or query range variable elsewhere in the method has the same name ([#258](https://github.com/quality-gates/messharp/issues/258)).
 - The opt-in explicitness rules can miss iterator effects consumed by `Contains`, spread expressions, the `List` constructor, or `AddRange` ([#250](https://github.com/quality-gates/messharp/issues/250)).
 - Explicitness analysis of branching same-file helper chains can grow exponentially ([#255](https://github.com/quality-gates/messharp/issues/255)).
 
