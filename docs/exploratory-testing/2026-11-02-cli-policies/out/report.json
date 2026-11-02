@@ -1,0 +1,25 @@
+{
+  "version": "0.0.0-dev",
+  "package": "messharp",
+  "timestamp": "2026-11-02T01:36:54.6371406+00:00",
+  "files": [
+    {
+      "file": "docs/exploratory-testing/2026-11-02-cli-policies/fixtures/Example.cs",
+      "violations": [
+        {
+          "beginLine": 5,
+          "endLine": 5,
+          "package": "",
+          "function": "",
+          "class": "",
+          "method": "",
+          "description": "Avoid variables with short names like x. Configured minimum length is 3.",
+          "rule": "ShortVariable",
+          "ruleSet": "Naming Rules",
+          "externalInfoUrl": "https://phpmd.org/rules/naming.html#shortvariable",
+          "priority": 3
+        }
+      ]
+    }
+  ]
+}

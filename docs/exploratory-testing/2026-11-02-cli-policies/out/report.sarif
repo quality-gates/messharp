@@ -1,0 +1,46 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "messharp",
+          "version": "0.0.0-dev",
+          "rules": [
+            {
+              "id": "ShortVariable",
+              "name": "ShortVariable",
+              "helpUri": "https://phpmd.org/rules/naming.html#shortvariable",
+              "shortDescription": {
+                "text": "Detects when a field, local, or parameter has a very short name."
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "ShortVariable",
+          "level": "warning",
+          "message": {
+            "text": "Avoid variables with short names like x. Configured minimum length is 3."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/exploratory-testing/2026-11-02-cli-policies/fixtures/Example.cs"
+                },
+                "region": {
+                  "startLine": 5,
+                  "endLine": 5
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
