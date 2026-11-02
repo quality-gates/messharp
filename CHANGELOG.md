@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.22] - 2026-11-02
+
 ### Added
 
 - Add `UnknownEffect` to the explicitness ruleset and propagate same-file callable effect summaries to a fixed point, including local functions, lambdas, recursive cycles, and simple returned-callback factories.
