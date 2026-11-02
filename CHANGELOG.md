@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.22] - 2026-11-02
+
 ### Added
 
 - Add `UnknownEffect` to the explicitness ruleset and propagate same-file callable effect summaries to a fixed point, including local functions, lambdas, recursive cycles, and simple returned-callback factories.
@@ -15,10 +17,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Document the explicitness ruleset's supported calculation subset and uncertainty boundaries, including shallow-copy reachable ownership and unresolved dynamic behavior.
 - Treat receiver field reads as explicit inputs and receiver mutations as implicit outputs in the default explicitness ruleset. The strict ruleset retains its instance-state findings.
-- Speed up explicitness storage analysis by reusing callee executions that start from the same environment, and by indexing per-file declarations, writes, and callable owners once. Mutually recursive helpers no longer take minutes per file.
+- Speed up explicitness storage analysis by reusing callee executions with matching call contexts and starting environments, and by indexing per-file declarations, writes, and callable owners once. Mutually recursive helpers no longer take minutes per file.
 
 ### Fixed
 
+- `GlobalVariable` recognizes a catch variable that shadows a static field instead of treating assignment to that local as a field mutation.
 - Resolve delegate values through reaching bindings across loops, tuple deconstruction, `ref` local aliases, `out` arguments, and captured variables, and select method-group and same-file call overloads by arity, named arguments, `ref`/`out`/`in` modifiers, and literal types.
 - Execute implicit parameterless same-file constructors, instance initializers, and base constructor chains at the call or initializer line, run custom event accessors on `+=` and `-=` subscriptions, treat preset `Lazy<T>` values as non-factories while forwarding delegate presets through `.Value`, treat `out` arguments as write-only targets, and deduplicate findings per printed owner and rule at the earliest site.
 - Give explicit and target-typed `Lazy<T>` factories in declarations, assignments, returns, switch expressions, and typed delegate results the `<lazy>` owner. Bind reordered `valueFactory` arguments by name, follow reaching bindings at `.Value`, and preserve earlier aliases after replacement.
@@ -38,6 +41,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Populate explicitness JSON metadata with the actual callable owner, including callbacks, instead of only embedding the callable name in the description.
 - Preserve outer and reachable storage origins through shallow copies, conditional bindings, loop-carried aliases, and returned closures; keep captured bindings distinct from callback arguments.
 - Recognize mutable readonly static storage changed through returned aliases, and report uncertainty for unsupported property, indexer, operator, and event dispatch.
+
+### Known limitations
+
+- Since 0.2.21, `GlobalVariable` can miss static field writes when a catch or query range variable elsewhere in the method has the same name ([#258](https://github.com/quality-gates/messharp/issues/258)).
+- The opt-in explicitness rules can miss iterator effects consumed by `Contains`, spread expressions, the `List` constructor, or `AddRange` ([#250](https://github.com/quality-gates/messharp/issues/250)).
+- Explicitness analysis of branching same-file helper chains can grow exponentially ([#255](https://github.com/quality-gates/messharp/issues/255)).
 
 ## [0.2.21] - 2026-10-04
 
