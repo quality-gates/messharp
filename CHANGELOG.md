@@ -17,7 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Document the explicitness ruleset's supported calculation subset and uncertainty boundaries, including shallow-copy reachable ownership and unresolved dynamic behavior.
 - Treat receiver field reads as explicit inputs and receiver mutations as implicit outputs in the default explicitness ruleset. The strict ruleset retains its instance-state findings.
-- Speed up explicitness storage analysis by reusing callee executions that start from the same environment, and by indexing per-file declarations, writes, and callable owners once. Mutually recursive helpers no longer take minutes per file.
+- Speed up explicitness storage analysis by reusing callee executions with matching call contexts and starting environments, and by indexing per-file declarations, writes, and callable owners once. Mutually recursive helpers no longer take minutes per file.
 
 ### Fixed
 
@@ -40,6 +40,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Populate explicitness JSON metadata with the actual callable owner, including callbacks, instead of only embedding the callable name in the description.
 - Preserve outer and reachable storage origins through shallow copies, conditional bindings, loop-carried aliases, and returned closures; keep captured bindings distinct from callback arguments.
 - Recognize mutable readonly static storage changed through returned aliases, and report uncertainty for unsupported property, indexer, operator, and event dispatch.
+
+### Known limitations
+
+- The opt-in explicitness rules can miss iterator effects consumed by `Contains`, spread expressions, the `List` constructor, or `AddRange` ([#250](https://github.com/quality-gates/messharp/issues/250)).
+- Analysis of branching same-file helper chains can grow exponentially ([#255](https://github.com/quality-gates/messharp/issues/255)).
 
 ## [0.2.21] - 2026-10-04
 
