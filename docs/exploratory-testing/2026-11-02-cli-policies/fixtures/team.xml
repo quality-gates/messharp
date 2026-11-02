@@ -1,0 +1,5 @@
+<ruleset name="team policy">
+  <rule ref="naming">
+    <exclude name="ShortVariable" />
+  </rule>
+</ruleset>

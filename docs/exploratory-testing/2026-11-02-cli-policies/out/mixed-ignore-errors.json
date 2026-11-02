@@ -1,0 +1,35 @@
+{
+  "version": "0.0.0-dev",
+  "package": "messharp",
+  "timestamp": "2026-11-02T01:37:01.0811462+00:00",
+  "files": [
+    {
+      "file": "docs/exploratory-testing/2026-11-02-cli-policies/fixtures/Example.cs",
+      "violations": [
+        {
+          "beginLine": 5,
+          "endLine": 5,
+          "package": "",
+          "function": "",
+          "class": "",
+          "method": "",
+          "description": "Avoid variables with short names like x. Configured minimum length is 3.",
+          "rule": "ShortVariable",
+          "ruleSet": "Naming Rules",
+          "externalInfoUrl": "https://phpmd.org/rules/naming.html#shortvariable",
+          "priority": 3
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "fileName": "docs/exploratory-testing/2026-11-02-cli-policies/fixtures/Broken.cs",
+      "message": "CS1026: ) expected on line 3"
+    },
+    {
+      "fileName": "docs/exploratory-testing/2026-11-02-cli-policies/fixtures/Broken.cs",
+      "message": "CS1002: ; expected on line 3"
+    }
+  ]
+}
