@@ -13,7 +13,7 @@ internal readonly record struct EffectFact(
     CallbackInvocation? Callback = null,
     DeferredExecution? Deferred = null);
 
-internal sealed class EffectSummary
+internal sealed class EffectSummary(CallableOwner? reportingOwner = null)
 {
     private readonly Dictionary<EffectFact, SyntaxNode> _facts = [];
 
@@ -36,7 +36,7 @@ internal sealed class EffectSummary
         foreach (var (fact, site) in _facts)
         {
             if (fact.Kind == EffectKind.ParameterChange)
-                yield return new Finding(site, $"changes argument '{fact.What}'");
+                yield return new Finding(site, ChangeDescription(fact.What));
             if (fact.Kind == EffectKind.CaptureWrite)
                 yield return new Finding(site, $"writes captured value '{fact.What}'");
             if (fact.Kind != EffectKind.ParameterWrite) continue;
@@ -47,10 +47,13 @@ internal sealed class EffectSummary
         }
     }
 
+    private string ChangeDescription(string name) => reportingOwner is not null && CaptureState.Contains(reportingOwner, name)
+        ? $"changes captured storage '{name}'" : $"changes argument '{name}'";
+
     public static EffectSummary Direct(RuleContext ctx, CallableOwner owner, IReadOnlyList<CallableOwner> owners)
     {
         var direct = MethodEffectAnalyzer.Analyze(ctx, owner, owners);
-        var summary = new EffectSummary();
+        var summary = new EffectSummary(owner);
         summary.AddFindings(EffectKind.Input, direct.AmbientInputs);
         summary.AddFindings(EffectKind.Output, direct.AmbientOutputs);
         foreach (var access in direct.Statics)
