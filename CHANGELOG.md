@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Describe mutations in local functions, lambdas, and lazy factories as changes to captured storage rather than to an argument, including captured parameters.
+
 ## [0.2.22] - 2026-11-02
 
 ### Added
