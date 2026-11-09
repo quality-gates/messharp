@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Record an exploratory pass covering file discovery, suppression, and CI reports.
+
 ## [0.2.23] - 2026-11-07
 
 ### Fixed
