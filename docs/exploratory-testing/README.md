@@ -4,6 +4,7 @@ Each exploratory testing pass drives the CLI through realistic user journeys. Th
 
 | Date | Scope | Issues filed |
 | :--- | :--- | :--- |
+| 2026-11-09 | [Discovery, suppression, and reports](2026-11-09-discovery-suppression-reports/REPORT.md) | [#262](https://github.com/quality-gates/messharp/issues/262) |
 | 2026-11-02 | [CLI policies and reports](2026-11-02-cli-policies/REPORT.md) | None |
 | 2026-10-03 | [Suppression, modern-C# metrics, variable naming](2026-10-03-suppression-metrics-naming/REPORT.md) | #226, #227 |
 | 2026-09-26 | [Unused code, design, and naming edge cases](2026-09-26-unusedcode-and-design-edgecases/REPORT.md) | #188, #189 |
