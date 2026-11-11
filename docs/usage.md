@@ -48,6 +48,8 @@ loaded ruleset(s). `--only` cannot pull in a rule the ruleset does not include.
 | `--version` | Print version. |
 | `--help`, `-h` | Show help. |
 
+With `--ignore-tests`, explicitly supplied files and directories are also skipped if any directory in their absolute path matches `*Tests`. This includes ancestors above the current working directory.
+
 ## Exit codes
 
 | Code | Meaning |
