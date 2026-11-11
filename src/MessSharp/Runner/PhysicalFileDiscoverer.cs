@@ -32,9 +32,15 @@ public sealed class PhysicalFileDiscoverer : IFileDiscoverer
         foreach (var p in paths)
         {
             if (Directory.Exists(p))
-                WalkDir(p, suffixes, exclude, ignoreTests, Add);
+            {
+                if (!ignoreTests || !HasTestDirectoryAncestor(p))
+                    WalkDir(p, suffixes, exclude, ignoreTests, Add);
+            }
             else if (File.Exists(p))
-                AddFileEntry(p, suffixes, exclude, ignoreTests, Add);
+            {
+                if (!ignoreTests || !HasTestDirectoryAncestor(Path.GetDirectoryName(Path.GetFullPath(p))!))
+                    AddFileEntry(p, suffixes, exclude, ignoreTests, Add);
+            }
             else
                 // phpmd/messgo error out on a path that does not exist
                 throw new FileNotFoundException($"no such file or directory: {p}");
@@ -104,6 +110,13 @@ public sealed class PhysicalFileDiscoverer : IFileDiscoverer
 
     private bool ShouldSkipDir(string name) =>
         name is "bin" or "obj" or ".git" or "node_modules";
+
+    private bool HasTestDirectoryAncestor(string path)
+    {
+        for (var directory = new DirectoryInfo(Path.GetFullPath(path)); directory != null; directory = directory.Parent)
+            if (IsTestDir(directory.Name)) return true;
+        return false;
+    }
 
     private bool IsTestDir(string name) =>
         name.EndsWith("Tests", StringComparison.OrdinalIgnoreCase)
