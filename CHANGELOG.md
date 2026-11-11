@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Count paths inside `checked` and `unchecked` statement blocks when calculating NPath complexity.
 - Apply `--ignore-tests` to explicit files and directories inside test-named directories.
 
 ## [0.2.23] - 2026-11-07
