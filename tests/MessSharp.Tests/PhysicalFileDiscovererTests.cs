@@ -5,6 +5,98 @@ namespace MessSharp.Tests;
 
 public class PhysicalFileDiscovererTests
 {
+    [Theory]
+    [InlineData("TeamTests", "parent")]
+    [InlineData("TeamTests", "test")]
+    [InlineData("tEaMtEsTs", "nested")]
+    [InlineData("Tests", "file")]
+    public void IgnoreTests_SkipsFilesUnderTestDirectoryForAnyInput(string testDirectory, string inputKind)
+    {
+        var root = Directory.CreateTempSubdirectory("messharp-ancestor-");
+        try
+        {
+            var test = Directory.CreateDirectory(Path.Combine(root.FullName, testDirectory));
+            var nested = Directory.CreateDirectory(Path.Combine(test.FullName, "Nested"));
+            var file = Path.Combine(nested.FullName, "Helper.cs");
+            File.WriteAllText(file, "class Helper { }");
+            var input = inputKind switch
+            {
+                "parent" => root.FullName,
+                "test" => test.FullName,
+                "nested" => nested.FullName,
+                _ => file,
+            };
+            var discoverer = new PhysicalFileDiscoverer();
+
+            Assert.Empty(discoverer.Discover(new[] { input }, new[] { ".cs" }, Array.Empty<string>(), true));
+            Assert.Single(discoverer.Discover(new[] { input }, new[] { ".cs" }, Array.Empty<string>(), false));
+        }
+        finally
+        {
+            Directory.Delete(root.FullName, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void IgnoreTests_PreservesFiltersDuplicatesAndMissingPaths()
+    {
+        var root = Directory.CreateTempSubdirectory("messharp-ordinary-");
+        try
+        {
+            var ordinary = Directory.CreateDirectory(Path.Combine(root.FullName, "TeamTestsExtra"));
+            var test = Directory.CreateDirectory(Path.Combine(root.FullName, "TeamTests"));
+            var file = Path.Combine(ordinary.FullName, "Helper.cs");
+            var excluded = Path.Combine(ordinary.FullName, "Excluded.cs");
+            File.WriteAllText(file, "class Helper { }");
+            File.WriteAllText(excluded, "class Excluded { }");
+            File.WriteAllText(Path.Combine(ordinary.FullName, "HelperTests.cs"), "class HelperTests { }");
+            File.WriteAllText(Path.Combine(ordinary.FullName, "Other.txt"), "text");
+            var discoverer = new PhysicalFileDiscoverer();
+            var suffixes = new[] { ".cs" };
+            var exclude = new[] { "Excluded.cs" };
+
+            Assert.Equal(new[] { file }, discoverer.Discover(new[] { ordinary.FullName, file }, suffixes, exclude, true));
+            Assert.Empty(discoverer.Discover(new[] { file }, new[] { ".txt" }, exclude, true));
+            Assert.Empty(discoverer.Discover(new[] { excluded }, suffixes, exclude, true));
+            var missing = Path.Combine(test.FullName, "Missing.cs");
+            Assert.Throws<FileNotFoundException>(() => discoverer.Discover(new[] { missing }, suffixes, exclude, true));
+            Assert.Throws<FileNotFoundException>(() => discoverer.Discover(new[] { file, missing }, suffixes, exclude, true));
+            Assert.Throws<FileNotFoundException>(() => discoverer.Discover(new[] { missing, file }, suffixes, exclude, true));
+        }
+        finally
+        {
+            Directory.Delete(root.FullName, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void IgnoreTests_UsesLexicalSymlinkNameForExplicitRoots()
+    {
+        var root = Directory.CreateTempSubdirectory("messharp-lexical-");
+        try
+        {
+            var target = Directory.CreateDirectory(Path.Combine(root.FullName, "TargetTests"));
+            var ordinary = Directory.CreateDirectory(Path.Combine(root.FullName, "Ordinary"));
+            File.WriteAllText(Path.Combine(target.FullName, "Helper.cs"), "class Helper { }");
+            File.WriteAllText(Path.Combine(ordinary.FullName, "Helper.cs"), "class Helper { }");
+            var ordinaryLink = Path.Combine(root.FullName, "Link");
+            var testLink = Path.Combine(root.FullName, "LinkTests");
+            Directory.CreateSymbolicLink(ordinaryLink, target.FullName);
+            Directory.CreateSymbolicLink(testLink, ordinary.FullName);
+            var discoverer = new PhysicalFileDiscoverer();
+            var suffixes = new[] { ".cs" };
+
+            Assert.Equal(new[] { Path.Combine(ordinaryLink, "Helper.cs") },
+                discoverer.Discover(new[] { ordinaryLink }, suffixes, Array.Empty<string>(), true));
+            Assert.Empty(discoverer.Discover(new[] { testLink }, suffixes, Array.Empty<string>(), true));
+            Assert.Single(discoverer.Discover(new[] { testLink }, suffixes, Array.Empty<string>(), false));
+        }
+        finally
+        {
+            Directory.Delete(root.FullName, recursive: true);
+        }
+    }
+
     [Fact]
     public void ExplicitFile_UsesSameFiltersAsDirectoryWalk()
     {

@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Record an exploratory pass covering file discovery, suppression, and CI reports.
 
+### Fixed
+
+- Apply `--ignore-tests` to explicit files and directories inside test-named directories.
+
 ## [0.2.23] - 2026-11-07
 
 ### Fixed
