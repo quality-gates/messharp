@@ -2,16 +2,23 @@ using MessSharp.Model;
 using MessSharp.Rule;
 using MessSharp.RuleSet;
 using Xunit;
+using static MessSharp.Tests.ExplicitnessExpectations;
 
 namespace MessSharp.Tests;
 
 public class ExplicitnessConstructionTests
 {
-    private static List<(string, string, int)> Analyze(string source) =>
-        Engine.Analyze(ModelBuilder.Parse("test.cs", source), new Loader().Load("explicitness"))
-            .Select(f => (f.Method, f.Rule.Name, f.BeginLine)).Distinct()
-            .OrderBy(f => f.BeginLine).ThenBy(f => f.Method, StringComparer.Ordinal)
-            .ThenBy(f => f.Name, StringComparer.Ordinal).ToList();
+    private static List<Violation> AnalyzeRecords(string source)
+    {
+        var records = Engine.Analyze(ModelBuilder.Parse("test.cs", source), new Loader().Load("explicitness"));
+        Assert.Empty(records.GroupBy(f => (f.Package, f.Class, f.Method, f.Rule.Name, f.BeginLine, f.Description))
+            .Where(group => group.Count() > 1));
+        return records.OrderBy(f => f.BeginLine).ThenBy(f => f.Method, StringComparer.Ordinal)
+            .ThenBy(f => f.Rule.Name, StringComparer.Ordinal).ToList();
+    }
+
+    private static List<(string, string, int, string)> Analyze(string source) =>
+        AnalyzeRecords(source).Select(f => (f.Method, f.Rule.Name, f.BeginLine, f.Description)).ToList();
 
     [Theory]
     [InlineData("Console.Read();", true)]
@@ -36,7 +43,7 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal(input ? [("Root", "ImplicitInput", 4), ("Run", "ImplicitInput", 13)] : [], findings);
+        Assert.Equal(input ? [ConstructorInput("Root", 4), Input("Run", 13)] : [], findings);
     }
 
     [Theory]
@@ -55,7 +62,7 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal(input ? [("Cell", "ImplicitInput", 3), ("Run", "ImplicitInput", 7)] : [], findings);
+        Assert.Equal(input ? [Input("Cell", 3), Input("Run", 7)] : [], findings);
     }
 
     [Theory]
@@ -76,7 +83,7 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal(input ? [("Root", "ImplicitInput", 3), ("Run", "ImplicitInput", 9)] : [], findings);
+        Assert.Equal(input ? [Input("Root", 3), Input("Run", 9)] : [], findings);
     }
 
     [Fact]
@@ -93,7 +100,7 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal([("Run", "UnknownEffect", 6)], findings);
+        Assert.Equal([Unknown("Run", 6, "unresolved constructor 'External'")], findings);
     }
 
     [Fact]
@@ -123,8 +130,8 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal([("Root", "ImplicitInput", 4), ("Mid", "ImplicitInput", 9), ("Leaf", "ImplicitInput", 14),
-            ("Run", "ImplicitInput", 19)], findings);
+        Assert.Equal([ConstructorInput("Root", 4), ConstructorInput("Mid", 9), ConstructorInput("Leaf", 14),
+            Input("Run", 19)], findings);
     }
 
     [Theory]
@@ -148,7 +155,7 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal(input ? [("Cell", "ImplicitInput", 3), ("Run", "ImplicitInput", 12)] : [], findings);
+        Assert.Equal(input ? [ConstructorInput("Cell", 3), Input("Run", 12)] : [], findings);
     }
 
     [Theory]
@@ -168,7 +175,7 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal(input ? [("Run", "ImplicitInput", 4)] : [], findings);
+        Assert.Equal(input ? [Input("Run", 4)] : [], findings);
     }
 
     [Theory]
@@ -181,7 +188,7 @@ public class ExplicitnessConstructionTests
     [InlineData("Lazy<int>", "Make", 13)]
     public void LazyArgumentShapeDecidesWhenTheValueIsComputed(string lazy, string argument, int line)
     {
-        var findings = Analyze($$"""
+        var findings = AnalyzeRecords($$"""
             using System;
             class Probe {
                 static int Make() {
@@ -198,10 +205,16 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        var expected = new List<(string, string, int)> { ("Make", "ImplicitInput", 4) };
-        if (argument.Contains("=>")) expected.Add(("<lazy>", "ImplicitInput", 12));
-        expected.Add(("Run", "ImplicitInput", line));
-        Assert.Equal(expected, findings);
+        var expected = new List<(string, string, int, string)>
+        {
+            ("Make", "ImplicitInput", 4, "The method Make() has an implicit input: uses Console.Read."),
+        };
+        if (argument.Contains("=>"))
+            expected.Add(("<lazy>", "ImplicitInput", 12, "The method <lazy>() has an implicit input: uses Console.Read."));
+        if (argument == "int.Parse(\"7\") + Make()")
+            expected.Add(("Run", "ImplicitInput", line, "The method Run() has an implicit input: uses the current culture."));
+        expected.Add(("Run", "ImplicitInput", line, "The method Run() has an implicit input: uses Console.Read."));
+        Assert.Equal(expected, findings.Select(f => (f.Method, f.Rule.Name, f.BeginLine, f.Description)));
     }
 
     [Theory]
@@ -212,7 +225,7 @@ public class ExplicitnessConstructionTests
     [InlineData("File.Exists(s)", 11)]
     public void LazyBooleanArgumentsSelectTheThreadSafetyOverload(string argument, int line)
     {
-        var findings = Analyze($$"""
+        var findings = AnalyzeRecords($$"""
             using System;
             class Widget {
                 public Widget() {
@@ -228,7 +241,14 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal([("Widget", "ImplicitInput", 4), ("Run", "ImplicitInput", line)], findings);
+        var expected = new List<(string, string, int, string)>
+        {
+            ("Widget", "ImplicitInput", 4, "The constructor Widget() has an implicit input: uses Console.Read."),
+        };
+        if (argument == "File.Exists(s)")
+            expected.Add(("Run", "ImplicitInput", line, "The method Run() has an implicit input: uses File.Exists."));
+        expected.Add(("Run", "ImplicitInput", line, "The method Run() has an implicit input: uses Console.Read."));
+        Assert.Equal(expected, findings.Select(f => (f.Method, f.Rule.Name, f.BeginLine, f.Description)));
     }
 
     [Theory]
@@ -249,7 +269,7 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal(input ? [("Run", "ImplicitInput", 7)] : [], findings);
+        Assert.Equal(input ? [Input("Run", 7, "uses File.ReadAllText")] : [], findings);
     }
 
     [Theory]
@@ -268,6 +288,6 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal(input ? [("Read", "ImplicitInput", 3), ("Run", "ImplicitInput", 7)] : [], findings);
+        Assert.Equal(input ? [Input("Read", 3), Input("Run", 7)] : [], findings);
     }
 }

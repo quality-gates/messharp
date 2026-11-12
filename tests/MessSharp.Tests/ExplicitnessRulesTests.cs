@@ -403,7 +403,14 @@ public class Foo {
     public async Task<int> Count(Db db) => await db.CountAsync();
     public int Size(List<int> items) { int Local() => items.IndexOf(1); return Local(); }
 }";
-        MustHave(Analyze("explicitness", src), "ImplicitOutput", "The method Bar() has an implicit output: changes argument 'items'.");
+        var findings = Analyze("explicitness", src);
+        Assert.Equal(new[]
+        {
+            ("Bar", "ImplicitOutput", "The method Bar() has an implicit output: changes argument 'items'."),
+            ("Save", "UnknownEffect", "The method Save() has an unknown effect: unresolved call 'db.SaveAsync'."),
+            ("Count", "UnknownEffect", "The method Count() has an unknown effect: unresolved call 'db.CountAsync'."),
+            ("Local", "ImplicitInput", "The method Local() has an implicit input: reads captured value 'items'."),
+        }, findings.OrderBy(f => f.BeginLine).Select(f => (f.Method, f.Rule.Name, f.Description)));
     }
 
     [Fact]
