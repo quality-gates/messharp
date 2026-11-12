@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - Group interleaved violations by file in XML, HTML, JSON, and Checkstyle reports, and combine Checkstyle processing errors with their file's findings.
+- Detect static field access outside the scopes of catch variables and query range variables.
+- Count paths inside `checked` and `unchecked` statement blocks when calculating NPath complexity.
 - Apply `--ignore-tests` to explicit files and directories inside test-named directories.
 
 ## [0.2.23] - 2026-11-07

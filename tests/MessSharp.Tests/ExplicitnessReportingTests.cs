@@ -14,6 +14,50 @@ public class ExplicitnessReportingTests
             .ThenBy(f => f.Name, StringComparer.Ordinal).ToList();
 
     [Theory]
+    [InlineData("try { ex = null; } catch (Exception ex) { }")]
+    [InlineData("try { } catch (Exception ex) { } ex = null;")]
+    [InlineData("try { } catch (Exception ex) { } finally { ex = null; }")]
+    public void CatchVariableDoesNotHideStaticOutputOutsideItsScope(string body)
+    {
+        var findings = Analyze($$"""
+            using System;
+            class Probe {
+                static Exception ex;
+                static void Run() { {{body}} }
+            }
+            """);
+        Assert.Equal([("Run", "ImplicitOutput", 4)], findings);
+    }
+
+    [Theory]
+    [InlineData("catch (Exception ex) { ex = null; }")]
+    [InlineData("catch (Exception ex) when (ex != null) { ex = null; }")]
+    public void CatchVariableDoesNotCreateStaticEffects(string handler)
+    {
+        var findings = Analyze($$"""
+            using System;
+            class Probe {
+                static Exception ex;
+                static void Run() { try { } {{handler}} }
+            }
+            """);
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void CatchVariableDoesNotHideStaticInputAfterCatch()
+    {
+        var findings = Analyze("""
+            using System;
+            class Probe {
+                static Exception ex;
+                static Exception Run() { try { } catch (Exception ex) { } return ex; }
+            }
+            """);
+        Assert.Equal([("Run", "ImplicitInput", 4)], findings);
+    }
+
+    [Theory]
     [InlineData("Console.Read()", 5)]
     [InlineData("1", 6)]
     public void OneOwnerReportsOneInputAtTheFirstSite(string value, int line)
