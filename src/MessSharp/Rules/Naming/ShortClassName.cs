@@ -15,7 +15,7 @@ public sealed class ShortClassNameRule : BaseRule, IClassRule, IInterfaceRule
         if (name.Length >= min)
             return;
 
-        var exceptions = SplitList(ctx.Props.Str("exceptions", ""));
+        var exceptions = ctx.Props.Set("exceptions");
         if (exceptions.Contains(name))
             return;
 
@@ -28,7 +28,4 @@ public sealed class ShortClassNameRule : BaseRule, IClassRule, IInterfaceRule
     public void Apply(RuleContext ctx, InterfaceModel iface) =>
         Check(ctx, iface.Name, iface.Line, iface.EndLine);
 
-    private static HashSet<string> SplitList(string s) =>
-        new(s.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-            StringComparer.Ordinal);
 }

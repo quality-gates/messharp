@@ -13,8 +13,7 @@ public sealed class TooManyPublicMethodsRule : BaseRule, IClassRule
     public void Apply(RuleContext ctx, ClassModel cls)
     {
         int threshold = ctx.Props.Int("maxmethods", 10);
-        var re = RuleContext.CompileRegex(
-            ctx.Props.Str("ignorepattern", "(^(set|get|is|has|with))i"));
+        var re = ctx.Props.Regex("ignorepattern", "(^(set|get|is|has|with))i");
 
         int count = 0;
         foreach (var m in cls.Methods)

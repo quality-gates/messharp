@@ -18,10 +18,7 @@ public sealed class ShortMethodNameRule : BaseRule, IMethodRule
         if (method.Name.Length >= min)
             return;
 
-        var exceptions = new HashSet<string>(
-            ctx.Props.Str("exceptions", "")
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-            StringComparer.Ordinal);
+        var exceptions = ctx.Props.Set("exceptions");
 
         if (exceptions.Contains(method.Name))
             return;

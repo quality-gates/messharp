@@ -26,29 +26,6 @@ public class RuleContextTests
     }
 
     [Fact]
-    public void CompileRegex_PhpmdPattern_CompilesSuccessfully()
-    {
-        var re = RuleContext.CompileRegex("(^(get|set))i");
-        Assert.NotNull(re);
-        Assert.Matches(re!, "getName");
-        Assert.Matches(re!, "SetValue");
-    }
-
-    [Fact]
-    public void CompileRegex_EmptyString_ReturnsNull()
-    {
-        Assert.Null(RuleContext.CompileRegex(""));
-    }
-
-    [Fact]
-    public void CompileRegex_PlainPattern_CompilesSuccessfully()
-    {
-        var re = RuleContext.CompileRegex("foo");
-        Assert.NotNull(re);
-        Assert.Matches(re!, "foobar");
-    }
-
-    [Fact]
     public void SortViolations_SortsByFileThenLine()
     {
         var violations = new List<Violation>

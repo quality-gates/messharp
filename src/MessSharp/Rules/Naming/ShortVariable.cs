@@ -15,7 +15,7 @@ public sealed class ShortVariableRule : BaseRule, IClassRule, IMethodRule
 {
     public void Apply(RuleContext ctx, ClassModel cls)
     {
-        var exceptions = GetExceptions(ctx);
+        var exceptions = ctx.Props.Set("exceptions");
         int min = ctx.Props.Int("minimum", 3);
         foreach (var f in cls.Fields)
             CheckName(ctx, f.Name, f.Line, min, exceptions);
@@ -23,7 +23,7 @@ public sealed class ShortVariableRule : BaseRule, IClassRule, IMethodRule
 
     public void Apply(RuleContext ctx, MethodModel method)
     {
-        var exceptions = GetExceptions(ctx);
+        var exceptions = ctx.Props.Set("exceptions");
         int min = ctx.Props.Int("minimum", 3);
 
         foreach (var p in method.Parameters)
@@ -40,17 +40,12 @@ public sealed class ShortVariableRule : BaseRule, IClassRule, IMethodRule
     }
 
     private static void CheckName(RuleContext ctx, string name, int line,
-        int min, HashSet<string> exceptions)
+        int min, IReadOnlySet<string> exceptions)
     {
         if (name.Length >= min) return;
         if (exceptions.Contains(name)) return;
         ctx.Report(line, line, name, min);
     }
-
-    private static HashSet<string> GetExceptions(RuleContext ctx) =>
-        new(ctx.Props.Str("exceptions", "")
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-            StringComparer.Ordinal);
 
     /// <summary>
     /// Walks a method body and yields (name, line, isLoop) for lambda parameters,

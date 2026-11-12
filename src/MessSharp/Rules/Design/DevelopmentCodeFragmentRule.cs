@@ -25,7 +25,8 @@ public sealed class DevelopmentCodeFragmentRule : BaseRule, IMethodRule
         var body = method.EffectiveBody;
         if (body == null) return;
 
-        var unwanted = BuildUnwantedSet(ctx.Props.Str("unwanted-functions", ""));
+        var unwanted = ctx.Props.Set("unwanted-functions", kind: PropertySetKind.LowerInvariantIgnoreCase,
+            nullPolicy: PropertyNullPolicy.Empty);
 
         foreach (var invocation in body.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
         {
@@ -42,7 +43,7 @@ public sealed class DevelopmentCodeFragmentRule : BaseRule, IMethodRule
         }
     }
 
-    private static bool MatchesUnwanted(string lower, HashSet<string> unwanted)
+    private static bool MatchesUnwanted(string lower, IReadOnlySet<string> unwanted)
     {
         if (unwanted.Contains(lower)) return true;
         foreach (var def in DefaultUnwanted)
@@ -56,18 +57,6 @@ public sealed class DevelopmentCodeFragmentRule : BaseRule, IMethodRule
                 return true;
         }
         return false;
-    }
-
-    private static HashSet<string> BuildUnwantedSet(string prop)
-    {
-        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (string.IsNullOrWhiteSpace(prop)) return set;
-        foreach (var item in prop.Split(','))
-        {
-            var t = item.Trim();
-            if (t.Length > 0) set.Add(t.ToLowerInvariant());
-        }
-        return set;
     }
 
     private static string? GetCallName(Microsoft.CodeAnalysis.SyntaxNode expr)

@@ -13,8 +13,8 @@ public sealed class LongClassNameRule : BaseRule, IClassRule, IInterfaceRule
     private void Check(RuleContext ctx, string name, int line, int endLine)
     {
         int max = ctx.Props.Int("maximum", 40);
-        var prefixes = SplitList(ctx.Props.Str("subtract-prefixes", ""));
-        var suffixes = SplitList(ctx.Props.Str("subtract-suffixes", ""));
+        var prefixes = ctx.Props.List("subtract-prefixes");
+        var suffixes = ctx.Props.List("subtract-suffixes");
         int effectiveLen = LengthWithout(name, prefixes, suffixes);
         if (effectiveLen <= max)
             return;
@@ -28,7 +28,7 @@ public sealed class LongClassNameRule : BaseRule, IClassRule, IInterfaceRule
     public void Apply(RuleContext ctx, InterfaceModel iface) =>
         Check(ctx, iface.Name, iface.Line, iface.EndLine);
 
-    internal static int LengthWithout(string name, List<string> prefixes, List<string> suffixes)
+    internal static int LengthWithout(string name, IReadOnlyList<string> prefixes, IReadOnlyList<string> suffixes)
     {
         string effective = name;
         foreach (var p in prefixes)
@@ -50,6 +50,4 @@ public sealed class LongClassNameRule : BaseRule, IClassRule, IInterfaceRule
         return effective.Length;
     }
 
-    private static List<string> SplitList(string s) =>
-        s.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 }

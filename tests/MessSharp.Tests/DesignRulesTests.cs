@@ -316,6 +316,14 @@ public class Foo {
     }
 
     [Fact]
+    public void DevCode_QualifiedCustomFunctionIsMatchedAfterInvariantLowercasing()
+    {
+        var src = "public class Foo { public void Bar() { Company.MyLogger.Dump(); } }";
+        var rule = MakeDevCodeRule(new() { ["unwanted-functions"] = "MyLogger.DuMp" });
+        MustHave(Analyze(src, rule), "DevelopmentCodeFragment");
+    }
+
+    [Fact]
     public void DevCode_NormalCall_NotFlagged()
     {
         var src = @"
