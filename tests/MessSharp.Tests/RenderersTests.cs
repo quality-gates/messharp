@@ -354,9 +354,10 @@ public class RenderersTests
         }
         else if (format == "html")
         {
-            Assert.True(output.IndexOf("<h2>A.cs</h2>", StringComparison.Ordinal) < output.IndexOf("<h2>b&amp;.cs</h2>", StringComparison.Ordinal));
+            var doc = new XmlDocument();
+            doc.LoadXml(output.Replace("<!DOCTYPE html>", "", StringComparison.Ordinal).Replace("<meta charset=\"utf-8\">", "<meta charset=\"utf-8\"/>", StringComparison.Ordinal));
+            Assert.Equal(new[] { "A.cs", "b&.cs" }, doc.SelectNodes("//h2")!.Cast<XmlElement>().Select(e => e.InnerText));
             Assert.True(output.IndexOf("early", StringComparison.Ordinal) < output.IndexOf("late &amp; &lt;tag&gt;", StringComparison.Ordinal));
-            Assert.DoesNotContain("<h2>z.cs</h2>", output);
             Assert.Contains("<p>b&amp;.cs: b &amp; error</p>", output);
             Assert.True(output.IndexOf("z-error", StringComparison.Ordinal) < output.IndexOf("b &amp; error", StringComparison.Ordinal));
         }
