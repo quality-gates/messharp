@@ -114,6 +114,7 @@ internal static class ConstructorTypes
 
     public static bool Trusted(CallableOwner owner, string type)
     {
+        type = SequenceTypeAliases.Resolve(owner, type);
         if (KnownTypeChecks.IsCustomType(owner, type)) return false;
         var name = type.Split('<')[0].Split('.').Last();
         return StorageTypes.IsMutable(type) || TrustedTypes.Contains(name);

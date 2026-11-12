@@ -31,7 +31,9 @@ internal static class KnownExecutionOperations
     {
         if (receiver is ImplicitArrayCreationExpressionSyntax) return true;
         var type = new ExpressionTypes(owner, owners).TypeOf(receiver);
-        if (type is null || KnownTypeChecks.IsCustomType(owner, type)) return false;
+        if (type is null) return false;
+        type = SequenceTypeAliases.Resolve(owner, type);
+        if (KnownTypeChecks.IsCustomType(owner, type)) return false;
         var name = type.Split('<')[0].Split('.').Last();
         return StorageTypes.IsMutable(type) || name is "IEnumerable" or "IReadOnlyList" or "IList" or "ICollection";
     }
@@ -40,8 +42,9 @@ internal static class KnownExecutionOperations
     {
         var types = new ExpressionTypes(owner);
         var type = types.TypeOf(creation);
-        if (type is null || KnownTypeChecks.IsCustomType(owner, type)
-            || type.Split('<')[0].Split('.').Last() != "List") return null;
+        if (type is null) return null;
+        type = SequenceTypeAliases.Resolve(owner, type);
+        if (KnownTypeChecks.IsCustomType(owner, type) || type.Split('<')[0].Split('.').Last() != "List") return null;
         if (creation.ArgumentList?.Arguments is not [var argument] || argument.NameColon?.Name.Identifier.Text == "capacity") return null;
         var value = argument.Expression;
         return IsSequence(owner, value) ? value : null;
@@ -83,6 +86,6 @@ internal static class KnownExecutionOperations
         if (kind != DeferredKind.Sequence) return true;
         if (value is ImplicitArrayCreationExpressionSyntax) return false;
         var type = new ExpressionTypes(owner).TypeOf(value);
-        return type is null || !StorageTypes.IsMutable(type);
+        return type is null || !StorageTypes.IsMutable(SequenceTypeAliases.Resolve(owner, type));
     }
 }

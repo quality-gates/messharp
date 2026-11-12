@@ -134,6 +134,56 @@ public class ExplicitnessExecutionTests
     }
 
     [Fact]
+    public void NonEnumeratingCustomExtensionsDoNotForceSequences()
+    {
+        var findings = Analyze("""
+            using System;
+            using System.Collections.Generic;
+            using System.Linq;
+            static class NonEnumeratingExtensions {
+                public static bool Contains(this IEnumerable<int> source, string value) => false;
+                public static void AddRange(this HashSet<int> target, IEnumerable<int> source) { }
+            }
+            class Probe {
+                static IEnumerable<int> Gen() { yield return Console.Read(); }
+                static bool CustomContains() { var sequence = Gen(); return sequence.Contains("not an integer"); }
+                static void CustomAddRange() { var sequence = Gen(); var target = new HashSet<int>(); target.AddRange(sequence); }
+            }
+            """);
+        Assert.Empty(Owner(findings, "CustomContains"));
+        Assert.Empty(Owner(findings, "CustomAddRange"));
+    }
+
+    [Fact]
+    public void ListConstructionForcesAnAliasedSequence()
+    {
+        var findings = Analyze("""
+            using System;
+            using System.Collections.Generic;
+            using Seq = System.Collections.Generic.IEnumerable<int>;
+            using Buffer = System.Collections.Generic.List<int>;
+            class Probe {
+                static IEnumerable<int> Gen() { yield return Console.Read(); }
+                static IEnumerable<int> Pure() { yield return 7; }
+                static List<int> Action() { Seq sequence = Gen(); return new List<int>(sequence); }
+                static List<int> PureAction() { Seq sequence = Pure(); return new List<int>(sequence); }
+                static List<int> Opaque(Seq sequence) => new List<int>(sequence);
+                static Buffer AliasTarget() => new Buffer(Gen());
+                static bool Materialized(Buffer values) => values.Contains(1);
+            }
+            """);
+        var action = Assert.Single(Owner(findings, "Action"));
+        Assert.Equal(("ImplicitInput", 8, "The method Action() has an implicit input: uses Console.Read."),
+            (action.Rule.Name, action.BeginLine, action.Description));
+        Assert.Empty(Owner(findings, "PureAction"));
+        var unknown = Assert.Single(Owner(findings, "Opaque"));
+        Assert.Equal(("UnknownEffect", 10), (unknown.Rule.Name, unknown.BeginLine));
+        var aliasTarget = Assert.Single(Owner(findings, "AliasTarget"));
+        Assert.Equal(("ImplicitInput", 11), (aliasTarget.Rule.Name, aliasTarget.BeginLine));
+        Assert.Empty(Owner(findings, "Materialized"));
+    }
+
+    [Fact]
     public void LazyCreationIsQuietAndValueAccessForcesTheLazyOwner()
     {
         var findings = Analyze("""

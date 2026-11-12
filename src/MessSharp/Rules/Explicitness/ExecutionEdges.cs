@@ -7,13 +7,14 @@ namespace MessSharp.Rules.Explicitness;
 internal sealed class ExecutionEdges(RuleContext ctx, IReadOnlyList<CallableOwner> owners, List<CallEdge> edges)
 {
     private readonly DeferredValueResolver _values = new(ctx, owners);
+    private readonly CallResolver _calls = new(owners);
 
     public void Add(CallableOwner owner, EffectSummary summary)
     {
         if (owner.Body is not { } body) return;
         foreach (var node in BodyWalk.Nodes(body))
         {
-            if (SequenceConsumption.Find(owner, node) is { } consumption)
+            if (SequenceConsumption.Find(owner, node, _calls) is { } consumption)
                 Force(owner, summary, consumption.Source, consumption.Site, DeferredKind.Sequence, body);
             if (LazyReceiver(node) is { } receiver && KnownExecutionOperations.IsLazyValue(owner, receiver))
                 Force(owner, summary, receiver, node, DeferredKind.Lazy, body);
