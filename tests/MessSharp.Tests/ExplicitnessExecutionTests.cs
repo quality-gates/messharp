@@ -217,6 +217,67 @@ public class ExplicitnessExecutionTests
     }
 
     [Fact]
+    public void NarrowingNumericExtensionsDoNotHideStandardContains()
+    {
+        var findings = Analyze("""
+            using System;
+            using System.Collections.Generic;
+            using System.Linq;
+            static class Extensions {
+                public static bool Contains(this IEnumerable<int> source, short value) => false;
+                public static bool Contains(this IEnumerable<int> source, ushort value) => false;
+            }
+            class Probe {
+                static IEnumerable<int> Gen() { yield return Console.Read(); }
+                static IEnumerable<int> Pure() { yield return 7; }
+                static bool Action(int key) { var q = Gen(); return q.Contains(key); }
+                static bool PureAction(int key) { var q = Pure(); return q.Contains(key); }
+            }
+            """);
+        var action = Assert.Single(Owner(findings, "Action"));
+        Assert.Equal(("ImplicitInput", 11), (action.Rule.Name, action.BeginLine));
+        Assert.Empty(Owner(findings, "PureAction"));
+    }
+
+    [Fact]
+    public void IncompatibleCustomExtensionEffectsDoNotReachStandardContains()
+    {
+        var findings = Analyze("""
+            using System;
+            using System.Collections.Generic;
+            using System.Linq;
+            static class Extensions {
+                public static bool Contains(this IEnumerable<int> source, string value) { Console.WriteLine("custom"); return false; }
+            }
+            class Probe {
+                static IEnumerable<int> Pure() { yield return 7; }
+                static bool Run(int key) { var q = Pure(); return q.Contains(key); }
+            }
+            """);
+        Assert.Empty(Owner(findings, "Run"));
+    }
+
+    [Fact]
+    public void CompatibleCustomExtensionTransfersOnlyItsOwnEffects()
+    {
+        var findings = Analyze("""
+            using System;
+            using System.Collections.Generic;
+            using System.Linq;
+            static class Extensions {
+                public static bool Contains(this IEnumerable<int> source, string value) { Console.WriteLine(value); return false; }
+            }
+            class Probe {
+                static IEnumerable<int> Gen() { yield return Console.Read(); }
+                static bool Run(string key) { var q = Gen(); return q.Contains(key); }
+            }
+            """);
+        var result = Assert.Single(Owner(findings, "Run"));
+        Assert.Equal(("ImplicitOutput", 9, "The method Run() has an implicit output: uses Console.WriteLine."),
+            (result.Rule.Name, result.BeginLine, result.Description));
+    }
+
+    [Fact]
     public void UnrelatedNumericExtensionDoesNotMakeAPureIteratorUnknown()
     {
         var findings = Analyze("""
