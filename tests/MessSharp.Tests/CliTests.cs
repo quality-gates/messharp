@@ -126,6 +126,120 @@ public class CliTests
         finally { File.Delete(tmpFile); }
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("checked")]
+    [InlineData("unchecked")]
+    public void NPath_ArithmeticCheckingWrappersPreservePaths(string wrapper)
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-cli-");
+        try
+        {
+            var sourceFile = Path.Combine(directory.FullName, "Sample.cs");
+            var rulesetFile = Path.Combine(directory.FullName, "npath.xml");
+            const string body = "if (a) { } if (b) { } if (c) { }";
+            var subjectBody = wrapper == "" ? body : $"{wrapper} {{ {body} }}";
+            File.WriteAllText(sourceFile, $@"public class Sample {{
+    public void Baseline(bool a, bool b, bool c) {{ {body} }}
+    public void Subject(bool a, bool b, bool c) {{ {subjectBody} }}
+}}");
+            File.WriteAllText(rulesetFile, @"<ruleset name=""NPath"">
+  <rule ref=""codesize/NPathComplexity"">
+    <properties><property name=""minimum"" value=""1"" /></properties>
+  </rule>
+</ruleset>");
+
+            var (code, stdout, stderr) = RunCli(sourceFile, "text", rulesetFile);
+
+            Assert.Equal(2, code);
+            Assert.Empty(stderr);
+            Assert.Contains("The method Baseline() has an NPath complexity of 8.", stdout);
+            var match = System.Text.RegularExpressions.Regex.Match(stdout,
+                @"The method Subject\(\) has an NPath complexity of (\d+)\.");
+            Assert.True(match.Success, stdout);
+            Assert.Equal("8", match.Groups[1].Value);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("checked")]
+    [InlineData("unchecked")]
+    public void NPath_ArithmeticCheckingWrappersComposeWithSurroundingStatements(string wrapper)
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-cli-");
+        try
+        {
+            var sourceFile = Path.Combine(directory.FullName, "Sample.cs");
+            var rulesetFile = Path.Combine(directory.FullName, "npath.xml");
+            File.WriteAllText(sourceFile, $@"public class Sample {{
+    public void Baseline(bool a, bool b, bool c, bool d) {{
+        if (a) {{ }} if (b) {{ }} if (c) {{ }} if (d) {{ }}
+    }}
+    public void Subject(bool a, bool b, bool c, bool d) {{
+        if (a) {{ }} {wrapper} {{ if (b) {{ }} if (c) {{ }} }} if (d) {{ }}
+    }}
+}}");
+            File.WriteAllText(rulesetFile, @"<ruleset name=""NPath"">
+  <rule ref=""codesize/NPathComplexity"">
+    <properties><property name=""minimum"" value=""1"" /></properties>
+  </rule>
+</ruleset>");
+
+            var (code, stdout, stderr) = RunCli(sourceFile, "text", rulesetFile);
+
+            Assert.Equal(2, code);
+            Assert.Empty(stderr);
+            Assert.Contains("The method Baseline() has an NPath complexity of 16.", stdout);
+            Assert.Contains("The method Subject() has an NPath complexity of 16.", stdout);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("checked")]
+    [InlineData("unchecked")]
+    public void NPath_ArithmeticCheckingWrappersPreserveSaturation(string wrapper)
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-cli-");
+        try
+        {
+            var sourceFile = Path.Combine(directory.FullName, "Sample.cs");
+            var rulesetFile = Path.Combine(directory.FullName, "npath.xml");
+            var innerDecisions = string.Join(" ", Enumerable.Repeat("if (condition) { }", 30));
+            File.WriteAllText(sourceFile, $@"public class Sample {{
+    public void Baseline(bool condition) {{
+        if (condition) {{ }} {innerDecisions} if (condition) {{ }}
+    }}
+    public void Subject(bool condition) {{
+        if (condition) {{ }} {wrapper} {{ {innerDecisions} }} if (condition) {{ }}
+    }}
+}}");
+            File.WriteAllText(rulesetFile, @"<ruleset name=""NPath"">
+  <rule ref=""codesize/NPathComplexity"">
+    <properties><property name=""minimum"" value=""1"" /></properties>
+  </rule>
+</ruleset>");
+
+            var (code, stdout, stderr) = RunCli(sourceFile, "text", rulesetFile);
+
+            Assert.Equal(2, code);
+            Assert.Empty(stderr);
+            Assert.Contains("The method Baseline() has an NPath complexity of 2147483647.", stdout);
+            Assert.Contains("The method Subject() has an NPath complexity of 2147483647.", stdout);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
     [Fact]
     public void MissingPath_ReturnsError()
     {

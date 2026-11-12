@@ -63,6 +63,7 @@ internal static class NPathStatementMetrics
             NPathDeclarationMetrics.Complexity(fixedStatement.Declaration),
             Block(fixedStatement.Statement)),
         UnsafeStatementSyntax unsafeStatement => Stmts(unsafeStatement.Block.Statements),
+        CheckedStatementSyntax checkedStatement => Stmts(checkedStatement.Block.Statements),
         _ => 1,
     };
 
