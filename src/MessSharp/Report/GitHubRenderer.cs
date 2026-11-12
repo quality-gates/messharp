@@ -21,8 +21,8 @@ public sealed class GitHubRenderer : IRenderer
             .Replace("\r", "%0D", StringComparison.Ordinal)
             .Replace("\n", "%0A", StringComparison.Ordinal);
 
-    private static string EscapeWorkflowCommandProperty(string value) =>
-        EscapeWorkflowCommandData(value)
+    private static string EscapeWorkflowCommandProperty(string? value) =>
+        EscapeWorkflowCommandData(value ?? "")
             .Replace(":", "%3A", StringComparison.Ordinal)
             .Replace(",", "%2C", StringComparison.Ordinal);
 }

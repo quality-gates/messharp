@@ -1,0 +1,2 @@
+/src/Bar.cs:5   [33mTooManyFields[0m  [31mThe class Bar has too many fields.[0m
+/src/Bar.cs:20  [33mShortVariable[0m  [31mAvoid variables with short names like $x.[0m

@@ -1,0 +1,3 @@
+/src/Bar.cs:5   TooManyFields         The class Bar has too many fields.
+/src/Bar.cs:20  ShortVariable         Avoid variables with short names like $x.
+/src/Foo.cs:10  CyclomaticComplexity  The method foo() has a Cyclomatic Complexity of 15.

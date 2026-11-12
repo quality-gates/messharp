@@ -16,37 +16,30 @@ public sealed class XmlRenderer : IRenderer
         w.WriteLine("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>");
         w.WriteLine($"<pmd version=\"{BuildInfo.Version}\" tool=\"{ToolName}\" timestamp=\"{DateTime.Now:o}\">");
 
-        string curFile = "";
-        bool open = false;
-
-        foreach (var v in report.Violations)
+        foreach (var file in report.GetFiles())
         {
-            if (v.File != curFile)
+            if (file.Violations.Count == 0) continue;
+            w.WriteLine($"  <file name=\"{XmlEscape(file.Path)}\">");
+            foreach (var v in file.Violations)
             {
-                if (open) w.WriteLine("  </file>");
-                curFile = v.File;
-                w.WriteLine($"  <file name=\"{XmlEscape(curFile)}\">");
-                open = true;
+                var sb = new StringBuilder("    <violation");
+                sb.Append($" beginline=\"{v.BeginLine}\"");
+                sb.Append($" endline=\"{v.EndLine}\"");
+                sb.Append($" rule=\"{XmlEscape(v.Rule.Name)}\"");
+                sb.Append($" ruleset=\"{XmlEscape(v.RuleSetName)}\"");
+                MaybeAttr(sb, "package", v.Package);
+                MaybeAttr(sb, "externalInfoUrl", v.Rule.ExternalUrl);
+                MaybeAttr(sb, "function", v.Function);
+                MaybeAttr(sb, "class", v.Class);
+                MaybeAttr(sb, "method", v.Method);
+                sb.Append($" priority=\"{v.Priority}\"");
+                sb.Append('>');
+                w.WriteLine(sb.ToString());
+                w.WriteLine($"      {XmlEscape(v.Description)}");
+                w.WriteLine("    </violation>");
             }
-
-            var sb = new StringBuilder("    <violation");
-            sb.Append($" beginline=\"{v.BeginLine}\"");
-            sb.Append($" endline=\"{v.EndLine}\"");
-            sb.Append($" rule=\"{XmlEscape(v.Rule.Name)}\"");
-            sb.Append($" ruleset=\"{XmlEscape(v.RuleSetName)}\"");
-            MaybeAttr(sb, "package", v.Package);
-            MaybeAttr(sb, "externalInfoUrl", v.Rule.ExternalUrl);
-            MaybeAttr(sb, "function", v.Function);
-            MaybeAttr(sb, "class", v.Class);
-            MaybeAttr(sb, "method", v.Method);
-            sb.Append($" priority=\"{v.Priority}\"");
-            sb.Append('>');
-            w.WriteLine(sb.ToString());
-            w.WriteLine($"      {XmlEscape(v.Description)}");
-            w.WriteLine("    </violation>");
+            w.WriteLine("  </file>");
         }
-
-        if (open) w.WriteLine("  </file>");
 
         foreach (var e in report.Errors)
             w.WriteLine($"  <error filename=\"{XmlEscape(e.File)}\" msg=\"{XmlEscape(e.Message)}\" />");

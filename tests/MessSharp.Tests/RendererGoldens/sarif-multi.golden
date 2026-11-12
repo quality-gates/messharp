@@ -1,0 +1,102 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "messharp",
+          "version": "0.0.0-dev",
+          "rules": [
+            {
+              "id": "TooManyFields",
+              "name": "TooManyFields",
+              "helpUri": "https://phpmd.org/rules/codesize.html#toomanyfields",
+              "shortDescription": {
+                "text": "The class Bar has too many fields."
+              }
+            },
+            {
+              "id": "ShortVariable",
+              "name": "ShortVariable",
+              "helpUri": "https://phpmd.org/rules/naming.html#shortvariable",
+              "shortDescription": {
+                "text": "Avoid variables with short names like $x."
+              }
+            },
+            {
+              "id": "CyclomaticComplexity",
+              "name": "CyclomaticComplexity",
+              "helpUri": "https://phpmd.org/rules/codesize.html#cyclomaticcomplexity",
+              "shortDescription": {
+                "text": "The method foo() has a Cyclomatic Complexity of 15."
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "TooManyFields",
+          "level": "warning",
+          "message": {
+            "text": "The class Bar has too many fields."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/src/Bar.cs"
+                },
+                "region": {
+                  "startLine": 5,
+                  "endLine": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "ShortVariable",
+          "level": "warning",
+          "message": {
+            "text": "Avoid variables with short names like $x."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/src/Bar.cs"
+                },
+                "region": {
+                  "startLine": 20,
+                  "endLine": 20
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CyclomaticComplexity",
+          "level": "error",
+          "message": {
+            "text": "The method foo() has a Cyclomatic Complexity of 15."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/src/Foo.cs"
+                },
+                "region": {
+                  "startLine": 10,
+                  "endLine": 30
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

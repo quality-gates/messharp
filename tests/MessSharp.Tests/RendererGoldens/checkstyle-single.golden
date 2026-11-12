@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="0.0.0-dev">
+  <file name="/src/Bar.cs">
+    <error line="5" column="1" severity="warning" message="The class Bar has too many fields." source="codesize/TooManyFields"/>
+    <error line="20" column="1" severity="info" message="Avoid variables with short names like $x." source="naming/ShortVariable"/>
+  </file>
+</checkstyle>

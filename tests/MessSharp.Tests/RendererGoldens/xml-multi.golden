@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<pmd version="0.0.0-dev" tool="messharp" timestamp="TIMESTAMP">
+  <file name="/src/Bar.cs">
+    <violation beginline="5" endline="5" rule="TooManyFields" ruleset="codesize" package="MyApp" externalInfoUrl="https://phpmd.org/rules/codesize.html#toomanyfields" class="Bar" priority="3">
+      The class Bar has too many fields.
+    </violation>
+    <violation beginline="20" endline="20" rule="ShortVariable" ruleset="naming" package="MyApp" externalInfoUrl="https://phpmd.org/rules/naming.html#shortvariable" class="Bar" method="DoSomething" priority="4">
+      Avoid variables with short names like $x.
+    </violation>
+  </file>
+  <file name="/src/Foo.cs">
+    <violation beginline="10" endline="30" rule="CyclomaticComplexity" ruleset="codesize" package="MyApp" externalInfoUrl="https://phpmd.org/rules/codesize.html#cyclomaticcomplexity" class="Foo" method="foo" priority="2">
+      The method foo() has a Cyclomatic Complexity of 15.
+    </violation>
+  </file>
+</pmd>

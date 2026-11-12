@@ -29,29 +29,26 @@ public sealed class JsonRenderer : IRenderer
             Files = new List<JsonFile>(),
         };
 
-        var idx = new Dictionary<string, int>();
-        foreach (var v in report.Violations)
+        foreach (var file in report.GetFiles())
         {
-            if (!idx.TryGetValue(v.File, out int i))
-            {
-                i = rep.Files.Count;
-                idx[v.File] = i;
-                rep.Files.Add(new JsonFile { File = v.File, Violations = new List<JsonViolation>() });
-            }
-            rep.Files[i].Violations.Add(new JsonViolation
-            {
-                BeginLine = v.BeginLine,
-                EndLine = v.EndLine,
-                Package = v.Package,
-                Function = v.Function,
-                Class = v.Class,
-                Method = v.Method,
-                Description = v.Description,
-                Rule = v.Rule.Name,
-                RuleSet = v.RuleSetName,
-                ExternalInfoUrl = v.Rule.ExternalUrl,
-                Priority = v.Priority,
-            });
+            if (file.Violations.Count == 0) continue;
+            var jsonFile = new JsonFile { File = file.Path, Violations = new List<JsonViolation>() };
+            rep.Files.Add(jsonFile);
+            foreach (var v in file.Violations)
+                jsonFile.Violations.Add(new JsonViolation
+                {
+                    BeginLine = v.BeginLine,
+                    EndLine = v.EndLine,
+                    Package = v.Package,
+                    Function = v.Function,
+                    Class = v.Class,
+                    Method = v.Method,
+                    Description = v.Description,
+                    Rule = v.Rule.Name,
+                    RuleSet = v.RuleSetName,
+                    ExternalInfoUrl = v.Rule.ExternalUrl,
+                    Priority = v.Priority,
+                });
         }
 
         foreach (var e in report.Errors)
