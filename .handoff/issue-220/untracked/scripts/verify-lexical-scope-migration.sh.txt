@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+if matches="$(git grep -n -E 'LocalShadowing|ShadowMap' -- src/MessSharp)"; then
+    printf 'Legacy shadow resolver references remain:\n%s\n' "$matches" >&2
+    exit 1
+else
+    status=$?
+    if [ "$status" -ne 1 ]; then
+        exit "$status"
+    fi
+fi
+
+exec ./scripts/dotnet.sh test tests/MessSharp.Tests/MessSharp.Tests.csproj \
+    --filter FullyQualifiedName~ImplicitInput_ReadOfQueryRangeVariable_NotFlagged

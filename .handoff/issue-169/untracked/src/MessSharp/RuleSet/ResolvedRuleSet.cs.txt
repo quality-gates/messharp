@@ -1,0 +1,12 @@
+using MessSharp.Rule;
+using RuleSetType = MessSharp.Rule.RuleSet;
+
+namespace MessSharp.RuleSet;
+
+internal sealed record RuleOccurrence(IRule Rule, string? Origin = null);
+
+internal sealed class ResolvedRuleSet
+{
+    internal RuleSetType Set { get; init; } = new();
+    internal List<RuleOccurrence> Rules { get; } = new();
+}

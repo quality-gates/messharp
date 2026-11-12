@@ -1,0 +1,126 @@
+using MessSharp.Model;
+using MessSharp.Rule;
+using MessSharp.RuleSet;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Xunit;
+
+namespace MessSharp.Tests;
+
+public class ExplicitnessTransitiveCaptureSafetyTests
+{
+    [Fact]
+    public void IntermediateParameterNamedLikeCaptureDoesNotChangeItsIdentity()
+    {
+        const string source = """
+            class Probe {
+                static void Run(int[] xs) {
+                    var c = xs;
+                    void Poke() { c[0] = 7; }
+                    void Outer(int[] c) { Poke(); }
+                    Outer(new int[1]);
+                }
+            }
+            """;
+        AssertRunOutputs(source, "The method Run() has an implicit output: changes argument 'xs'.");
+    }
+
+    [Fact]
+    public void IntermediateSharedParameterDoesNotMakePrivateCaptureShared()
+    {
+        const string source = """
+            class Probe {
+                static void Run(int[] xs) {
+                    var c = new int[1];
+                    void Poke() { c[0] = 7; }
+                    void Outer(int[] c) { Poke(); }
+                    Outer(xs);
+                }
+            }
+            """;
+        AssertRunOutputs(source);
+    }
+
+    [Fact]
+    public void CaptureReboundFromSharedToPrivateBeforeCallDoesNotMutateArgument()
+    {
+        const string source = """
+            class Probe {
+                static void Run(int[] xs) {
+                    var c = xs;
+                    void Poke() { c[0] = 7; }
+                    void Outer() { Poke(); }
+                    c = new int[1];
+                    Outer();
+                }
+            }
+            """;
+        AssertRunOutputs(source);
+    }
+
+    [Fact]
+    public void CaptureReboundFromPrivateToSharedBeforeCallMutatesArgument()
+    {
+        const string source = """
+            class Probe {
+                static void Run(int[] xs) {
+                    var c = new int[1];
+                    void Poke() { c[0] = 7; }
+                    void Outer() { Poke(); }
+                    c = xs;
+                    Outer();
+                }
+            }
+            """;
+        AssertRunOutputs(source, "The method Run() has an implicit output: changes argument 'xs'.");
+    }
+
+    [Fact]
+    public void UninvokedMutatorDoesNotMutateArgument()
+    {
+        const string source = """
+            class Probe {
+                static void Run(int[] xs) {
+                    var c = xs;
+                    void Poke() { c[0] = 7; }
+                    void Outer() { }
+                    Outer();
+                }
+            }
+            """;
+        AssertRunOutputs(source);
+    }
+
+    [Fact]
+    public void AliasedCaptureMutationPropagatesThroughMultipleLocalCalls()
+    {
+        const string source = """
+            class Probe {
+                static void Run(int[] xs) {
+                    var c = xs;
+                    void Poke() { c[0] = 7; }
+                    void Middle() { Poke(); }
+                    void Outer() { Middle(); }
+                    Outer();
+                }
+            }
+            """;
+        AssertRunOutputs(source, "The method Run() has an implicit output: changes argument 'xs'.");
+    }
+
+    private static void AssertRunOutputs(string source, params string[] expected)
+    {
+        var tree = CSharpSyntaxTree.ParseText(source);
+        var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+            .Split(Path.PathSeparator).Select(path => MetadataReference.CreateFromFile(path));
+        var compilation = CSharpCompilation.Create("Fixture", [tree], references,
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        using var assembly = new MemoryStream();
+        var emitted = compilation.Emit(assembly);
+        Assert.True(emitted.Success, string.Join(Environment.NewLine, emitted.Diagnostics));
+
+        var findings = Engine.Analyze(ModelBuilder.Parse("test.cs", source), new Loader().Load("explicitness"));
+        Assert.Equal(expected, findings.Where(f => f.Method == "Run" && f.Rule.Name == "ImplicitOutput")
+            .Select(f => f.Description).OrderBy(description => description).ToArray());
+    }
+}
