@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Xml;
 using Xunit;
 using MessSharp.Report;
@@ -96,6 +97,454 @@ public class RenderersTests
         };
     }
 
+    [Theory]
+    [InlineData("xml")]
+    [InlineData("checkstyle")]
+    public void InterleavedReport_GroupsRecordsByFile(string format)
+    {
+        var rule = new FakeRule { Name = "Rule", SetName = "test", Priority = 3 };
+        var report = new ViolationReport
+        {
+            Violations = new List<Violation>
+            {
+                new() { Rule = rule, File = "/src/A.cs", BeginLine = 20, Description = "A twenty", RuleSetName = "test", Priority = 3 },
+                new() { Rule = rule, File = "/src/B.cs", BeginLine = 5, Description = "B five", RuleSetName = "test", Priority = 3 },
+                new() { Rule = rule, File = "/src/A.cs", BeginLine = 10, Description = "A ten", RuleSetName = "test", Priority = 3 },
+            },
+            Errors = new List<ProcessingError>
+            {
+                new() { File = "/src/A.cs", Message = "A error one" },
+                new() { File = "/src/C.cs", Message = "C error" },
+                new() { File = "/src/A.cs", Message = "A error two" },
+            },
+        };
+        Assert.True(Renderers.TryGet(format, out var renderer));
+        var doc = new XmlDocument();
+        doc.LoadXml(Render(renderer, report));
+
+        var actualViolations = doc.SelectNodes(format == "xml" ? "/pmd/file/violation" : "/checkstyle/file/error[@source='test/Rule']")!
+            .Cast<XmlElement>()
+            .Select(e => ($"{((XmlElement)e.ParentNode!).GetAttribute("name")}:{e.GetAttribute(format == "xml" ? "beginline" : "line")}",
+                format == "xml" ? e.InnerText.Trim() : e.GetAttribute("message")))
+            .OrderBy(x => x.Item1, StringComparer.Ordinal).ToArray();
+        Assert.Equal(new[] { ("/src/A.cs:10", "A ten"), ("/src/A.cs:20", "A twenty"), ("/src/B.cs:5", "B five") }, actualViolations);
+
+        var actualErrors = doc.SelectNodes(format == "xml" ? "/pmd/error" : "/checkstyle/file/error[@source='messharp/parse-error']")!
+            .Cast<XmlElement>()
+            .Select(e => (format == "xml" ? e.GetAttribute("filename") : ((XmlElement)e.ParentNode!).GetAttribute("name"),
+                e.GetAttribute(format == "xml" ? "msg" : "message")))
+            .OrderBy(x => x.Item1, StringComparer.Ordinal).ThenBy(x => x.Item2, StringComparer.Ordinal).ToArray();
+        Assert.Equal(new[] { ("/src/A.cs", "A error one"), ("/src/A.cs", "A error two"), ("/src/C.cs", "C error") }, actualErrors);
+
+        var paths = doc.SelectNodes(format == "xml" ? "/pmd/file" : "/checkstyle/file")!
+            .Cast<XmlElement>().Select(e => e.GetAttribute("name")).OrderBy(x => x, StringComparer.Ordinal).ToArray();
+        Assert.Equal(format == "xml" ? new[] { "/src/A.cs", "/src/B.cs" } : new[] { "/src/A.cs", "/src/B.cs", "/src/C.cs" }, paths);
+    }
+
+    [Theory]
+    [InlineData("xml")]
+    [InlineData("checkstyle")]
+    public void SortedSingleFileReport_HasOneFileSection(string format)
+    {
+        var report = MakeReport();
+        report.Violations.RemoveAll(v => v.File != "/src/Bar.cs");
+        report.Errors.Clear();
+        Assert.True(Renderers.TryGet(format, out var renderer));
+        var doc = new XmlDocument();
+        doc.LoadXml(Render(renderer, report));
+        var file = Assert.Single(doc.SelectNodes(format == "xml" ? "/pmd/file" : "/checkstyle/file")!.Cast<XmlElement>());
+        Assert.Equal("/src/Bar.cs", file.GetAttribute("name"));
+        Assert.Equal(2, file.ChildNodes.Count);
+    }
+
+    public static IEnumerable<object[]> RegisteredFormats => Renderers.Formats.Select(format => new object[] { format });
+
+    private sealed record RenderedRecord(string Kind, string Path, string Message);
+
+    [Theory]
+    [MemberData(nameof(RegisteredFormats))]
+    public void RegisteredFormat_PreservesEscapedPathsAndDuplicateRecordsAcrossMutation(string format)
+    {
+        const string escapedPath = "nested/odd path & <tag> #café,25%.cs";
+        var rule = new FakeRule { Name = "Rule", SetName = "test", Priority = 3 };
+        var report = new ViolationReport
+        {
+            Violations = new List<Violation>
+            {
+                new() { Rule = rule, File = escapedPath, BeginLine = 8, Description = "duplicate finding", RuleSetName = "test" },
+                new() { Rule = rule, File = "src/other.cs", BeginLine = 3, Description = "single finding", RuleSetName = "test" },
+                new() { Rule = rule, File = escapedPath, BeginLine = 8, Description = "duplicate finding", RuleSetName = "test" },
+            },
+            Errors = new List<ProcessingError>
+            {
+                new() { File = escapedPath, Message = "duplicate parse error" },
+                new() { File = "error-only.cs", Message = "single parse error" },
+                new() { File = escapedPath, Message = "duplicate parse error" },
+            },
+        };
+        var expected = new[]
+        {
+            new RenderedRecord("violation", RenderedPath(format, escapedPath), "duplicate finding"),
+            new RenderedRecord("violation", RenderedPath(format, "src/other.cs"), "single finding"),
+            new RenderedRecord("violation", RenderedPath(format, escapedPath), "duplicate finding"),
+            new RenderedRecord("error", RenderedPath(format, escapedPath), "duplicate parse error"),
+            new RenderedRecord("error", RenderedPath(format, "error-only.cs"), "single parse error"),
+            new RenderedRecord("error", RenderedPath(format, escapedPath), "duplicate parse error"),
+        };
+        Assert.True(Renderers.TryGet(format, out var renderer));
+        AssertRecords(format, Render(renderer, report), expected);
+
+        report.Violations.Clear();
+        report.Errors.Clear();
+        report.Errors.Add(new ProcessingError { File = "new.cs", Message = "new-error" });
+        AssertRecords(format, Render(renderer, report), new[]
+        {
+            new RenderedRecord("error", "new.cs", "new-error"),
+        });
+    }
+
+    private static string RenderedPath(string format, string path) => format switch
+    {
+        "github" => path.Replace("%", "%25", StringComparison.Ordinal).Replace(",", "%2C", StringComparison.Ordinal),
+        "sarif" when path == "nested/odd path & <tag> #café,25%.cs" => "nested/odd%20path%20%26%20%3Ctag%3E%20%23caf%C3%A9%2C25%25.cs",
+        _ => path,
+    };
+
+    private static void AssertRecords(string format, string output, IEnumerable<RenderedRecord> expected)
+    {
+        var expectedRecords = expected
+            .OrderBy(record => record.Kind, StringComparer.Ordinal)
+            .ThenBy(record => record.Path, StringComparer.Ordinal)
+            .ThenBy(record => record.Message, StringComparer.Ordinal)
+            .ToArray();
+        var actualRecords = ReadRecords(format, output, expectedRecords.Select(record => record.Message).Distinct().ToArray())
+            .OrderBy(record => record.Kind, StringComparer.Ordinal)
+            .ThenBy(record => record.Path, StringComparer.Ordinal)
+            .ThenBy(record => record.Message, StringComparer.Ordinal)
+            .ToArray();
+        Assert.Equal(expectedRecords, actualRecords);
+    }
+
+    private static RenderedRecord[] ReadRecords(string format, string output, string[] messages)
+    {
+        string FindMessage(string value) => messages.Single(message => value.Contains(message, StringComparison.Ordinal));
+
+        if (format is "text" or "ansi")
+        {
+            return output.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line =>
+            {
+                var errorSeparator = line.IndexOf("\t-\t", StringComparison.Ordinal);
+                if (errorSeparator >= 0)
+                    return new RenderedRecord("error", line[..errorSeparator], line[(errorSeparator + 3)..].TrimEnd('\r'));
+                var pathSeparator = line.IndexOf(':');
+                return new RenderedRecord("violation", line[..pathSeparator], FindMessage(line));
+            }).ToArray();
+        }
+
+        if (format == "github")
+        {
+            return output.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line =>
+            {
+                var fileStart = line.IndexOf(" file=", StringComparison.Ordinal) + " file=".Length;
+                if (line.StartsWith("::error ", StringComparison.Ordinal))
+                {
+                    var dataStart = line.IndexOf("::", fileStart, StringComparison.Ordinal);
+                    return new RenderedRecord("error", line[fileStart..dataStart], line[(dataStart + 2)..]);
+                }
+                var locationEnd = line.IndexOf(",line=", fileStart, StringComparison.Ordinal);
+                var messageStart = line.IndexOf("::", locationEnd, StringComparison.Ordinal) + 2;
+                return new RenderedRecord("violation", line[fileStart..locationEnd], FindMessage(line[messageStart..]));
+            }).ToArray();
+        }
+
+        if (format == "gitlab")
+        {
+            using var doc = JsonDocument.Parse(output);
+            return doc.RootElement.EnumerateArray().Select(entry => new RenderedRecord(
+                entry.GetProperty("check_name").GetString() == "parse-error" ? "error" : "violation",
+                entry.GetProperty("location").GetProperty("path").GetString()!,
+                entry.GetProperty("description").GetString()!)).ToArray();
+        }
+
+        if (format == "sarif")
+        {
+            using var doc = JsonDocument.Parse(output);
+            return doc.RootElement.GetProperty("runs")[0].GetProperty("results").EnumerateArray().Select(entry => new RenderedRecord(
+                entry.GetProperty("ruleId").GetString() == "" ? "error" : "violation",
+                entry.GetProperty("locations")[0].GetProperty("physicalLocation").GetProperty("artifactLocation").GetProperty("uri").GetString()!,
+                entry.GetProperty("message").GetProperty("text").GetString()!)).ToArray();
+        }
+
+        if (format == "json")
+        {
+            using var doc = JsonDocument.Parse(output);
+            return doc.RootElement.GetProperty("files").EnumerateArray()
+                .SelectMany(file => file.GetProperty("violations").EnumerateArray().Select(violation => new RenderedRecord(
+                    "violation", file.GetProperty("file").GetString()!, violation.GetProperty("description").GetString()!)))
+                .Concat(doc.RootElement.GetProperty("errors").EnumerateArray().Select(error => new RenderedRecord(
+                    "error", error.GetProperty("fileName").GetString()!, error.GetProperty("message").GetString()!)))
+                .ToArray();
+        }
+
+        if (format == "html")
+        {
+            var doc = new XmlDocument();
+            doc.LoadXml(output.Replace("<!DOCTYPE html>", "", StringComparison.Ordinal).Replace("<meta charset=\"utf-8\">", "<meta charset=\"utf-8\"/>", StringComparison.Ordinal));
+            return doc.SelectNodes("//table/tr[td]")!.Cast<XmlElement>()
+                .Select(row => new RenderedRecord("violation", row.ParentNode!.PreviousSibling!.InnerText, row.ChildNodes[2]!.InnerText))
+                .Concat(doc.SelectNodes("//p")!.Cast<XmlElement>().Select(error =>
+                {
+                    var parts = error.InnerText.Split(": ", 2);
+                    return new RenderedRecord("error", parts[0], parts[1]);
+                })).ToArray();
+        }
+
+        var xml = new XmlDocument();
+        xml.LoadXml(output);
+        if (format == "xml")
+            return xml.SelectNodes("/pmd/file/violation")!.Cast<XmlElement>()
+                .Select(violation => new RenderedRecord("violation", ((XmlElement)violation.ParentNode!).GetAttribute("name"), violation.InnerText.Trim()))
+                .Concat(xml.SelectNodes("/pmd/error")!.Cast<XmlElement>().Select(error => new RenderedRecord(
+                    "error", error.GetAttribute("filename"), error.GetAttribute("msg"))))
+                .ToArray();
+
+        if (format == "checkstyle")
+            return xml.SelectNodes("/checkstyle/file/error")!.Cast<XmlElement>().Select(error => new RenderedRecord(
+                error.GetAttribute("source") == "messharp/parse-error" ? "error" : "violation",
+                ((XmlElement)error.ParentNode!).GetAttribute("name"),
+                error.GetAttribute("message"))).ToArray();
+
+        throw new InvalidOperationException($"No record reader for {format}");
+    }
+
+    [Theory]
+    [InlineData("xml")]
+    [InlineData("checkstyle")]
+    [InlineData("html")]
+    [InlineData("json")]
+    public void GroupedFormats_OrderAndEscapeRecordsAndKeepErrorChannels(string format)
+    {
+        var rule = new FakeRule { Name = "Rule", SetName = "test" };
+        var report = new ViolationReport
+        {
+            Violations = new List<Violation>
+            {
+                new() { Rule = rule, File = "b&.cs", BeginLine = 9, Description = "late & <tag>", RuleSetName = "test" },
+                new() { Rule = rule, File = "A.cs", BeginLine = 4, Description = "alpha", RuleSetName = "test" },
+                new() { Rule = rule, File = "b&.cs", BeginLine = 2, Description = "early", RuleSetName = "test" },
+            },
+            Errors = new List<ProcessingError>
+            {
+                new() { File = "z.cs", Message = "z-error" },
+                new() { File = "b&.cs", Message = "b & error" },
+                new() { File = "z.cs", Message = "z-error" },
+            },
+        };
+        Assert.True(Renderers.TryGet(format, out var renderer));
+        var output = Render(renderer, report);
+        if (format == "json")
+        {
+            using var doc = JsonDocument.Parse(output);
+            var root = doc.RootElement;
+            var files = root.GetProperty("files");
+            Assert.Equal(new[] { "A.cs", "b&.cs" }, files.EnumerateArray().Select(f => f.GetProperty("file").GetString()));
+            Assert.Equal(new[] { 2, 9 }, files[1].GetProperty("violations").EnumerateArray().Select(v => v.GetProperty("beginLine").GetInt32()));
+            Assert.Equal("late & <tag>", files[1].GetProperty("violations")[1].GetProperty("description").GetString());
+            Assert.Equal(new[] { "z-error", "b & error", "z-error" }, root.GetProperty("errors").EnumerateArray().Select(e => e.GetProperty("message").GetString()));
+        }
+        else if (format == "html")
+        {
+            var doc = new XmlDocument();
+            doc.LoadXml(output.Replace("<!DOCTYPE html>", "", StringComparison.Ordinal).Replace("<meta charset=\"utf-8\">", "<meta charset=\"utf-8\"/>", StringComparison.Ordinal));
+            Assert.Equal(new[] { "A.cs", "b&.cs" }, doc.SelectNodes("//h2")!.Cast<XmlElement>().Select(e => e.InnerText));
+            Assert.True(output.IndexOf("early", StringComparison.Ordinal) < output.IndexOf("late &amp; &lt;tag&gt;", StringComparison.Ordinal));
+            Assert.Contains("<p>b&amp;.cs: b &amp; error</p>", output);
+            Assert.True(output.IndexOf("z-error", StringComparison.Ordinal) < output.IndexOf("b &amp; error", StringComparison.Ordinal));
+        }
+        else
+        {
+            var doc = new XmlDocument();
+            doc.LoadXml(output);
+            var files = doc.SelectNodes(format == "xml" ? "/pmd/file" : "/checkstyle/file")!.Cast<XmlElement>().ToArray();
+            Assert.Equal(format == "xml" ? new[] { "A.cs", "b&.cs" } : new[] { "A.cs", "b&.cs", "z.cs" }, files.Select(f => f.GetAttribute("name")));
+            var violations = files[1].SelectNodes(format == "xml" ? "violation" : "error[@source='test/Rule']")!.Cast<XmlElement>().ToArray();
+            Assert.Equal(new[] { "2", "9" }, violations.Select(v => v.GetAttribute(format == "xml" ? "beginline" : "line")));
+            Assert.Equal("late & <tag>", format == "xml" ? violations[1].InnerText.Trim() : violations[1].GetAttribute("message"));
+            var errors = doc.SelectNodes(format == "xml" ? "/pmd/error" : "/checkstyle/file/error[@source='messharp/parse-error']")!.Cast<XmlElement>().Select(e => e.GetAttribute(format == "xml" ? "msg" : "message"));
+            Assert.Equal(format == "xml" ? new[] { "z-error", "b & error", "z-error" } : new[] { "b & error", "z-error", "z-error" }, errors);
+        }
+    }
+
+    [Fact]
+    public void Report_GroupsAreFreshAndSortedWithStableTies()
+    {
+        var rule = new FakeRule { Name = "Rule" };
+        var report = new ViolationReport();
+        report.Violations.Add(new Violation { Rule = rule, File = "b", BeginLine = 5, Description = "first" });
+        report.Violations.Add(new Violation { Rule = rule, File = "", BeginLine = 1 });
+        report.Violations.Add(new Violation { Rule = rule, File = "A", BeginLine = 2 });
+        report.Violations.Add(new Violation { Rule = rule, File = "b", BeginLine = 1 });
+        report.Violations.Add(new Violation { Rule = rule, File = "b", BeginLine = 5, Description = "second" });
+        report.Errors.Add(new ProcessingError { File = "c", Message = "duplicate" });
+        report.Errors.Add(new ProcessingError { File = "c", Message = "duplicate" });
+        var groups = report.GetFiles();
+        Assert.Equal(new[] { "", "A", "b", "c" }, groups.Select(g => g.Path));
+        Assert.Equal(new[] { 1, 5, 5 }, groups[2].Violations.Select(v => v.BeginLine));
+        Assert.Equal(new[] { "", "first", "second" }, groups[2].Violations.Select(v => v.Description));
+        Assert.Equal(2, groups[3].Errors.Count);
+        report.Violations.Clear();
+        report.Errors.Clear();
+        Assert.Empty(report.GetFiles());
+        Assert.Equal(3, groups[2].Violations.Count);
+    }
+
+    [Theory]
+    [InlineData("html", true)]
+    [InlineData("html", false)]
+    [InlineData("xml", true)]
+    [InlineData("xml", false)]
+    [InlineData("json", true)]
+    [InlineData("json", false)]
+    [InlineData("checkstyle", true)]
+    [InlineData("checkstyle", false)]
+    [InlineData("text", true)]
+    [InlineData("text", false)]
+    [InlineData("ansi", true)]
+    [InlineData("ansi", false)]
+    [InlineData("github", true)]
+    [InlineData("github", false)]
+    [InlineData("gitlab", true)]
+    [InlineData("gitlab", false)]
+    [InlineData("sarif", true)]
+    [InlineData("sarif", false)]
+    public void SortedReports_MatchBaselineBytes(string format, bool single)
+    {
+        var report = MakeReport();
+        report.Errors.Clear();
+        report.SortViolations();
+        if (single) report.Violations.RemoveAll(v => v.File != "/src/Bar.cs");
+        Assert.True(Renderers.TryGet(format, out var renderer));
+        var file = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "RendererGoldens", $"{format}-{(single ? "single" : "multi")}.golden");
+        var output = Render(renderer, report);
+        if (format == "xml") output = Regex.Replace(output, "timestamp=\"[^\"]+\"", "timestamp=\"TIMESTAMP\"");
+        if (format == "json") output = Regex.Replace(output, "\"timestamp\": \"[^\"]+\"", "\"timestamp\": \"TIMESTAMP\"");
+        Assert.Equal(File.ReadAllBytes(file), Encoding.UTF8.GetBytes(output));
+    }
+
+    [Fact]
+    public void Checkstyle_MergesErrorsIntoTheirFileAndOrdersFiles()
+    {
+        var report = MakeReport();
+        report.SortViolations();
+        report.Errors.Clear();
+        report.Errors.Add(new ProcessingError { File = "/src/Foo.cs", Message = "first" });
+        report.Errors.Add(new ProcessingError { File = "/src/Bad.cs", Message = "other" });
+        report.Errors.Add(new ProcessingError { File = "/src/Foo.cs", Message = "second" });
+        var doc = new XmlDocument();
+        doc.LoadXml(Render(new CheckstyleRenderer(), report));
+        var files = doc.SelectNodes("/checkstyle/file")!.Cast<XmlElement>().ToArray();
+        Assert.Equal(new[] { "/src/Bad.cs", "/src/Bar.cs", "/src/Foo.cs" }, files.Select(f => f.GetAttribute("name")));
+        Assert.Equal(new[] { "first", "second" }, files[2].SelectNodes("error[@source='messharp/parse-error']")!.Cast<XmlElement>().Select(e => e.GetAttribute("message")));
+        Assert.Single(files[2].SelectNodes("error[@source='codesize/CyclomaticComplexity']")!.Cast<XmlElement>());
+    }
+
+    [Theory]
+    [MemberData(nameof(RegisteredFormats))]
+    public void NullProcessingErrorPath_KeepsTheErrorInEachFormatSchema(string format)
+    {
+        var report = new ViolationReport();
+        report.Errors.Add(new ProcessingError { File = null!, Message = "missing path" });
+        Assert.True(Renderers.TryGet(format, out var renderer));
+        var output = Render(renderer, report);
+        Assert.Equal(1, output.Split("missing path", StringSplitOptions.None).Length - 1);
+        switch (format)
+        {
+            case "xml":
+                {
+                    var doc = new XmlDocument();
+                    doc.LoadXml(output);
+                    var error = (XmlElement)doc.SelectSingleNode("/pmd/error")!;
+                    Assert.Equal("", error.GetAttribute("filename"));
+                    Assert.Equal("missing path", error.GetAttribute("msg"));
+                    break;
+                }
+            case "checkstyle":
+                {
+                    var doc = new XmlDocument();
+                    doc.LoadXml(output);
+                    var file = (XmlElement)doc.SelectSingleNode("/checkstyle/file")!;
+                    Assert.Equal("", file.GetAttribute("name"));
+                    Assert.Equal("messharp/parse-error", file.SelectSingleNode("error")!.Attributes!["source"]!.Value);
+                    Assert.Equal("missing path", file.SelectSingleNode("error")!.Attributes!["message"]!.Value);
+                    break;
+                }
+            case "html":
+                Assert.Contains("<p>: missing path</p>", output);
+                break;
+            case "json":
+                {
+                    using var doc = JsonDocument.Parse(output);
+                    var error = doc.RootElement.GetProperty("errors")[0];
+                    Assert.False(error.TryGetProperty("fileName", out _));
+                    Assert.Equal("missing path", error.GetProperty("message").GetString());
+                    break;
+                }
+            case "text":
+            case "ansi":
+                Assert.Contains("\t-\tmissing path", output);
+                break;
+            case "github":
+                Assert.Contains("::error file=::missing path", output);
+                break;
+            case "gitlab":
+                {
+                    using var doc = JsonDocument.Parse(output);
+                    var error = doc.RootElement[0];
+                    Assert.Equal("parse-error", error.GetProperty("check_name").GetString());
+                    Assert.Equal(JsonValueKind.Null, error.GetProperty("location").GetProperty("path").ValueKind);
+                    Assert.Equal("missing path", error.GetProperty("description").GetString());
+                    break;
+                }
+            case "sarif":
+                {
+                    using var doc = JsonDocument.Parse(output);
+                    var error = doc.RootElement.GetProperty("runs")[0].GetProperty("results")[0];
+                    Assert.Equal("", error.GetProperty("locations")[0].GetProperty("physicalLocation").GetProperty("artifactLocation").GetProperty("uri").GetString());
+                    Assert.Equal("missing path", error.GetProperty("message").GetProperty("text").GetString());
+                    break;
+                }
+            default:
+                throw new InvalidOperationException($"No null-path assertion for {format}");
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(RegisteredFormats))]
+    public void RenderingAndMutatingProjection_DoNotMutateTheReport(string format)
+    {
+        var report = MakeReport();
+        var violations = report.Violations.ToArray();
+        var errors = report.Errors.ToArray();
+        var expectedRecords = new[]
+        {
+            new RenderedRecord("violation", RenderedPath(format, "/src/Foo.cs"), "The method foo() has a Cyclomatic Complexity of 15."),
+            new RenderedRecord("violation", RenderedPath(format, "/src/Bar.cs"), "The class Bar has too many fields."),
+            new RenderedRecord("violation", RenderedPath(format, "/src/Bar.cs"), "Avoid variables with short names like $x."),
+            new RenderedRecord("error", RenderedPath(format, "/src/Bad.cs"), "Syntax error on line 1."),
+        };
+        Assert.True(Renderers.TryGet(format, out var renderer));
+        var before = Render(renderer, report);
+        AssertRecords(format, before, expectedRecords);
+        Assert.Equal(violations, report.Violations);
+        Assert.Equal(errors, report.Errors);
+        var projection = report.GetFiles();
+        foreach (var file in projection) { file.Violations.Clear(); file.Errors.Clear(); }
+        var after = Render(renderer, report);
+        AssertRecords(format, after, expectedRecords);
+        Assert.Equal(violations, report.Violations);
+        Assert.Equal(errors, report.Errors);
+    }
+
     private static string Render(IRenderer r) =>
         Render(r, MakeReport());
 
@@ -185,8 +634,7 @@ public class RenderersTests
         var violations = doc.SelectNodes("//violation")!;
         Assert.Equal(3, violations.Count);
 
-        // Check attributes on first violation
-        var v1 = violations[0]!;
+        var v1 = doc.SelectSingleNode("/pmd/file[@name='/src/Foo.cs']/violation")!;
         Assert.Equal("10", ((XmlElement)v1).GetAttribute("beginline"));
         Assert.Equal("30", ((XmlElement)v1).GetAttribute("endline"));
         Assert.Equal("CyclomaticComplexity", ((XmlElement)v1).GetAttribute("rule"));
@@ -329,9 +777,7 @@ public class RenderersTests
         Assert.Equal(JsonValueKind.Array, files.ValueKind);
         Assert.Equal(2, files.GetArrayLength());  // 2 distinct files
 
-        // First file
-        var f1 = files[0];
-        Assert.Equal("/src/Foo.cs", f1.GetProperty("file").GetString());
+        var f1 = files.EnumerateArray().Single(f => f.GetProperty("file").GetString() == "/src/Foo.cs");
         var viols = f1.GetProperty("violations");
         Assert.Equal(1, viols.GetArrayLength());
 
@@ -727,7 +1173,7 @@ public class RenderersTests
         var errors = doc.SelectNodes("//error")!;
         Assert.Equal(4, errors.Count);  // 3 violations + 1 processing error
 
-        var e1 = (XmlElement)errors[0]!;
+        var e1 = (XmlElement)doc.SelectSingleNode("/checkstyle/file[@name='/src/Foo.cs']/error")!;
         Assert.Equal("10", e1.GetAttribute("line"));
         Assert.Equal("1", e1.GetAttribute("column"));
         Assert.Equal("error", e1.GetAttribute("severity"));  // priority 2 => error
@@ -740,14 +1186,9 @@ public class RenderersTests
         var out_ = Render(new CheckstyleRenderer());
         var doc = new XmlDocument();
         doc.LoadXml(out_);
-        var errors = doc.SelectNodes("//error")!;
-
-        // priority 2 => error
-        Assert.Equal("error", ((XmlElement)errors[0]!).GetAttribute("severity"));
-        // priority 3 => warning
-        Assert.Equal("warning", ((XmlElement)errors[1]!).GetAttribute("severity"));
-        // priority 4 => info
-        Assert.Equal("info", ((XmlElement)errors[2]!).GetAttribute("severity"));
+        Assert.Equal("error", ((XmlElement)doc.SelectSingleNode("//error[@source='codesize/CyclomaticComplexity']")!).GetAttribute("severity"));
+        Assert.Equal("warning", ((XmlElement)doc.SelectSingleNode("//error[@source='codesize/TooManyFields']")!).GetAttribute("severity"));
+        Assert.Equal("info", ((XmlElement)doc.SelectSingleNode("//error[@source='naming/ShortVariable']")!).GetAttribute("severity"));
     }
 
     [Fact]
@@ -763,8 +1204,7 @@ public class RenderersTests
         var out_ = Render(new CheckstyleRenderer());
         var doc = new XmlDocument();
         doc.LoadXml(out_);
-        var files = doc.SelectNodes("//file")!;
-        var last = (XmlElement)files[files.Count - 1]!;
+        var last = (XmlElement)doc.SelectSingleNode("/checkstyle/file[@name='/src/Bad.cs']")!;
         Assert.Equal("/src/Bad.cs", last.GetAttribute("name"));
         var error = (XmlElement)last.SelectSingleNode("error")!;
         Assert.Equal("0", error.GetAttribute("line"));

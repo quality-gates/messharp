@@ -1,0 +1,56 @@
+{
+  "version": "0.0.0-dev",
+  "package": "messharp",
+  "timestamp": "TIMESTAMP",
+  "files": [
+    {
+      "file": "/src/Bar.cs",
+      "violations": [
+        {
+          "beginLine": 5,
+          "endLine": 5,
+          "package": "MyApp",
+          "function": "",
+          "class": "Bar",
+          "method": "",
+          "description": "The class Bar has too many fields.",
+          "rule": "TooManyFields",
+          "ruleSet": "codesize",
+          "externalInfoUrl": "https://phpmd.org/rules/codesize.html#toomanyfields",
+          "priority": 3
+        },
+        {
+          "beginLine": 20,
+          "endLine": 20,
+          "package": "MyApp",
+          "function": "",
+          "class": "Bar",
+          "method": "DoSomething",
+          "description": "Avoid variables with short names like $x.",
+          "rule": "ShortVariable",
+          "ruleSet": "naming",
+          "externalInfoUrl": "https://phpmd.org/rules/naming.html#shortvariable",
+          "priority": 4
+        }
+      ]
+    },
+    {
+      "file": "/src/Foo.cs",
+      "violations": [
+        {
+          "beginLine": 10,
+          "endLine": 30,
+          "package": "MyApp",
+          "function": "",
+          "class": "Foo",
+          "method": "foo",
+          "description": "The method foo() has a Cyclomatic Complexity of 15.",
+          "rule": "CyclomaticComplexity",
+          "ruleSet": "codesize",
+          "externalInfoUrl": "https://phpmd.org/rules/codesize.html#cyclomaticcomplexity",
+          "priority": 2
+        }
+      ]
+    }
+  ]
+}

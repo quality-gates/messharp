@@ -46,7 +46,7 @@ public sealed class Runner : IRunner
         }
 
         report.Violations.AddRange(Engine.AnalyzeAll(parsed, opts.RuleSets, opts.Strict));
-        RuleContext.SortViolations(report.Violations);
+        report.SortViolations();
         return report;
     }
 

@@ -1,0 +1,2 @@
+/src/Bar.cs:5   TooManyFields  The class Bar has too many fields.
+/src/Bar.cs:20  ShortVariable  Avoid variables with short names like $x.

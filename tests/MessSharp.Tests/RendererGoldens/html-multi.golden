@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>messharp report</title></head><body>
+<h1>messharp report</h1>
+<h2>/src/Bar.cs</h2>
+<table border="1" cellspacing="0" cellpadding="3">
+<tr><th>Line</th><th>Rule</th><th>Description</th></tr>
+<tr><td>5</td><td>TooManyFields</td><td>The class Bar has too many fields.</td></tr>
+<tr><td>20</td><td>ShortVariable</td><td>Avoid variables with short names like $x.</td></tr>
+</table>
+<h2>/src/Foo.cs</h2>
+<table border="1" cellspacing="0" cellpadding="3">
+<tr><th>Line</th><th>Rule</th><th>Description</th></tr>
+<tr><td>10</td><td>CyclomaticComplexity</td><td>The method foo() has a Cyclomatic Complexity of 15.</td></tr>
+</table>
+</body></html>

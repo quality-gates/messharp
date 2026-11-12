@@ -138,10 +138,5 @@ public sealed class RuleContext
     /// <summary>
     /// Sorts violations by file then begin line (phpmd ordering).
     /// </summary>
-    public static void SortViolations(List<Violation> vs) =>
-        vs.Sort((a, b) =>
-        {
-            int fc = string.Compare(a.File, b.File, StringComparison.Ordinal);
-            return fc != 0 ? fc : a.BeginLine.CompareTo(b.BeginLine);
-        });
+    public static void SortViolations(List<Violation> vs) => global::MessSharp.Report.Report.SortViolations(vs);
 }

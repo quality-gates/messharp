@@ -1,0 +1,2 @@
+::warning file=/src/Bar.cs,line=5,col=1::The class Bar has too many fields. (TooManyFields)
+::warning file=/src/Bar.cs,line=20,col=1::Avoid variables with short names like $x. (ShortVariable)

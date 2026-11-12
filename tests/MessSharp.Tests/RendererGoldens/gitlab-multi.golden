@@ -1,0 +1,41 @@
+[
+  {
+    "type": "issue",
+    "check_name": "TooManyFields",
+    "description": "The class Bar has too many fields.",
+    "fingerprint": "2f7372632f4261722e63733a353a546f6f4d616e794669656c6473",
+    "severity": "major",
+    "location": {
+      "path": "/src/Bar.cs",
+      "lines": {
+        "begin": 5
+      }
+    }
+  },
+  {
+    "type": "issue",
+    "check_name": "ShortVariable",
+    "description": "Avoid variables with short names like $x.",
+    "fingerprint": "2f7372632f4261722e63733a32303a53686f72745661726961626c65",
+    "severity": "minor",
+    "location": {
+      "path": "/src/Bar.cs",
+      "lines": {
+        "begin": 20
+      }
+    }
+  },
+  {
+    "type": "issue",
+    "check_name": "CyclomaticComplexity",
+    "description": "The method foo() has a Cyclomatic Complexity of 15.",
+    "fingerprint": "2f7372632f466f6f2e63733a31303a4379636c6f6d61746963436f6d706c6578697479",
+    "severity": "critical",
+    "location": {
+      "path": "/src/Foo.cs",
+      "lines": {
+        "begin": 10
+      }
+    }
+  }
+]
