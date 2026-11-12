@@ -20,7 +20,7 @@ public sealed class UnusedLocalVariableRule : BaseRule, IMethodRule
         var body = BodyAnalysis.EffectiveBody(method);
         if (body == null) return;
 
-        var exceptions = ParseExceptions(ctx.Props.Str("exceptions", ""));
+        var exceptions = ctx.Props.Set("exceptions", nullPolicy: PropertyNullPolicy.Empty);
         var disposed = BodyAnalysis.UsingResourceVariables(body);
         var locals = BodyAnalysis.LocalVariables(body).Where(l => !disposed.Contains(l));
         var reads = BodyAnalysis.IdentReads(body);
@@ -36,15 +36,4 @@ public sealed class UnusedLocalVariableRule : BaseRule, IMethodRule
         }
     }
 
-    private static HashSet<string> ParseExceptions(string raw)
-    {
-        var set = new HashSet<string>(StringComparer.Ordinal);
-        if (string.IsNullOrWhiteSpace(raw)) return set;
-        foreach (var part in raw.Split(','))
-        {
-            var t = part.Trim();
-            if (t.Length > 0) set.Add(t);
-        }
-        return set;
-    }
 }

@@ -29,9 +29,9 @@ public sealed class BooleanArgumentFlagRule : BaseRule, IMethodRule
 
     private static bool IsExcluded(RuleContext ctx, MethodModel method)
     {
-        var exceptions = SplitList(ctx.Props.Str("exceptions", ""));
+        var exceptions = ctx.Props.Set("exceptions", nullPolicy: PropertyNullPolicy.Empty);
         if (exceptions.Contains(method.DeclaringTypeName)) return true;
-        var ignorePattern = RuleContext.CompileRegex(ctx.Props.Str("ignorepattern", ""));
+        var ignorePattern = ctx.Props.Regex("ignorepattern");
         return ignorePattern != null && ignorePattern.IsMatch(method.Name);
     }
 
@@ -43,11 +43,4 @@ public sealed class BooleanArgumentFlagRule : BaseRule, IMethodRule
             || t == "Nullable<bool>" || t == "Nullable<Boolean>";
     }
 
-    private static HashSet<string> SplitList(string val)
-    {
-        if (string.IsNullOrWhiteSpace(val)) return new HashSet<string>(StringComparer.Ordinal);
-        return new HashSet<string>(
-            val.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-            StringComparer.Ordinal);
-    }
 }

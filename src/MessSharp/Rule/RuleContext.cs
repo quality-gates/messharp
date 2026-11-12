@@ -112,30 +112,6 @@ public sealed class RuleContext
     };
 
     /// <summary>
-    /// Compiles a phpmd-style regex property "(pattern)flags" to a .NET Regex.
-    /// Translates flags i/m/s/x; drops u (not supported in .NET).
-    /// Returns null if the pattern is empty or invalid.
-    /// </summary>
-    public static System.Text.RegularExpressions.Regex? CompileRegex(string pat)
-    {
-        if (string.IsNullOrEmpty(pat)) return null;
-
-        string body = pat, flags = "";
-        var m = System.Text.RegularExpressions.Regex.Match(pat, @"^\((.*)\)([imsxu]*)$");
-        if (m.Success)
-        {
-            body = m.Groups[1].Value;
-            flags = m.Groups[2].Value.Replace("u", "");
-        }
-
-        if (flags.Length > 0)
-            body = "(?" + flags + ")" + body;
-
-        try { return new System.Text.RegularExpressions.Regex(body); }
-        catch { return null; }
-    }
-
-    /// <summary>
     /// Sorts violations by file then begin line (phpmd ordering).
     /// </summary>
     public static void SortViolations(List<Violation> vs) => global::MessSharp.Report.Report.SortViolations(vs);

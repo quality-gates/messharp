@@ -1,0 +1,146 @@
+using System.Globalization;
+using MessSharp.Rule;
+using Xunit;
+
+namespace MessSharp.Tests;
+
+public class PropertiesTests
+{
+    [Fact]
+    public void ListsAndSetsPreserveOrderDuplicatesAndCase()
+    {
+        var props = new Properties(new() { ["items"] = " a, A, , a ,b, " });
+        var list = props.List("items");
+        Assert.Equal(new[] { "a", "A", "a", "b" }, list);
+        var set = props.Set("items");
+        Assert.Equal(3, set.Count);
+        Assert.Contains("A", set);
+        Assert.DoesNotContain("B", set);
+        var lower = props.Set("items", kind: PropertySetKind.LowerInvariantIgnoreCase);
+        Assert.Equal(2, lower.Count);
+        Assert.Contains("B", lower);
+        Assert.All(lower, item => Assert.Equal(item.ToLowerInvariant(), item));
+        Assert.Throws<NotSupportedException>(() => ((IList<string>)list)[0] = "changed");
+        Assert.False(set is HashSet<string>);
+        Assert.Equal("a", props.List("items")[0]);
+    }
+
+    [Fact]
+    public void EffectiveValuesAndPoliciesHaveIndependentLifetimeEntries()
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var props = new Properties(map);
+        var listA = props.List("Items", "a,a");
+        var listB = props.List("Items", "b");
+        Assert.Same(listA, props.List("Items", "a,a"));
+        Assert.NotSame(listA, listB);
+        var setA = props.Set("Items", "a,a");
+        var setB = props.Set("Items", "b");
+        Assert.Same(setA, props.Set("Items", "a,a"));
+        Assert.NotSame(setA, setB);
+        var regexA = props.Regex("Items", "a");
+        var regexB = props.Regex("Items", "b");
+        Assert.Same(regexA, props.Regex("Items", "a"));
+        Assert.NotSame(regexA, regexB);
+        map["items"] = "a,a";
+        Assert.Same(listA, props.List("Items", "ignored"));
+        map["items"] = "b";
+        Assert.Same(listB, props.List("Items"));
+        map.Remove("items");
+        Assert.Same(listA, props.List("Items", "a,a"));
+        map["items"] = "";
+        Assert.Empty(props.List("Items", "fallback"));
+        Assert.Null(props.Regex("Items", "fallback"));
+    }
+
+    [Fact]
+    public void NullPoliciesPreserveExistingConsumers()
+    {
+        var props = new Properties(new() { ["key"] = null! });
+        Assert.Throws<NullReferenceException>(() => props.List("key"));
+        Assert.Throws<NullReferenceException>(() => props.Set("key"));
+        Assert.Empty(props.Set("key", nullPolicy: PropertyNullPolicy.Empty));
+        Assert.Null(props.Regex("key", "fallback"));
+    }
+
+    [Theory]
+    [InlineData("(abc)i", "ABC", true)]
+    [InlineData("(?i)abc", "ABC", true)]
+    [InlineData("(^b)m", "a\nb", true)]
+    [InlineData("(a.b)s", "a\nb", true)]
+    [InlineData("(a b)x", "ab", true)]
+    [InlineData("(abc)u", "abc", true)]
+    [InlineData("(abc)z", "abcz", true)]
+    [InlineData("[", "x", false)]
+    [InlineData("", "x", false)]
+    public void RegexTranslationMatchesExistingBehavior(string pattern, string input, bool matches)
+    {
+        var props = new Properties();
+        Assert.Equal(matches, props.Regex("pattern", pattern)?.IsMatch(input) ?? false);
+    }
+
+    [Theory]
+    [InlineData("(i)i")]
+    [InlineData("(?i)i+")]
+    [InlineData("(?i)(i)\\1")]
+    public void RegexCacheSeparatesCultureAndPreservesFreshRuntimeBehavior(string pattern)
+    {
+        var original = CultureInfo.CurrentCulture;
+        try
+        {
+            var props = new Properties();
+            foreach (var culture in new[] { CultureInfo.GetCultureInfo("en-US"), CultureInfo.GetCultureInfo("tr-TR"), CultureInfo.GetCultureInfo("az-Latn-AZ"), CultureInfo.InvariantCulture, (CultureInfo)CultureInfo.GetCultureInfo("en-US").Clone() })
+            {
+                CultureInfo.CurrentCulture = culture;
+                var fresh = new Properties().Regex("pattern", pattern)!;
+                var cached = props.Regex("pattern", pattern)!;
+                foreach (var text in new[] { "i", "I", "İ", "ı", "iI", "iİ", "ii" })
+                    Assert.Equal(fresh.IsMatch(text), cached.IsMatch(text));
+                Assert.Same(cached, props.Regex("pattern", pattern));
+            }
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            var english = props.Regex("pattern", pattern);
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("tr-TR");
+            Assert.NotSame(english, props.Regex("pattern", pattern));
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            Assert.Same(english, props.Regex("pattern", pattern));
+        }
+        finally { CultureInfo.CurrentCulture = original; }
+    }
+
+    [Fact]
+    public void ConcurrentReadsSharePublishedValues()
+    {
+        var props = new Properties();
+        var lists = new IReadOnlyList<string>[256];
+        var sets = new IReadOnlySet<string>[256];
+        var regexes = new System.Text.RegularExpressions.Regex?[256];
+        Parallel.For(0, lists.Length, i =>
+        {
+            lists[i] = props.List("a", "x,y");
+            sets[i] = props.Set("a", "x,y");
+            regexes[i] = props.Regex("a", "(x)i");
+            Assert.Null(props.Regex("bad", "["));
+        });
+        Assert.All(lists, value => Assert.Same(lists[0], value));
+        Assert.All(sets, value => Assert.Same(sets[0], value));
+        Assert.All(regexes, value => Assert.Same(regexes[0], value));
+    }
+
+    [Fact]
+    public void Regex_PhpmdPattern_CompilesAndMatches()
+    {
+        var re = new Properties().Regex("p", "(^(get|set))i");
+        Assert.NotNull(re);
+        Assert.Matches(re!, "getName");
+        Assert.Matches(re!, "SetValue");
+    }
+
+    [Fact]
+    public void Regex_PlainPatternCompilesAndEmptyIsNull()
+    {
+        var props = new Properties(new() { ["empty"] = "" });
+        Assert.Matches(props.Regex("p", "foo")!, "foobar");
+        Assert.Null(props.Regex("empty"));
+    }
+}

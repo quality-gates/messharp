@@ -14,8 +14,8 @@ public sealed class LongVariableRule : BaseRule, IClassRule, IMethodRule
     public void Apply(RuleContext ctx, ClassModel cls)
     {
         int max = ctx.Props.Int("maximum", 20);
-        var prefixes = SplitList(ctx.Props.Str("subtract-prefixes", ""));
-        var suffixes = SplitList(ctx.Props.Str("subtract-suffixes", ""));
+        var prefixes = ctx.Props.List("subtract-prefixes");
+        var suffixes = ctx.Props.List("subtract-suffixes");
         foreach (var f in cls.Fields)
             CheckName(ctx, f.Name, f.Line, max, prefixes, suffixes);
     }
@@ -23,8 +23,8 @@ public sealed class LongVariableRule : BaseRule, IClassRule, IMethodRule
     public void Apply(RuleContext ctx, MethodModel method)
     {
         int max = ctx.Props.Int("maximum", 20);
-        var prefixes = SplitList(ctx.Props.Str("subtract-prefixes", ""));
-        var suffixes = SplitList(ctx.Props.Str("subtract-suffixes", ""));
+        var prefixes = ctx.Props.List("subtract-prefixes");
+        var suffixes = ctx.Props.List("subtract-suffixes");
 
         foreach (var p in method.Parameters)
             CheckName(ctx, p.Name, p.Line, max, prefixes, suffixes);
@@ -37,13 +37,11 @@ public sealed class LongVariableRule : BaseRule, IClassRule, IMethodRule
     }
 
     private static void CheckName(RuleContext ctx, string name, int line,
-        int max, List<string> prefixes, List<string> suffixes)
+        int max, IReadOnlyList<string> prefixes, IReadOnlyList<string> suffixes)
     {
         int effective = LongClassNameRule.LengthWithout(name, prefixes, suffixes);
         if (effective <= max) return;
         ctx.Report(line, line, name, max);
     }
 
-    private static List<string> SplitList(string s) =>
-        s.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 }

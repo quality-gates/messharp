@@ -123,6 +123,24 @@ class Fo
         Assert.Contains("3", violations[0].Description);
     }
 
+    [Fact]
+    public void ShortClassName_ExceptionsRemainCaseSensitive()
+    {
+        var rule = MakeRule<ShortClassNameRule>("ShortClassName", "{0}",
+            new() { ["exceptions"] = "FO" });
+        MustHave(Run("class Fo {}", rule), "ShortClassName");
+    }
+
+    [Fact]
+    public void LongClassName_UsesFirstMatchingPrefix()
+    {
+        var rule = MakeRule<LongClassNameRule>("LongClassName", "{0}",
+            new() { ["maximum"] = "3", ["subtract-prefixes"] = "A, Abc" });
+        MustHave(Run("class AbcName {}", rule), "LongClassName");
+        rule.RuleProps = new Properties(new() { ["maximum"] = "4", ["subtract-prefixes"] = "Abc, A" });
+        MustNotHave(Run("class AbcName {}", rule), "LongClassName");
+    }
+
     // ------------------------------------------------------------------ LongClassName
 
     [Fact]

@@ -20,8 +20,8 @@ public sealed class StaticAccessRule : BaseRule, IMethodRule
         var body = method.EffectiveBody;
         if (body == null) return;
 
-        var exceptions = SplitList(ctx.Props.Str("exceptions", ""));
-        var ignorePattern = RuleContext.CompileRegex(ctx.Props.Str("ignorepattern", ""));
+        var exceptions = ctx.Props.Set("exceptions", nullPolicy: PropertyNullPolicy.Empty);
+        var ignorePattern = ctx.Props.Regex("ignorepattern");
         if (ignorePattern != null && ignorePattern.IsMatch(method.Name)) return;
 
         var ownClass = method.Class?.Name ?? "";
@@ -31,7 +31,7 @@ public sealed class StaticAccessRule : BaseRule, IMethodRule
     }
 
     private static void CheckInvocation(RuleContext ctx, string methodName,
-        InvocationExpressionSyntax invocation, string ownClass, HashSet<string> exceptions,
+        InvocationExpressionSyntax invocation, string ownClass, IReadOnlySet<string> exceptions,
         HashSet<string> instanceNames)
     {
         if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess) return;
@@ -45,18 +45,11 @@ public sealed class StaticAccessRule : BaseRule, IMethodRule
         ctx.Report(line, line, targetClassName, methodName);
     }
 
-    private static bool IsSkipped(string targetClassName, string ownClass, HashSet<string> exceptions)
+    private static bool IsSkipped(string targetClassName, string ownClass, IReadOnlySet<string> exceptions)
     {
         if (targetClassName.Length == 0 || !char.IsUpper(targetClassName[0])) return true;
         if (targetClassName == ownClass) return true;
         return exceptions.Contains(targetClassName);
     }
 
-    private static HashSet<string> SplitList(string val)
-    {
-        if (string.IsNullOrWhiteSpace(val)) return new HashSet<string>(StringComparer.Ordinal);
-        return new HashSet<string>(
-            val.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-            StringComparer.Ordinal);
-    }
 }
