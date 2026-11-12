@@ -2,6 +2,7 @@ using MessSharp.Model;
 using MessSharp.Rule;
 using MessSharp.RuleSet;
 using Xunit;
+using static MessSharp.Tests.ExplicitnessExpectations;
 
 namespace MessSharp.Tests;
 
@@ -16,8 +17,8 @@ public class ExplicitnessCallableIdentityTests
             .ThenBy(f => f.Rule.Name, StringComparer.Ordinal).ToList();
     }
 
-    private static List<(string, string, int)> Analyze(string source) =>
-        AnalyzeRecords(source).Select(f => (f.Method, f.Rule.Name, f.BeginLine)).ToList();
+    private static List<(string, string, int, string)> Analyze(string source) =>
+        AnalyzeRecords(source).Select(f => (f.Method, f.Rule.Name, f.BeginLine, f.Description)).ToList();
 
     [Theory]
     [InlineData("foreach (var x in xs)", "Console.Read()", true)]
@@ -41,7 +42,7 @@ public class ExplicitnessCallableIdentityTests
                 }
             }
             """);
-        Assert.Equal(input ? [("Run", "ImplicitInput", 7), ("<lambda>", "ImplicitInput", 8)] : [], findings);
+        Assert.Equal(input ? [Input("Run", 7), Input("<lambda>", 8)] : [], findings);
     }
 
     [Theory]
@@ -63,7 +64,7 @@ public class ExplicitnessCallableIdentityTests
                 }
             }
             """);
-        Assert.Equal(input ? [("<lambda>", "ImplicitInput", 6), ("Run", "ImplicitInput", 7)] : [], findings);
+        Assert.Equal(input ? [Input("<lambda>", 6), Input("Run", 7)] : [], findings);
     }
 
     [Fact]
@@ -80,7 +81,7 @@ public class ExplicitnessCallableIdentityTests
                 }
             }
             """);
-        Assert.Equal([("Run", "UnknownEffect", 7)], findings);
+        Assert.Equal([Unknown("Run", 7, "unresolved call 'f'")], findings);
     }
 
     [Theory]
@@ -99,7 +100,7 @@ public class ExplicitnessCallableIdentityTests
                 }
             }
             """);
-        Assert.Equal(input ? [("<lambda>", "ImplicitInput", 4), ("Run", "ImplicitInput", 5)] : [], findings);
+        Assert.Equal(input ? [Input("<lambda>", 4), Input("Run", 5)] : [], findings);
     }
 
     [Theory]
@@ -118,7 +119,7 @@ public class ExplicitnessCallableIdentityTests
                 }
             }
             """);
-        Assert.Equal(input ? [("<lambda>", "ImplicitInput", 5), ("Run", "ImplicitInput", 7)] : [], findings);
+        Assert.Equal(input ? [Input("<lambda>", 5), Input("Run", 7)] : [], findings);
     }
 
     [Fact]
@@ -135,7 +136,7 @@ public class ExplicitnessCallableIdentityTests
                 }
             }
             """);
-        Assert.Equal([("Run", "UnknownEffect", 7)], findings);
+        Assert.Equal([Unknown("Run", 7, "unresolved call 'g'")], findings);
     }
 
     [Theory]
@@ -157,8 +158,8 @@ public class ExplicitnessCallableIdentityTests
             }
             """);
         Assert.Equal(input
-            ? [("<lambda>", "ImplicitInput", 4), ("Swap", "ImplicitOutput", 4), ("Run", "ImplicitInput", 9)]
-            : [("Swap", "ImplicitOutput", 4)], findings);
+            ? [Input("<lambda>", 4), Output("Swap", 4, "writes out parameter 'g'"), Input("Run", 9)]
+            : [Output("Swap", 4, "writes out parameter 'g'")], findings);
     }
 
     [Theory]
@@ -182,8 +183,8 @@ public class ExplicitnessCallableIdentityTests
             }
             """);
         Assert.Equal(input
-            ? [("<lambda>", "ImplicitInput", 4), ("TryMake", "ImplicitOutput", 4), ("Run", "ImplicitInput", 9)]
-            : [("TryMake", "ImplicitOutput", 4)], findings);
+            ? [Input("<lambda>", 4), Output("TryMake", 4, "writes out parameter 'f'"), Input("Run", 9)]
+            : [Output("TryMake", 4, "writes out parameter 'f'")], findings);
     }
 
     [Theory]
@@ -232,7 +233,7 @@ public class ExplicitnessCallableIdentityTests
                 }
             }
             """);
-        Assert.Equal(input ? [("<lambda>", "ImplicitInput", 6), ("Run", "ImplicitInput", 7)] : [], findings);
+        Assert.Equal(input ? [Input("<lambda>", 6), Input("Run", 7)] : [], findings);
     }
 
     [Theory]
@@ -254,7 +255,7 @@ public class ExplicitnessCallableIdentityTests
                 }
             }
             """);
-        Assert.Equal(input ? [("<lambda>", "ImplicitInput", 6), ("Run", "ImplicitInput", 7)] : [], findings);
+        Assert.Equal(input ? [Input("<lambda>", 6), Input("Run", 7)] : [], findings);
     }
 
     [Fact]
@@ -273,7 +274,7 @@ public class ExplicitnessCallableIdentityTests
                 }
             }
             """);
-        Assert.Equal([("Run", "UnknownEffect", 6)], findings);
+        Assert.Equal([Unknown("Run", 6, "unresolved reference location")], findings);
     }
 
     [Theory]
@@ -296,7 +297,7 @@ public class ExplicitnessCallableIdentityTests
                 }
             }
             """);
-        Assert.Equal(input ? [("Read", "ImplicitInput", 5), ("Run", "ImplicitInput", 8)] : [], findings);
+        Assert.Equal(input ? [Input("Read", 5), Input("Run", 8)] : [], findings);
     }
 
     [Theory]
@@ -320,8 +321,8 @@ public class ExplicitnessCallableIdentityTests
             }
             """);
         Assert.Equal(input
-            ? [("Read", "ImplicitInput", 4), ("Run", "ImplicitInput", 11)]
-            : [("Read", "ImplicitInput", 4)], findings);
+            ? [Input("Read", 4), Input("Run", 11)]
+            : [Input("Read", 4)], findings);
     }
 
     [Theory]
@@ -342,8 +343,8 @@ public class ExplicitnessCallableIdentityTests
             }
             """);
         Assert.Equal(input
-            ? [("Apply", "UnknownEffect", 5), ("<lambda>", "ImplicitInput", 8), ("Run", "ImplicitInput", 8)]
-            : [("Apply", "UnknownEffect", 5)], findings);
+            ? [Unknown("Apply", 5, "unresolved call 'g'"), Input("<lambda>", 8), Input("Run", 8)]
+            : [Unknown("Apply", 5, "unresolved call 'g'")], findings);
     }
 
     [Theory]
@@ -368,7 +369,7 @@ public class ExplicitnessCallableIdentityTests
                 }
             }
             """);
-        Assert.Equal(input ? [("Make", "ImplicitInput", 4), ("Run", "ImplicitInput", 11)] : [], findings);
+        Assert.Equal(input ? [Input("Make", 4), Input("Run", 11)] : [], findings);
     }
 
     [Theory]
@@ -394,8 +395,8 @@ public class ExplicitnessCallableIdentityTests
             }
             """);
         Assert.Equal(input
-            ? [("Read", "ImplicitInput", 7), ("Run", "ImplicitInput", 10)]
-            : [("Read", "ImplicitInput", 7)], findings);
+            ? [Input("Read", 7), Input("Run", 10)]
+            : [Input("Read", 7)], findings);
     }
 
     [Theory]
@@ -419,8 +420,8 @@ public class ExplicitnessCallableIdentityTests
             }
             """);
         Assert.Equal(input
-            ? [("Read", "ImplicitInput", 7), ("Run", "ImplicitInput", 10)]
-            : [("Read", "ImplicitInput", 7)], findings);
+            ? [Input("Read", 7), Input("Run", 10)]
+            : [Input("Read", 7)], findings);
     }
 
     [Theory]
@@ -444,8 +445,8 @@ public class ExplicitnessCallableIdentityTests
             }
             """);
         Assert.Equal(input
-            ? [("Read", "ImplicitOutput", 7), ("Read", "ImplicitInput", 8), ("Run", "ImplicitInput", 11)]
-            : [("Read", "ImplicitOutput", 7), ("Read", "ImplicitInput", 8)], findings);
+            ? [Output("Read", 7, "writes out parameter 'x'"), Input("Read", 8), Input("Run", 11)]
+            : [Output("Read", 7, "writes out parameter 'x'"), Input("Read", 8)], findings);
     }
 
     [Fact]
@@ -465,6 +466,6 @@ public class ExplicitnessCallableIdentityTests
                 }
             }
             """);
-        Assert.Equal([("Read", "ImplicitInput", 7), ("Run", "UnknownEffect", 10)], findings);
+        Assert.Equal([Input("Read", 7), Unknown("Run", 10, "unresolved call 'Read'")], findings);
     }
 }

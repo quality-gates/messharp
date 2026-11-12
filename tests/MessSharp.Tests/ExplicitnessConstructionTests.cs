@@ -2,6 +2,7 @@ using MessSharp.Model;
 using MessSharp.Rule;
 using MessSharp.RuleSet;
 using Xunit;
+using static MessSharp.Tests.ExplicitnessExpectations;
 
 namespace MessSharp.Tests;
 
@@ -16,8 +17,8 @@ public class ExplicitnessConstructionTests
             .ThenBy(f => f.Rule.Name, StringComparer.Ordinal).ToList();
     }
 
-    private static List<(string, string, int)> Analyze(string source) =>
-        AnalyzeRecords(source).Select(f => (f.Method, f.Rule.Name, f.BeginLine)).ToList();
+    private static List<(string, string, int, string)> Analyze(string source) =>
+        AnalyzeRecords(source).Select(f => (f.Method, f.Rule.Name, f.BeginLine, f.Description)).ToList();
 
     [Theory]
     [InlineData("Console.Read();", true)]
@@ -42,7 +43,7 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal(input ? [("Root", "ImplicitInput", 4), ("Run", "ImplicitInput", 13)] : [], findings);
+        Assert.Equal(input ? [ConstructorInput("Root", 4), Input("Run", 13)] : [], findings);
     }
 
     [Theory]
@@ -61,7 +62,7 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal(input ? [("Cell", "ImplicitInput", 3), ("Run", "ImplicitInput", 7)] : [], findings);
+        Assert.Equal(input ? [Input("Cell", 3), Input("Run", 7)] : [], findings);
     }
 
     [Theory]
@@ -82,7 +83,7 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal(input ? [("Root", "ImplicitInput", 3), ("Run", "ImplicitInput", 9)] : [], findings);
+        Assert.Equal(input ? [Input("Root", 3), Input("Run", 9)] : [], findings);
     }
 
     [Fact]
@@ -99,7 +100,7 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal([("Run", "UnknownEffect", 6)], findings);
+        Assert.Equal([Unknown("Run", 6, "unresolved constructor 'External'")], findings);
     }
 
     [Fact]
@@ -129,8 +130,8 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal([("Root", "ImplicitInput", 4), ("Mid", "ImplicitInput", 9), ("Leaf", "ImplicitInput", 14),
-            ("Run", "ImplicitInput", 19)], findings);
+        Assert.Equal([ConstructorInput("Root", 4), ConstructorInput("Mid", 9), ConstructorInput("Leaf", 14),
+            Input("Run", 19)], findings);
     }
 
     [Theory]
@@ -154,7 +155,7 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal(input ? [("Cell", "ImplicitInput", 3), ("Run", "ImplicitInput", 12)] : [], findings);
+        Assert.Equal(input ? [ConstructorInput("Cell", 3), Input("Run", 12)] : [], findings);
     }
 
     [Theory]
@@ -174,7 +175,7 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal(input ? [("Run", "ImplicitInput", 4)] : [], findings);
+        Assert.Equal(input ? [Input("Run", 4)] : [], findings);
     }
 
     [Theory]
@@ -268,7 +269,7 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal(input ? [("Run", "ImplicitInput", 7)] : [], findings);
+        Assert.Equal(input ? [Input("Run", 7, "uses File.ReadAllText")] : [], findings);
     }
 
     [Theory]
@@ -287,6 +288,6 @@ public class ExplicitnessConstructionTests
                 }
             }
             """);
-        Assert.Equal(input ? [("Read", "ImplicitInput", 3), ("Run", "ImplicitInput", 7)] : [], findings);
+        Assert.Equal(input ? [Input("Read", 3), Input("Run", 7)] : [], findings);
     }
 }

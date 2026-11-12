@@ -2,6 +2,7 @@ using MessSharp.Model;
 using MessSharp.Rule;
 using MessSharp.RuleSet;
 using Xunit;
+using static MessSharp.Tests.ExplicitnessExpectations;
 
 namespace MessSharp.Tests;
 
@@ -16,8 +17,8 @@ public class ExplicitnessReportingTests
             .ThenBy(f => f.Rule.Name, StringComparer.Ordinal).ToList();
     }
 
-    private static List<(string, string, int)> Analyze(string source) =>
-        AnalyzeRecords(source).Select(f => (f.Method, f.Rule.Name, f.BeginLine)).ToList();
+    private static List<(string, string, int, string)> Analyze(string source) =>
+        AnalyzeRecords(source).Select(f => (f.Method, f.Rule.Name, f.BeginLine, f.Description)).ToList();
 
     [Fact]
     public void DistinctCausesRemainSeparateWhileIdenticalRecordsAppearOnce()
@@ -62,7 +63,7 @@ public class ExplicitnessReportingTests
                 static void Run() { {{body}} }
             }
             """);
-        Assert.Equal([("Run", "ImplicitOutput", 4)], findings);
+        Assert.Equal([Output("Run", 4, "writes static member 'ex'")], findings);
     }
 
     [Theory]
@@ -90,7 +91,7 @@ public class ExplicitnessReportingTests
                 static Exception Run() { try { } catch (Exception ex) { } return ex; }
             }
             """);
-        Assert.Equal([("Run", "ImplicitInput", 4)], findings);
+        Assert.Equal([Input("Run", 4, "reads static member 'ex'")], findings);
     }
 
     [Theory]
@@ -185,9 +186,9 @@ public class ExplicitnessReportingTests
                 }
             }
             """);
-        var expected = new List<(string, string, int)> { ("Set", "ImplicitOutput", 5) };
-        if (reads) expected.Add(("Run", "ImplicitInput", 8));
-        expected.Add(("Run", "ImplicitOutput", 8));
+        var expected = new List<(string, string, int, string)> { Output("Set", 5, $"writes {modifier} parameter 'x'") };
+        if (reads) expected.Add(Input("Run", 8, "reads static member 'seed'"));
+        expected.Add(Output("Run", 8, "writes static member 'seed'"));
         Assert.Equal(expected, findings);
     }
 
@@ -246,10 +247,10 @@ public class ExplicitnessReportingTests
                 }
             }
             """);
-        var accessor = add.Contains("Console") ? ("add_E", "ImplicitInput", 5) : ("remove_E", "ImplicitInput", 8);
-        var expected = new List<(string, string, int)>();
+        var accessor = add.Contains("Console") ? Input("add_E", 5) : Input("remove_E", 8);
+        var expected = new List<(string, string, int, string)>();
         if (add.Contains("Console") || remove.Contains("Console")) expected.Add(accessor);
-        if (input) expected.Add(("Run", "ImplicitInput", 12));
+        if (input) expected.Add(Input("Run", 12));
         Assert.Equal(expected, findings);
     }
 
@@ -274,7 +275,7 @@ public class ExplicitnessReportingTests
                 }
             }
             """);
-        Assert.Equal(input ? [("add_E", "ImplicitInput", 5), ("Run", "ImplicitInput", 11)] : [], findings);
+        Assert.Equal(input ? [Input("add_E", 5), Input("Run", 11)] : [], findings);
     }
 
     [Theory]
@@ -298,8 +299,8 @@ public class ExplicitnessReportingTests
                 }
             }
             """);
-        var expected = new List<(string, string, int)> { ("add_E", "UnknownEffect", 5) };
-        if (input) expected.AddRange([("<lambda>", "ImplicitInput", 11), ("Run", "ImplicitInput", 11)]);
+        var expected = new List<(string, string, int, string)> { Unknown("add_E", 5, "unresolved call 'value'") };
+        if (input) expected.AddRange([Input("<lambda>", 11), Input("Run", 11)]);
         Assert.Equal(expected, findings);
     }
 
@@ -329,7 +330,7 @@ public class ExplicitnessReportingTests
                 }
             }
             """);
-        Assert.Equal(input ? [("add_E", "ImplicitInput", 5), ("Run", "ImplicitInput", 13)] : [], findings);
+        Assert.Equal(input ? [Input("add_E", 5), Input("Run", 13)] : [], findings);
     }
 
     [Theory]
@@ -352,7 +353,7 @@ public class ExplicitnessReportingTests
                 }
             }
             """);
-        Assert.Equal(unknown ? [("Run", "UnknownEffect", 10)] : [], findings);
+        Assert.Equal(unknown ? [Unknown("Run", 10, "unresolved event accessor 'add_E'")] : [], findings);
     }
 
     [Theory]
@@ -377,7 +378,7 @@ public class ExplicitnessReportingTests
                 }
             }
             """);
-        Assert.Equal(output ? [("add_E", "ImplicitOutput", 6), ("Run", "ImplicitOutput", 12)] : [], findings);
+        Assert.Equal(output ? [Output("add_E", 6, "writes static member 'handlers'"), Output("Run", 12, "writes static member 'handlers'")] : [], findings);
     }
 
     [Theory]
@@ -396,7 +397,7 @@ public class ExplicitnessReportingTests
                 }
             }
             """);
-        Assert.Equal(output ? [("Run", "ImplicitInput", 6), ("Run", "ImplicitOutput", 6)] : [], findings);
+        Assert.Equal(output ? [Input("Run", 6, "reads static member 'E'"), Output("Run", 6, "writes static member 'E'")] : [], findings);
     }
 
     [Theory]
@@ -420,7 +421,7 @@ public class ExplicitnessReportingTests
                 }
             }
             """);
-        Assert.Equal([("Run", unknown ? "UnknownEffect" : "ImplicitOutput", 8)], findings);
+        Assert.Equal([unknown ? Unknown("Run", 8, "unresolved event accessor 'add_E'") : Output("Run", 8, "writes member 'E'")], findings);
     }
 
     [Theory]
@@ -447,8 +448,8 @@ public class ExplicitnessReportingTests
                 }
             }
             """);
-        Assert.Equal(unknown ? [("add_E", "ImplicitInput", 8), ("Run", "UnknownEffect", 14)]
-            : [("add_E", "ImplicitInput", 8), ("Run", "ImplicitInput", 14)], findings);
+        Assert.Equal(unknown ? [Input("add_E", 8), Unknown("Run", 14, "unresolved event accessor 'add_E'")]
+            : [Input("add_E", 8), Input("Run", 14)], findings);
     }
 
     [Theory]
@@ -473,7 +474,7 @@ public class ExplicitnessReportingTests
                 }
             }
             """);
-        Assert.Equal(input ? [("add_E", "ImplicitInput", 5), ("<lambda>", "ImplicitInput", 11), ("Run", "ImplicitInput", 12)]
+        Assert.Equal(input ? [Input("add_E", 5), Input("<lambda>", 11), Input("Run", 12)]
             : [], findings);
     }
 }
