@@ -157,6 +157,38 @@ public class CliTests
         }
     }
 
+    [Fact]
+    public void GlobalVariable_OutVariableInJoinSourceRemainsLocalAfterQuery()
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-cli-");
+        try
+        {
+            var sourceFile = Path.Combine(directory.FullName, "Probe.cs");
+            File.WriteAllText(sourceFile, """
+                using System.Linq;
+                class Probe {
+                    static int x;
+                    static int[] Source(out int value) { value = 1; return new[] { 1 }; }
+                    public static int Run(int[] values) {
+                        var q = from a in values join b in Source(out var x) on a equals b select a;
+                        x = 2;
+                        return x;
+                    }
+                }
+                """);
+
+            var (code, stdout, stderr) = RunCli(sourceFile, "text", "csharp", "--only", "GlobalVariable", "--strict");
+
+            Assert.Equal(0, code);
+            Assert.Empty(stdout);
+            Assert.Empty(stderr);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("checked")]

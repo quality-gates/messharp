@@ -5,6 +5,11 @@ namespace MessSharp.Rules;
 
 internal static class QueryRangeScope
 {
+    internal static bool IsBoundary(SyntaxNode node) =>
+        node is SelectOrGroupClauseSyntax
+        || node is QueryClauseSyntax { Parent: QueryBodySyntax } and not JoinClauseSyntax
+        || node.Parent is JoinClauseSyntax join && (node == join.LeftExpression || node == join.RightExpression);
+
     internal static bool IsShadowed(QueryExpressionSyntax query, SyntaxNode usage, string name)
     {
         if (Contains(query.FromClause.Expression, usage)) return false;

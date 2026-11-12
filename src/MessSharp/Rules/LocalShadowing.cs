@@ -38,8 +38,7 @@ internal static class LocalShadowing
 
     private static bool IsScopeBoundary(SyntaxNode node) =>
         node is BlockSyntax or CatchClauseSyntax or AnonymousFunctionExpressionSyntax or LocalFunctionStatementSyntax
-            or QueryBodySyntax or SelectOrGroupClauseSyntax
-        || node is QueryClauseSyntax { Parent: QueryBodySyntax };
+        || QueryRangeScope.IsBoundary(node);
 
     private static IEnumerable<string> DeclaredNames(SyntaxNode node) => node switch
     {

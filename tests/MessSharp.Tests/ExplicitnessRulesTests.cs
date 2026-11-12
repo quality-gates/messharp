@@ -227,6 +227,26 @@ public class Counter {
     }
 
     [Fact]
+    public void Explicitness_OutVariableInJoinSourceRemainsLocalInsideAndAfterQuery()
+    {
+        var src = """
+            using System.Linq;
+            public class Probe {
+                private static int x;
+                private static int[] Source(out int value) { value = 1; return new[] { 1 }; }
+                public static int Run(int[] values) {
+                    var q = from a in values join b in Source(out var x) on a equals b select x;
+                    x = 2;
+                    return x;
+                }
+            }
+            """;
+        var findings = Analyze("explicitness", src);
+        Assert.DoesNotContain("The method Run() has an implicit input: reads static member 'x'.", Descriptions(findings, "ImplicitInput"));
+        Assert.DoesNotContain("The method Run() has an implicit output: writes static member 'x'.", Descriptions(findings, "ImplicitOutput"));
+    }
+
+    [Fact]
     public void ImplicitInput_ObjectInitializerKeyAndNameof_NotFlagged()
     {
         var src = @"
