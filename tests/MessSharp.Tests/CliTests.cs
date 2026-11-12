@@ -206,6 +206,40 @@ public class CliTests
     }
 
     [Fact]
+    public void Explicitness_ListConstructionDoesNotLoseCrossFileAliasSequences()
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-cli-");
+        try
+        {
+            File.WriteAllText(Path.Combine(directory.FullName, "Aliases.cs"),
+                "global using GlobalSeq = System.Collections.Generic.IEnumerable<int>;");
+            File.WriteAllText(Path.Combine(directory.FullName, "Probe.cs"), """
+                using System;
+                using System.Collections.Generic;
+                class Probe {
+                    static IEnumerable<int> Gen() { yield return Console.Read(); }
+                    static List<int> Action() {
+                        GlobalSeq sequence = Gen();
+                        return new List<int>(sequence);
+                    }
+                    static List<int> Opaque(GlobalSeq sequence) => new List<int>(sequence);
+                }
+                """);
+
+            var (code, stdout, stderr) = RunCli(directory.FullName, "text", "explicitness", "--strict");
+
+            Assert.Equal(2, code);
+            Assert.Empty(stderr);
+            Assert.Matches(@"Probe\.cs:7\s+ImplicitInput\s+The method Action\(\) has an implicit input: uses Console\.Read\.", stdout);
+            Assert.Matches(@"Probe\.cs:9\s+UnknownEffect\s+The method Opaque\(\) has an unknown effect: unresolved deferred execution\.", stdout);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
+    [Fact]
     public void GlobalVariable_QueryRangeDoesNotHideLaterFieldWrite()
     {
         var directory = Directory.CreateTempSubdirectory("messharp-cli-");

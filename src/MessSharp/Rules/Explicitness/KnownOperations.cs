@@ -8,6 +8,7 @@ internal static class KnownOperations
     {
         if (call.Expression is IdentifierNameSyntax { Identifier.Text: "nameof" }) return true;
         if (KnownParseOperations.IsKnown(call)) return true;
+        if (KnownEnumerableContains.Source(owner, call) is not null) return true;
         if (CallParts(call) is not { } parts) return false;
         var (receiver, name, member) = parts;
         return IsKnownMember(owner, receiver, name, member);

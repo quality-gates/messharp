@@ -120,17 +120,19 @@ public class ExplicitnessExecutionTests
             using System.Linq;
             class Probe {
                 static List<int> Capacity() => new List<int>(1 + 2);
+                static List<int> ComputedCapacity(int n) => new List<int>(System.Math.Abs(n));
                 static List<int> FromArray() => new List<int>(new[] { 1 });
                 static void AddArray() { var list = new List<int>(); list.AddRange(new[] { 1 }); }
                 static bool Opaque(IEnumerable<int> values) => values.Contains(1);
             }
             """);
         Assert.Empty(Owner(findings, "Capacity"));
+        Assert.Empty(Owner(findings, "ComputedCapacity"));
         Assert.Empty(Owner(findings, "FromArray"));
         Assert.Empty(Owner(findings, "AddArray"));
         var unknown = Assert.Single(Owner(findings, "Opaque"));
         Assert.Equal("UnknownEffect", unknown.Rule.Name);
-        Assert.Equal(7, unknown.BeginLine);
+        Assert.Equal(8, unknown.BeginLine);
     }
 
     [Fact]
@@ -152,6 +154,114 @@ public class ExplicitnessExecutionTests
             """);
         Assert.Empty(Owner(findings, "CustomContains"));
         Assert.Empty(Owner(findings, "CustomAddRange"));
+    }
+
+    [Fact]
+    public void AmbiguousCustomContainsIsNotAssumedToEnumerate()
+    {
+        var findings = Analyze("""
+            using System;
+            using System.Collections.Generic;
+            using System.Linq;
+            static class Extensions {
+                public static bool Contains(this IEnumerable<int> source, string value) => false;
+                public static bool Contains(this IEnumerable<int> source, object value) => false;
+            }
+            class Probe {
+                static IEnumerable<int> Gen() { yield return Console.Read(); }
+                static bool Run(string key) { var q = Gen(); return q.Contains(key); }
+            }
+            """);
+        var unknown = Assert.Single(Owner(findings, "Run"));
+        Assert.Equal(("UnknownEffect", 10, "The method Run() has an unknown effect: unresolved sequence consumer."),
+            (unknown.Rule.Name, unknown.BeginLine, unknown.Description));
+    }
+
+    [Fact]
+    public void UnrelatedStringExtensionDoesNotMakeAPureIteratorUnknown()
+    {
+        var findings = Analyze("""
+            using System.Collections.Generic;
+            using System.Linq;
+            static class Extensions {
+                public static bool Contains(this string source, int value) => false;
+            }
+            class Probe {
+                static IEnumerable<int> Pure() { yield return 7; }
+                static bool Run() { var q = Pure(); return q.Contains(1); }
+            }
+            """);
+        Assert.Empty(Owner(findings, "Run"));
+    }
+
+    [Fact]
+    public void StandardListContainsWinsOverAnExtensionWithTheSameArguments()
+    {
+        var findings = Analyze("""
+            using System.Collections.Generic;
+            using System.Linq;
+            static class Extensions {
+                public static bool Contains(this IEnumerable<int> source, int value) => false;
+            }
+            class Probe {
+                static bool Run(List<int> values) => values.Contains(1);
+                static bool HashSetRun(HashSet<int> values) => values.Contains(1);
+            }
+            """);
+        Assert.Empty(Owner(findings, "Run"));
+        Assert.Empty(Owner(findings, "HashSetRun"));
+    }
+
+    [Fact]
+    public void StandardListAddRangeWinsOverAnUnrelatedExtension()
+    {
+        var findings = Analyze("""
+            using System;
+            using System.Collections.Generic;
+            static class Extensions {
+                public static void AddRange(this List<int> target, string source) { }
+            }
+            class Probe {
+                static IEnumerable<int> Gen() { yield return Console.Read(); }
+                static void Run() { var q = Gen(); var xs = new List<int>(); xs.AddRange(q); }
+            }
+            """);
+        var result = Assert.Single(Owner(findings, "Run"));
+        Assert.Equal(("ImplicitInput", 8), (result.Rule.Name, result.BeginLine));
+    }
+
+    [Fact]
+    public void NonListAddRangeExtensionsDoNotForceTheirArguments()
+    {
+        var findings = Analyze("""
+            using System;
+            using System.Collections.Generic;
+            static class Extensions {
+                public static void AddRange(this ICollection<int> target, IEnumerable<int> source) { }
+            }
+            class Probe {
+                static IEnumerable<int> Gen() { yield return Console.Read(); }
+                static void Run() { var q = Gen(); var xs = new HashSet<int>(); xs.AddRange(q); }
+            }
+            """);
+        Assert.Empty(Owner(findings, "Run"));
+    }
+
+    [Fact]
+    public void ConvertedReceiverWithUnresolvedCustomContainsIsConservative()
+    {
+        var findings = Analyze("""
+            using System.Collections.Generic;
+            using System.Linq;
+            static class Extensions {
+                public static bool Contains(this IEnumerable<int> source, string value) => false;
+            }
+            class Probe {
+                static bool Run() { var values = new List<int>(); return values.Contains("x"); }
+            }
+            """);
+        var unknown = Assert.Single(Owner(findings, "Run"));
+        Assert.Equal(("UnknownEffect", 7), (unknown.Rule.Name, unknown.BeginLine));
     }
 
     [Fact]
@@ -181,6 +291,46 @@ public class ExplicitnessExecutionTests
         var aliasTarget = Assert.Single(Owner(findings, "AliasTarget"));
         Assert.Equal(("ImplicitInput", 11), (aliasTarget.Rule.Name, aliasTarget.BeginLine));
         Assert.Empty(Owner(findings, "Materialized"));
+    }
+
+    [Fact]
+    public void QualifiedStandardListIsNotHiddenByAnUnrelatedCustomList()
+    {
+        var findings = Analyze("""
+            using System;
+            using System.Collections.Generic;
+            namespace LocalTypes { class List<T> { public List(IEnumerable<T> q) { } } }
+            namespace ProbeSpace {
+                class Probe {
+                    static IEnumerable<int> Gen() { yield return Console.Read(); }
+                    static System.Collections.Generic.List<int> Action() => new System.Collections.Generic.List<int>(Gen());
+                    static LocalTypes.List<int> Custom() => new LocalTypes.List<int>(Gen());
+                }
+            }
+            """);
+        var action = Assert.Single(Owner(findings, "Action"));
+        Assert.Equal(("ImplicitInput", 7), (action.Rule.Name, action.BeginLine));
+        Assert.Empty(Owner(findings, "Custom"));
+    }
+
+    [Fact]
+    public void StaticEnumerableContainsForcesTheSequenceWithoutInventingEffects()
+    {
+        var findings = Analyze("""
+            using System;
+            using System.Collections.Generic;
+            using System.Linq;
+            class Probe {
+                static IEnumerable<int> Gen() { yield return Console.Read(); }
+                static IEnumerable<int> Pure() { yield return 7; }
+                static bool Action() => Enumerable.Contains(Gen(), 1);
+                static bool PureAction() => Enumerable.Contains(Pure(), 1);
+            }
+            """);
+        var action = Assert.Single(Owner(findings, "Action"));
+        Assert.Equal(("ImplicitInput", 7, "The method Action() has an implicit input: uses Console.Read."),
+            (action.Rule.Name, action.BeginLine, action.Description));
+        Assert.Empty(Owner(findings, "PureAction"));
     }
 
     [Fact]

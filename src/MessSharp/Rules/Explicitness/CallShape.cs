@@ -26,6 +26,8 @@ internal sealed record CallShape(int Count, IReadOnlyList<ArgumentSyntax>? Argum
         return exact.Count == 1 && fits.All(candidate => candidate.Types.SequenceEqual(exact[0].Types)) ? exact[0].Owner : null;
     }
 
+    public bool CouldMatch(CallableOwner owner, int receivers) => Match(owner, receivers) is not null;
+
     private Candidate? Match(CallableOwner owner, int receivers)
     {
         var parameters = Own(owner).Skip(receivers).ToList();

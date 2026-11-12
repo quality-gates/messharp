@@ -18,6 +18,16 @@ internal sealed class CallResolver(IReadOnlyList<CallableOwner> owners)
         _ => null,
     };
 
+    public bool HasPossibleExtension(InvocationExpressionSyntax call)
+    {
+        if (call.Expression is not MemberAccessExpressionSyntax member) return false;
+        var shape = CallShape.From(call.ArgumentList);
+        return owners.Any(candidate => ExtensionMethods.IsExtension(candidate)
+            && candidate.Method.Name == member.Name.Identifier.Text && shape.CouldMatch(candidate, 1)
+            && ExtensionMethods.ReceiverType(candidate) is { } receiver
+            && TypeNames.Simple(receiver) is not ("string" or "String"));
+    }
+
     private CallableOwner? ResolveBare(CallableOwner caller, IdentifierNameSyntax name, CallShape shape)
     {
         if (_lookup.VisibleLocal(caller, name, shape) is { } local) return local;

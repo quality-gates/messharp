@@ -15,7 +15,11 @@ internal sealed class ExecutionEdges(RuleContext ctx, IReadOnlyList<CallableOwne
         foreach (var node in BodyWalk.Nodes(body))
         {
             if (SequenceConsumption.Find(owner, node, _calls) is { } consumption)
-                Force(owner, summary, consumption.Source, consumption.Site, DeferredKind.Sequence, body);
+            {
+                if (consumption.Ambiguous)
+                    summary.Add(new EffectFact(EffectKind.Unknown, "unresolved sequence consumer"), consumption.Site);
+                else Force(owner, summary, consumption.Source, consumption.Site, DeferredKind.Sequence, body);
+            }
             if (LazyReceiver(node) is { } receiver && KnownExecutionOperations.IsLazyValue(owner, receiver))
                 Force(owner, summary, receiver, node, DeferredKind.Lazy, body);
         }

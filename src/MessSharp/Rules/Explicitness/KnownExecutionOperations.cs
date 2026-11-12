@@ -38,18 +38,6 @@ internal static class KnownExecutionOperations
         return StorageTypes.IsMutable(type) || name is "IEnumerable" or "IReadOnlyList" or "IList" or "ICollection";
     }
 
-    public static ExpressionSyntax? ListSequenceArgument(CallableOwner owner, BaseObjectCreationExpressionSyntax creation)
-    {
-        var types = new ExpressionTypes(owner);
-        var type = types.TypeOf(creation);
-        if (type is null) return null;
-        type = SequenceTypeAliases.Resolve(owner, type);
-        if (KnownTypeChecks.IsCustomType(owner, type) || type.Split('<')[0].Split('.').Last() != "List") return null;
-        if (creation.ArgumentList?.Arguments is not [var argument] || argument.NameColon?.Name.Identifier.Text == "capacity") return null;
-        var value = argument.Expression;
-        return IsSequence(owner, value) ? value : null;
-    }
-
     public static bool IsLazy(CallableOwner owner, ExpressionSyntax value)
     {
         var type = new ExpressionTypes(owner).TypeOf(value);
@@ -72,11 +60,6 @@ internal static class KnownExecutionOperations
         call.Expression is MemberAccessExpressionSyntax member
         && HasTiming(member, ExecutionTiming.ForceSequence)
         && IsSequence(owner, member.Expression);
-
-    public static ExpressionSyntax? AddRangeSequenceArgument(CallableOwner owner, InvocationExpressionSyntax call) =>
-        call.Expression is MemberAccessExpressionSyntax { Name.Identifier.Text: "AddRange" } member
-        && IsSequence(owner, member.Expression)
-        && call.ArgumentList.Arguments is [var argument] ? argument.Expression : null;
 
     private static bool HasTiming(MemberAccessExpressionSyntax member, ExecutionTiming timing) =>
         Timings.TryGetValue(member.Name.Identifier.Text, out var known) && (known & timing) != 0;
