@@ -113,6 +113,27 @@ public class ExplicitnessExecutionTests
     }
 
     [Fact]
+    public void SequenceConsumersKeepMaterializedValuesQuietAndUnknownSequencesConservative()
+    {
+        var findings = Analyze("""
+            using System.Collections.Generic;
+            using System.Linq;
+            class Probe {
+                static List<int> Capacity() => new List<int>(1 + 2);
+                static List<int> FromArray() => new List<int>(new[] { 1 });
+                static void AddArray() { var list = new List<int>(); list.AddRange(new[] { 1 }); }
+                static bool Opaque(IEnumerable<int> values) => values.Contains(1);
+            }
+            """);
+        Assert.Empty(Owner(findings, "Capacity"));
+        Assert.Empty(Owner(findings, "FromArray"));
+        Assert.Empty(Owner(findings, "AddArray"));
+        var unknown = Assert.Single(Owner(findings, "Opaque"));
+        Assert.Equal("UnknownEffect", unknown.Rule.Name);
+        Assert.Equal(7, unknown.BeginLine);
+    }
+
+    [Fact]
     public void LazyCreationIsQuietAndValueAccessForcesTheLazyOwner()
     {
         var findings = Analyze("""
