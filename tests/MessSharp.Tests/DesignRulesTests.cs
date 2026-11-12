@@ -731,6 +731,72 @@ public class Registry {
     }
 
     [Fact]
+    public void GlobalVariable_StaticFieldWrittenInTryWithShadowingCatch_Flagged()
+    {
+        var src = @"
+using System;
+public class Probe {
+    private static int ex;
+    public static void Run() {
+        try { ex = 1; }
+        catch (Exception ex) { Console.WriteLine(ex); }
+    }
+}";
+        var vs = Analyze(src, MakeGlobalVarRule());
+        MustHave(vs, "GlobalVariable");
+    }
+
+    [Theory]
+    [InlineData("try { } catch (Exception ex) { } ex = null;")]
+    [InlineData("try { } catch (Exception ex) { } finally { ex = null; }")]
+    [InlineData("try { } catch (ArgumentException ex) { } catch (Exception other) { ex = null; }")]
+    public void GlobalVariable_StaticFieldWrittenOutsideCatch_Flagged(string body)
+    {
+        var src = $$"""
+            using System;
+            public class Probe {
+                private static Exception ex;
+                public static void Run() { {{body}} }
+            }
+            """;
+        var finding = Assert.Single(Analyze(src, MakeGlobalVarRule()));
+        Assert.Equal("GlobalVariable", finding.Rule.Name);
+        Assert.Equal(3, finding.BeginLine);
+    }
+
+    [Theory]
+    [InlineData("catch (Exception ex) { ex = null; }")]
+    [InlineData("catch (Exception ex) when ((ex = null) != null) { }")]
+    [InlineData("catch (Exception ex) { { ex = null; } }")]
+    public void GlobalVariable_CatchVariableWritten_NotFlagged(string handler)
+    {
+        var src = $$"""
+            using System;
+            public class Probe {
+                private static Exception ex;
+                public static void Run() { try { } {{handler}} }
+            }
+            """;
+        MustNotHave(Analyze(src, MakeGlobalVarRule()), "GlobalVariable");
+    }
+
+    [Fact]
+    public void GlobalVariable_EnclosingLocalWrittenInCatch_NotFlagged()
+    {
+        var src = """
+            using System;
+            public class Probe {
+                private static int state;
+                public static void Run() {
+                    int state = 0;
+                    try { } catch (Exception ex) { state = 1; }
+                }
+            }
+            """;
+        MustNotHave(Analyze(src, MakeGlobalVarRule()), "GlobalVariable");
+    }
+
+    [Fact]
     public void GlobalVariable_ShadowingLocal_NotFlagged()
     {
         var src = @"

@@ -165,6 +165,87 @@ public class Counter {
         MustNotHave(Analyze("explicitness", src), "ImplicitInput");
     }
 
+    [Theory]
+    [InlineData("var q = from x in values select x; return x;", true)]
+    [InlineData("var q = from x in values select x; return 0;", false)]
+    [InlineData("var q = from y in values join x in values on y equals x select x; return 0;", false)]
+    [InlineData("var q = from x in values select x into y select x; return 0;", true)]
+    [InlineData("var q = from a in values from x in new[] { x } select x; return 0;", true)]
+    [InlineData("var q = from x in values let y = x select y; return 0;", false)]
+    [InlineData("var q = from a in values let x = x select x; return 0;", true)]
+    [InlineData("var q = from a in values join x in new[] { x } on a equals x select x; return 0;", true)]
+    [InlineData("var q = from x in values join y in values on x equals x select y; return 0;", true)]
+    [InlineData("var q = from x in values join y in values on x equals y into g select x; return 0;", false)]
+    [InlineData("var q = from x in values let y = (from z in values select x).Count() select y; return 0;", false)]
+    [InlineData("var q = from a in values let y = (from x in values select x).Count() select x; return 0;", true)]
+    [InlineData("var q = from a in values let y = int.TryParse(\"1\", out var x) select x; return 0;", true)]
+    public void ImplicitInput_QueryRangeScopesDoNotHideOrInventStaticReads(string body, bool readsField)
+    {
+        var src = $$"""
+            using System.Linq;
+            public class Probe {
+                private static int x;
+                public static int Run(int[] values) { {{body}} }
+            }
+            """;
+        var inputs = Descriptions(Analyze("explicitness", src), "ImplicitInput");
+        const string expected = "The method Run() has an implicit input: reads static member 'x'.";
+        if (readsField) Assert.Contains(expected, inputs);
+        else Assert.DoesNotContain(expected, inputs);
+    }
+
+    [Fact]
+    public void ImplicitInput_QuerySourceCanReadFieldWithSameNameAsRange()
+    {
+        var src = """
+            using System.Linq;
+            public class Probe {
+                private static int[] x;
+                public static object Run() => from x in x select x;
+            }
+            """;
+        MustHave(Analyze("explicitness", src), "ImplicitInput",
+            "The method Run() has an implicit input: reads static member 'x'.");
+    }
+
+    [Fact]
+    public void ImplicitInput_OutVariableInInitialQuerySourceRemainsLocalAfterQuery()
+    {
+        var src = """
+            using System.Linq;
+            public class Probe {
+                private static int x;
+                private static int[] Source(out int value) { value = 1; return new[] { 1 }; }
+                public static int Run() {
+                    var q = from a in Source(out var x) select a;
+                    return x;
+                }
+            }
+            """;
+        var inputs = Descriptions(Analyze("explicitness", src), "ImplicitInput");
+        Assert.DoesNotContain("The method Run() has an implicit input: reads static member 'x'.", inputs);
+    }
+
+    [Fact]
+    public void Explicitness_OutVariableInJoinSourceRemainsLocalInsideAndAfterQuery()
+    {
+        var src = """
+            using System.Linq;
+            public class Probe {
+                private static int x;
+                private static int[] Source(out int value) { value = 1; return new[] { 1 }; }
+                public static int Run(int[] values) {
+                    var q = from a in values join b in Source(out var x) on a equals b select x;
+                    x = 2;
+                    return x;
+                }
+            }
+            """;
+        var findings = Analyze("explicitness", src);
+        Assert.DoesNotContain("The method Run() has an implicit input: reads static member 'x'.", Descriptions(findings, "ImplicitInput"));
+        Assert.DoesNotContain("The method Run() has an implicit output: writes static member 'x'.", Descriptions(findings, "ImplicitOutput"));
+    }
+
     [Fact]
     public void ImplicitInput_ObjectInitializerKeyAndNameof_NotFlagged()
     {
