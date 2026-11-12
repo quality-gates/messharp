@@ -126,6 +126,37 @@ public class CliTests
         finally { File.Delete(tmpFile); }
     }
 
+    [Fact]
+    public void GlobalVariable_QueryRangeDoesNotHideLaterFieldWrite()
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-cli-");
+        try
+        {
+            var sourceFile = Path.Combine(directory.FullName, "Probe.cs");
+            File.WriteAllText(sourceFile, """
+                using System.Linq;
+                class Probe {
+                    static int x;
+                    public static void Run(int[] values) {
+                        var q = from x in values select x;
+                        x = 1;
+                    }
+                }
+                """);
+
+            var (code, stdout, stderr) = RunCli(sourceFile, "text", "csharp", "--only", "GlobalVariable", "--strict");
+
+            Assert.Equal(2, code);
+            Assert.Empty(stderr);
+            Assert.Contains("GlobalVariable", stdout);
+            Assert.Contains("Avoid using static mutable state: x.", stdout);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("checked")]

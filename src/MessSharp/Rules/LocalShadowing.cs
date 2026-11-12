@@ -9,6 +9,7 @@ internal static class LocalShadowing
     {
         for (var scope = usage.Parent; scope != null; scope = scope.Parent)
         {
+            if (scope is QueryExpressionSyntax query && QueryRangeScope.IsShadowed(query, usage, name)) return true;
             if (DeclaresName(scope, name)) return true;
             if (scope is MemberDeclarationSyntax) break;
         }
@@ -36,7 +37,9 @@ internal static class LocalShadowing
              .SelectMany(DeclaredNames);
 
     private static bool IsScopeBoundary(SyntaxNode node) =>
-        node is BlockSyntax or AnonymousFunctionExpressionSyntax or LocalFunctionStatementSyntax;
+        node is BlockSyntax or CatchClauseSyntax or AnonymousFunctionExpressionSyntax or LocalFunctionStatementSyntax
+            or QueryBodySyntax or SelectOrGroupClauseSyntax
+        || node is QueryClauseSyntax { Parent: QueryBodySyntax };
 
     private static IEnumerable<string> DeclaredNames(SyntaxNode node) => node switch
     {
@@ -44,16 +47,6 @@ internal static class LocalShadowing
         SingleVariableDesignationSyntax d => [d.Identifier.Text],
         ForEachStatementSyntax f => [f.Identifier.Text],
         CatchDeclarationSyntax caught => [caught.Identifier.Text],
-        _ => QueryNames(node),
-    };
-
-    private static IEnumerable<string> QueryNames(SyntaxNode node) => node switch
-    {
-        FromClauseSyntax from => [from.Identifier.Text],
-        LetClauseSyntax let => [let.Identifier.Text],
-        JoinClauseSyntax join => [join.Identifier.Text],
-        JoinIntoClauseSyntax into => [into.Identifier.Text],
-        QueryContinuationSyntax continuation => [continuation.Identifier.Text],
         _ => [],
     };
 }
