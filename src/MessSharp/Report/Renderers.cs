@@ -1,9 +1,5 @@
 namespace MessSharp.Report;
 
-/// <summary>
-/// Registry of all report format renderers.
-/// Only the `text` renderer is implemented; all others throw a clear error.
-/// </summary>
 public static class Renderers
 {
     private static readonly Dictionary<string, Func<IRenderer>> _map =
@@ -78,15 +74,4 @@ public sealed class TextRenderer : IRenderer
         foreach (var e in report.Errors)
             w.WriteLine($"{e.File}\t-\t{e.Message}");
     }
-}
-
-internal sealed class NotImplementedRenderer : IRenderer
-{
-    private readonly string _format;
-    public NotImplementedRenderer(string format) => _format = format;
-
-    public void Render(TextWriter w, Report report) =>
-        throw new NotSupportedException(
-            $"Report format '{_format}' is not implemented yet. " +
-            $"Available: {string.Join(", ", Renderers.Formats)}");
 }
