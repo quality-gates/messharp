@@ -7,11 +7,17 @@ namespace MessSharp.Tests;
 
 public class ExplicitnessCallableIdentityTests
 {
+    private static List<Violation> AnalyzeRecords(string source)
+    {
+        var records = Engine.Analyze(ModelBuilder.Parse("test.cs", source), new Loader().Load("explicitness"));
+        Assert.Empty(records.GroupBy(f => (f.Package, f.Class, f.Method, f.Rule.Name, f.BeginLine, f.Description))
+            .Where(group => group.Count() > 1));
+        return records.OrderBy(f => f.BeginLine).ThenBy(f => f.Method, StringComparer.Ordinal)
+            .ThenBy(f => f.Rule.Name, StringComparer.Ordinal).ToList();
+    }
+
     private static List<(string, string, int)> Analyze(string source) =>
-        Engine.Analyze(ModelBuilder.Parse("test.cs", source), new Loader().Load("explicitness"))
-            .Select(f => (f.Method, f.Rule.Name, f.BeginLine)).Distinct()
-            .OrderBy(f => f.BeginLine).ThenBy(f => f.Method, StringComparer.Ordinal)
-            .ThenBy(f => f.Name, StringComparer.Ordinal).ToList();
+        AnalyzeRecords(source).Select(f => (f.Method, f.Rule.Name, f.BeginLine)).ToList();
 
     [Theory]
     [InlineData("foreach (var x in xs)", "Console.Read()", true)]
@@ -185,7 +191,7 @@ public class ExplicitnessCallableIdentityTests
     [InlineData("8", false)]
     public void CapturedCallableSeesLaterRebinding(string value, bool input)
     {
-        var findings = Analyze($$"""
+        var findings = AnalyzeRecords($$"""
             using System;
             class Probe {
                 static int Read() {
@@ -199,9 +205,15 @@ public class ExplicitnessCallableIdentityTests
                 }
             }
             """);
-        Assert.Equal(input
-            ? [("Read", "ImplicitInput", 4), ("<lambda>", "ImplicitInput", 8), ("Run", "ImplicitInput", 10)]
-            : [("<lambda>", "ImplicitInput", 8)], findings);
+        var expected = new List<(string, string, int, string)>();
+        if (input)
+        {
+            expected.Add(("Read", "ImplicitInput", 4, "The method Read() has an implicit input: uses Console.Read."));
+            expected.Add(("<lambda>", "ImplicitInput", 8, "The method <lambda>() has an implicit input: uses Console.Read."));
+        }
+        expected.Add(("<lambda>", "ImplicitInput", 8, "The method <lambda>() has an implicit input: reads captured value 'g'."));
+        if (input) expected.Add(("Run", "ImplicitInput", 10, "The method Run() has an implicit input: uses Console.Read."));
+        Assert.Equal(expected, findings.Select(f => (f.Method, f.Rule.Name, f.BeginLine, f.Description)));
     }
 
     [Theory]

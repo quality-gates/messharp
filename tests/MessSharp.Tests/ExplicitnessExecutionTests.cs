@@ -150,8 +150,11 @@ public class ExplicitnessExecutionTests
             }
             """);
         Assert.Empty(Owner(findings, "Counter"));
-        Assert.Equal(new[] { "ImplicitInput", "ImplicitOutput" },
-            Owner(findings, "Use").Select(f => f.Rule.Name).Distinct().OrderBy(name => name));
+        Assert.Equal(new[]
+        {
+            ("ImplicitInput", 3, "The method Use() has an implicit input: reads captured value 'count'."),
+            ("ImplicitOutput", 3, "The method Use() has an implicit output: writes captured value 'count'."),
+        }, Owner(findings, "Use").Select(f => (f.Rule.Name, f.BeginLine, f.Description)).OrderBy(f => f.Name, StringComparer.Ordinal));
         Assert.Empty(Owner(findings, "Fixed"));
     }
 

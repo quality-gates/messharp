@@ -7,11 +7,47 @@ namespace MessSharp.Tests;
 
 public class ExplicitnessReportingTests
 {
+    private static List<Violation> AnalyzeRecords(string source)
+    {
+        var records = Engine.Analyze(ModelBuilder.Parse("test.cs", source), new Loader().Load("explicitness"));
+        Assert.Empty(records.GroupBy(f => (f.Package, f.Class, f.Method, f.Rule.Name, f.BeginLine, f.Description))
+            .Where(group => group.Count() > 1));
+        return records.OrderBy(f => f.BeginLine).ThenBy(f => f.Method, StringComparer.Ordinal)
+            .ThenBy(f => f.Rule.Name, StringComparer.Ordinal).ToList();
+    }
+
     private static List<(string, string, int)> Analyze(string source) =>
-        Engine.Analyze(ModelBuilder.Parse("test.cs", source), new Loader().Load("explicitness"))
-            .Select(f => (f.Method, f.Rule.Name, f.BeginLine)).Distinct()
-            .OrderBy(f => f.BeginLine).ThenBy(f => f.Method, StringComparer.Ordinal)
-            .ThenBy(f => f.Name, StringComparer.Ordinal).ToList();
+        AnalyzeRecords(source).Select(f => (f.Method, f.Rule.Name, f.BeginLine)).ToList();
+
+    [Fact]
+    public void DistinctCausesRemainSeparateWhileIdenticalRecordsAppearOnce()
+    {
+        var source = """
+            using System;
+            class Probe {
+                static int seed;
+                static void Mark(int[] a) { a[0] = 1; }
+                static void Both(int[] x, int[] y) { Mark(x); Mark(y); }
+                static int Inputs() { return Console.Read() + seed; }
+                static int Duplicate() { return Console.Read() + Console.Read(); }
+            }
+            """;
+        var findings = Engine.Analyze(ModelBuilder.Parse("test.cs", source), new Loader().Load("explicitness"));
+
+        Assert.Equal(new[]
+        {
+            ("ImplicitOutput", 5, "The method Both() has an implicit output: changes argument 'x'."),
+            ("ImplicitOutput", 5, "The method Both() has an implicit output: changes argument 'y'."),
+        }, findings.Where(f => f.Method == "Both").Select(f => (f.Rule.Name, f.BeginLine, f.Description)));
+        Assert.Equal(new[]
+        {
+            ("ImplicitInput", 6, "The method Inputs() has an implicit input: uses Console.Read."),
+            ("ImplicitInput", 6, "The method Inputs() has an implicit input: reads static member 'seed'."),
+        }, findings.Where(f => f.Method == "Inputs").Select(f => (f.Rule.Name, f.BeginLine, f.Description)));
+        var duplicate = Assert.Single(findings.Where(f => f.Method == "Duplicate"));
+        Assert.Equal(("ImplicitInput", 7, "The method Duplicate() has an implicit input: uses Console.Read."),
+            (duplicate.Rule.Name, duplicate.BeginLine, duplicate.Description));
+    }
 
     [Theory]
     [InlineData("try { ex = null; } catch (Exception ex) { }")]
@@ -60,9 +96,9 @@ public class ExplicitnessReportingTests
     [Theory]
     [InlineData("Console.Read()", 5)]
     [InlineData("1", 6)]
-    public void OneOwnerReportsOneInputAtTheFirstSite(string value, int line)
+    public void DistinctInputsShareTheFirstSite(string value, int line)
     {
-        var findings = Analyze($$"""
+        var findings = AnalyzeRecords($$"""
             using System;
             class Probe {
                 public static int seed;
@@ -73,15 +109,19 @@ public class ExplicitnessReportingTests
                 }
             }
             """);
-        Assert.Equal([("Run", "ImplicitInput", line)], findings);
+        var expected = new List<(string, string, int, string)>();
+        if (value == "Console.Read()")
+            expected.Add(("Run", "ImplicitInput", line, "The method Run() has an implicit input: uses Console.Read."));
+        expected.Add(("Run", "ImplicitInput", line, "The method Run() has an implicit input: reads static member 'seed'."));
+        Assert.Equal(expected, findings.Select(f => (f.Method, f.Rule.Name, f.BeginLine, f.Description)));
     }
 
     [Theory]
     [InlineData("Console.Write(1);", 5)]
     [InlineData("var a = 1;", 6)]
-    public void OneOwnerReportsOneOutputAtTheFirstSite(string statement, int line)
+    public void DistinctOutputsShareTheFirstSite(string statement, int line)
     {
-        var findings = Analyze($$"""
+        var findings = AnalyzeRecords($$"""
             using System;
             class Probe {
                 public static int seed;
@@ -91,7 +131,11 @@ public class ExplicitnessReportingTests
                 }
             }
             """);
-        Assert.Equal([("Run", "ImplicitOutput", line)], findings);
+        var expected = new List<(string, string, int, string)>();
+        if (statement == "Console.Write(1);")
+            expected.Add(("Run", "ImplicitOutput", line, "The method Run() has an implicit output: uses Console.Write."));
+        expected.Add(("Run", "ImplicitOutput", line, "The method Run() has an implicit output: writes static member 'seed'."));
+        Assert.Equal(expected, findings.Select(f => (f.Method, f.Rule.Name, f.BeginLine, f.Description)));
     }
 
     [Theory]
@@ -99,7 +143,7 @@ public class ExplicitnessReportingTests
     [InlineData("7", false)]
     public void OutArgumentWritesStaticStorageWithoutReadingIt(string value, bool input)
     {
-        var findings = Analyze($$"""
+        var findings = AnalyzeRecords($$"""
             using System;
             class Probe {
                 static Lazy<int> shared = new(() => 7);
@@ -112,10 +156,15 @@ public class ExplicitnessReportingTests
                 }
             }
             """);
-        var expected = new List<(string, string, int)>();
-        if (input) expected.Add(("<lazy>", "ImplicitInput", 5));
-        expected.AddRange([("Make", "ImplicitOutput", 5), ("Run", "ImplicitOutput", 8), ("Run", "ImplicitInput", 9)]);
-        Assert.Equal(expected, findings);
+        var expected = new List<(string, string, int, string)>();
+        if (input) expected.Add(("<lazy>", "ImplicitInput", 5, "The method <lazy>() has an implicit input: uses Console.Read."));
+        expected.AddRange([
+            ("Make", "ImplicitOutput", 5, "The method Make() has an implicit output: writes out parameter 'lazy'."),
+            ("Run", "ImplicitOutput", 8, "The method Run() has an implicit output: writes static member 'shared'."),
+            ("Run", "ImplicitInput", 9, "The method Run() has an implicit input: reads static member 'shared'."),
+        ]);
+        if (input) expected.Add(("Run", "ImplicitInput", 9, "The method Run() has an implicit input: uses Console.Read."));
+        Assert.Equal(expected, findings.Select(f => (f.Method, f.Rule.Name, f.BeginLine, f.Description)));
     }
 
     [Theory]
