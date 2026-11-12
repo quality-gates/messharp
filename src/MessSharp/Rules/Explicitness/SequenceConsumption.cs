@@ -18,8 +18,8 @@ internal readonly record struct SequenceConsumption(ExpressionSyntax Source, Syn
         InvocationExpressionSyntax call when KnownCollectionContains.Receiver(owner, call) is { } receiver =>
             new(receiver, call),
         InvocationExpressionSyntax call when KnownExecutionOperations.IsSequenceForce(owner, call)
-            && calls.Resolve(owner, call) is null =>
-            new(((MemberAccessExpressionSyntax)call.Expression).Expression, call, calls.HasPossibleExtension(call)),
+            && !calls.IsResolvedConsumerOverride(owner, call) =>
+            new(((MemberAccessExpressionSyntax)call.Expression).Expression, call, calls.HasPossibleExtension(owner, call)),
         _ => null,
     };
 }

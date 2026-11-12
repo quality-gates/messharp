@@ -12,7 +12,7 @@ internal static class KnownEnumerableContains
     public static ExpressionSyntax? Source(CallableOwner owner, InvocationExpressionSyntax call)
     {
         if (call.Expression is not MemberAccessExpressionSyntax { Name.Identifier.Text: "Contains" } member) return null;
-        var receiver = member.Expression.ToString();
+        var receiver = SequenceTypeAliases.Resolve(owner, member.Expression.ToString());
         if (!Receivers.Contains(receiver)) return null;
         if (receiver == "Enumerable" && !KnownTypeChecks.StandardReceiver(owner, member.Expression)) return null;
         var arguments = call.ArgumentList.Arguments;

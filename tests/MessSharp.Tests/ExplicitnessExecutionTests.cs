@@ -195,6 +195,66 @@ public class ExplicitnessExecutionTests
     }
 
     [Fact]
+    public void StandardContainsUsesVariableArgumentTypeToRejectAnIncompatibleExtension()
+    {
+        var findings = Analyze("""
+            using System;
+            using System.Collections.Generic;
+            using System.Linq;
+            static class Extensions {
+                public static bool Contains(this IEnumerable<int> source, string value) => false;
+            }
+            class Probe {
+                static IEnumerable<int> Gen() { yield return Console.Read(); }
+                static IEnumerable<int> Pure() { yield return 7; }
+                static bool Action(int key) { var q = Gen(); return q.Contains(key); }
+                static bool PureAction(int key) { var q = Pure(); return q.Contains(key); }
+            }
+            """);
+        var action = Assert.Single(Owner(findings, "Action"));
+        Assert.Equal(("ImplicitInput", 10), (action.Rule.Name, action.BeginLine));
+        Assert.Empty(Owner(findings, "PureAction"));
+    }
+
+    [Fact]
+    public void UnrelatedNumericExtensionDoesNotMakeAPureIteratorUnknown()
+    {
+        var findings = Analyze("""
+            using System.Collections.Generic;
+            using System.Linq;
+            static class Extensions {
+                public static bool Contains(this int source, int value) => false;
+            }
+            class Probe {
+                static IEnumerable<int> Pure() { yield return 7; }
+                static bool Run() { var q = Pure(); return q.Contains(1); }
+            }
+            """);
+        Assert.Empty(Owner(findings, "Run"));
+    }
+
+    [Fact]
+    public void AliasedCustomEnumerableDoesNotAcquireIteratorEffects()
+    {
+        var findings = Analyze("""
+            using System;
+            using System.Collections.Generic;
+            using System.Linq;
+            namespace Sample {
+                using Enumerable = NonConsumer;
+                static class NonConsumer {
+                    public static bool Contains(IEnumerable<int> source, int value) => false;
+                }
+                class Probe {
+                    static IEnumerable<int> Gen() { yield return Console.Read(); }
+                    static bool Run() => Enumerable.Contains(Gen(), 1);
+                }
+            }
+            """);
+        Assert.DoesNotContain(Owner(findings, "Run"), finding => finding.Rule.Name == "ImplicitInput");
+    }
+
+    [Fact]
     public void StandardListContainsWinsOverAnExtensionWithTheSameArguments()
     {
         var findings = Analyze("""
