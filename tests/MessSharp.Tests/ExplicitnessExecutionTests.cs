@@ -455,6 +455,97 @@ public class ExplicitnessExecutionTests
     }
 
     [Fact]
+    public void UncertainGenericReceiverDoesNotTransferAnUnrelatedExtension()
+    {
+        var findings = Analyze("""
+            using System;
+            using System.Collections.Generic;
+            using System.Linq;
+            static class Extensions {
+                public static bool Contains(this IEnumerable<string> source, int value) { Console.WriteLine("custom"); return false; }
+            }
+            class Probe {
+                static IEnumerable<int> Gen() { yield return Console.Read(); }
+                static IEnumerable<int> Pure() { yield return 1; }
+                static bool Action(int key) { var q = Gen(); return q.Contains(key); }
+                static bool PureAction(int key) { var q = Pure(); return q.Contains(key); }
+            }
+            """);
+        AssertUncertainConsumer(findings, "Action", 10);
+        AssertUncertainConsumer(findings, "PureAction", 11);
+    }
+
+    [Fact]
+    public void UncertainNativeIntegerOverloadDoesNotInventOrDropEffects()
+    {
+        var findings = Analyze("""
+            using System;
+            using System.Collections.Generic;
+            using System.Linq;
+            static class Extensions {
+                public static bool Contains(this IEnumerable<nint> source, int value) => false;
+            }
+            class Probe {
+                static IEnumerable<nint> Gen() { yield return (nint)Console.Read(); }
+                static IEnumerable<nint> Pure() { yield return (nint)1; }
+                static bool Action(nint key) { var q = Gen(); return q.Contains(key); }
+                static bool PureAction(nint key) { var q = Pure(); return q.Contains(key); }
+            }
+            """);
+        AssertUncertainConsumer(findings, "Action", 10);
+        AssertUncertainConsumer(findings, "PureAction", 11);
+    }
+
+    [Fact]
+    public void UncertainParamsOverloadDoesNotTransferAnIncompatibleBody()
+    {
+        var findings = Analyze("""
+            using System;
+            using System.Collections.Generic;
+            using System.Linq;
+            static class Extensions {
+                public static bool Contains(this IEnumerable<int> source, params string[] values) { Console.WriteLine("custom"); return false; }
+            }
+            class Probe {
+                static IEnumerable<int> Gen() { yield return Console.Read(); }
+                static IEnumerable<int> Pure() { yield return 1; }
+                static bool Action(int key) { var q = Gen(); return q.Contains(key); }
+                static bool PureAction(int key) { var q = Pure(); return q.Contains(key); }
+            }
+            """);
+        AssertUncertainConsumer(findings, "Action", 10);
+        AssertUncertainConsumer(findings, "PureAction", 11);
+    }
+
+    [Fact]
+    public void UncertainConstantConversionDoesNotInventIteratorExecution()
+    {
+        var findings = Analyze("""
+            using System;
+            using System.Collections.Generic;
+            using System.Linq;
+            static class Extensions {
+                public static bool Contains(this IEnumerable<int> source, short value) { Console.WriteLine("custom"); return false; }
+            }
+            class Probe {
+                static IEnumerable<int> Gen() { yield return Console.Read(); }
+                static IEnumerable<int> Pure() { yield return 1; }
+                static bool Action() { const int key = 1; var q = Gen(); return q.Contains(key); }
+                static bool PureAction() { const int key = 1; var q = Pure(); return q.Contains(key); }
+            }
+            """);
+        AssertUncertainConsumer(findings, "Action", 10);
+        AssertUncertainConsumer(findings, "PureAction", 11);
+    }
+
+    private static void AssertUncertainConsumer(IEnumerable<Violation> findings, string owner, int line)
+    {
+        var finding = Assert.Single(Owner(findings, owner));
+        Assert.Equal(("UnknownEffect", line, $"The method {owner}() has an unknown effect: unresolved sequence consumer."),
+            (finding.Rule.Name, finding.BeginLine, finding.Description));
+    }
+
+    [Fact]
     public void LazyCreationIsQuietAndValueAccessForcesTheLazyOwner()
     {
         var findings = Analyze("""

@@ -20,12 +20,26 @@ internal sealed class CallResolver(IReadOnlyList<CallableOwner> owners)
             _ => null,
         };
         return target is not null && ExtensionMethods.IsExtension(target)
-            && !ExtensionArgumentTypes.CouldMatch(caller, target, call) ? null : target;
+            ? SelectedExtension(caller, target, call) : target;
+    }
+
+    private static CallableOwner? SelectedExtension(CallableOwner caller, CallableOwner target, InvocationExpressionSyntax call)
+    {
+        var compatibility = ExtensionArgumentTypes.Classify(caller, target, call);
+        if (compatibility == ArgumentCompatibility.Incompatible) return null;
+        if (!IsSequenceConsumer(caller, call)) return target;
+        if (KnownCollectionContains.Receiver(caller, call) is not null
+            || KnownListConsumption.AddRangeArgument(caller, call) is not null) return null;
+        return compatibility == ArgumentCompatibility.Exact ? target : null;
     }
 
     public bool IsResolvedConsumerOverride(CallableOwner caller, InvocationExpressionSyntax call) =>
-        Resolve(caller, call) is { } target
-        && (!ExtensionMethods.IsExtension(target) || ExtensionArgumentTypes.CouldMatch(caller, target, call));
+        Resolve(caller, call) is not null;
+
+    private static bool IsSequenceConsumer(CallableOwner caller, InvocationExpressionSyntax call) =>
+        call.Expression is MemberAccessExpressionSyntax member
+        && member.Name.Identifier.Text is "Contains" or "AddRange"
+        && KnownExecutionOperations.IsSequence(caller, member.Expression);
 
     public bool HasPossibleExtension(CallableOwner caller, InvocationExpressionSyntax call)
     {
@@ -35,7 +49,7 @@ internal sealed class CallResolver(IReadOnlyList<CallableOwner> owners)
             && candidate.Method.Name == member.Name.Identifier.Text && shape.CouldMatch(candidate, 1)
             && ExtensionMethods.ReceiverType(candidate) is { } receiver
             && PrimitiveTypeNames.Name(receiver) is null
-            && ExtensionArgumentTypes.CouldMatch(caller, candidate, call));
+            && ExtensionArgumentTypes.Classify(caller, candidate, call) != ArgumentCompatibility.Incompatible);
     }
 
     private CallableOwner? ResolveBare(CallableOwner caller, IdentifierNameSyntax name, CallShape shape)
