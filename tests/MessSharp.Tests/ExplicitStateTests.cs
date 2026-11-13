@@ -181,4 +181,14 @@ public class ExplicitStateTests
         var onlyTop = new MessSharp.RuleSet.Loader { MinPriority = 1, MaxPriority = 1 }.Load("design").Sum(s => s.Rules.Count);
         Assert.True(all > onlyTop);
     }
+
+    [Fact]
+    public void Loader_BuiltFromOptionsBehavesLikeOneConfiguredInline()
+    {
+        var fromOptions = new MessSharp.RuleSet.Loader(new MessSharp.RuleSet.LoaderOptions { MinPriority = 1 })
+            .Load("design").Sum(s => s.Rules.Count);
+        var inline = new MessSharp.RuleSet.Loader { MinPriority = 1 }.Load("design").Sum(s => s.Rules.Count);
+        Assert.Equal(inline, fromOptions);
+        Assert.Equal(1, new MessSharp.RuleSet.Loader(new MessSharp.RuleSet.LoaderOptions { MaxPriority = 1 }).MaxPriority);
+    }
 }

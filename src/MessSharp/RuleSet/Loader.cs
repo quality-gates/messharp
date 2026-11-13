@@ -75,9 +75,14 @@ public sealed class Loader
 
     private readonly RuleRefResolver _refResolver;
 
-    public Loader()
+    public Loader() { _refResolver = new RuleRefResolver(this); }
+
+    /// <summary>Creates a loader whose settings are exactly <paramref name="options"/> for its whole life.</summary>
+    public Loader(LoaderOptions options) : this()
     {
-        _refResolver = new RuleRefResolver(this);
+        MinPriority = options.MinPriority;
+        MaxPriority = options.MaxPriority;
+        Warn = options.Warn;
     }
 
     private void AddRule(RuleSetType set, string setName, XmlRule xr)
@@ -112,4 +117,12 @@ public sealed class Loader
     }
 
     private void WarnMsg(string msg) => Warn?.Invoke(msg);
+}
+
+/// <summary>Everything that tunes a <see cref="Loader"/>. It is a value: change it by making a new one.</summary>
+public sealed record LoaderOptions
+{
+    public int MinPriority { get; init; }
+    public int MaxPriority { get; init; } = 1;
+    public Action<string>? Warn { get; init; }
 }
