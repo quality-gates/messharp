@@ -154,23 +154,44 @@ internal static class XmlRulesetParser
         return xrs;
     }
 
+    /// <summary>Where the reader is in a ruleset: still in the header, or past the first rule.</summary>
+    private enum RuleSetPart { Header, Rules }
+
     private static void ParseRuleSet(XmlReader r, XmlRuleSet xrs)
     {
-        while (r.Read())
+        if (r.MoveToContent() != XmlNodeType.Element || r.LocalName != "ruleset") return;
+        xrs.Name = r.GetAttribute("name");
+        var part = RuleSetPart.Header;
+        EachChild(r, child =>
         {
-            if (r.NodeType != XmlNodeType.Element) continue;
-            switch (r.LocalName)
+            switch (child.LocalName)
             {
-                case "ruleset":
-                    xrs.Name = r.GetAttribute("name");
-                    break;
-                case "description" when xrs.Rules == null:
-                    xrs.Description = r.ReadElementContentAsString();
+                case "description" when part == RuleSetPart.Header:
+                    xrs.Description = child.ReadElementContentAsString();
                     break;
                 case "rule":
-                    (xrs.Rules ??= new()).Add(ParseRule(r));
+                    part = RuleSetPart.Rules;
+                    (xrs.Rules ??= new()).Add(ParseRule(child));
                     break;
             }
+        });
+    }
+
+    /// <summary>
+    /// Calls <paramref name="visit"/> on each element directly inside the current element, then leaves the reader on its end.
+    /// Each child gets its own sub-reader, so a visitor that reads text to the end tag cannot make us skip the next sibling.
+    /// </summary>
+    private static void EachChild(XmlReader r, Action<XmlReader> visit)
+    {
+        if (r.IsEmptyElement) return;
+        int depth = r.Depth;
+        while (r.Read())
+        {
+            if (r.NodeType == XmlNodeType.EndElement && r.Depth == depth) break;
+            if (r.NodeType != XmlNodeType.Element) continue;
+            using var sub = r.ReadSubtree();
+            sub.Read();
+            visit(sub);
         }
     }
 
@@ -185,16 +206,7 @@ internal static class XmlRulesetParser
             ExternalInfoUrl = r.GetAttribute("externalInfoUrl"),
             Since = r.GetAttribute("since"),
         };
-
-        if (r.IsEmptyElement) return rule;
-
-        int depth = r.Depth;
-        while (r.Read())
-        {
-            if (r.NodeType == XmlNodeType.EndElement && r.Depth == depth) break;
-            if (r.NodeType != XmlNodeType.Element) continue;
-            ApplyRuleChild(r, rule);
-        }
+        EachChild(r, child => ApplyRuleChild(child, rule));
         return rule;
     }
 
@@ -230,14 +242,10 @@ internal static class XmlRulesetParser
     private static XmlProperties ParseProperties(XmlReader r)
     {
         var props = new XmlProperties { Property = new() };
-        if (r.IsEmptyElement) return props;
-        int depth = r.Depth;
-        while (r.Read())
+        EachChild(r, child =>
         {
-            if (r.NodeType == XmlNodeType.EndElement && r.Depth == depth) break;
-            if (r.NodeType == XmlNodeType.Element && r.LocalName == "property")
-                props.Property.Add(ParseProperty(r));
-        }
+            if (child.LocalName == "property") props.Property.Add(ParseProperty(child));
+        });
         return props;
     }
 
@@ -248,16 +256,10 @@ internal static class XmlRulesetParser
             Name = r.GetAttribute("name"),
             Value = r.GetAttribute("value"),
         };
-        if (!r.IsEmptyElement)
+        EachChild(r, child =>
         {
-            int pd = r.Depth;
-            while (r.Read())
-            {
-                if (r.NodeType == XmlNodeType.EndElement && r.Depth == pd) break;
-                if (r.NodeType == XmlNodeType.Element && r.LocalName == "value")
-                    p.InnerValue = r.ReadElementContentAsString();
-            }
-        }
+            if (child.LocalName == "value") p.InnerValue = child.ReadElementContentAsString();
+        });
         return p;
     }
 }

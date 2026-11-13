@@ -63,7 +63,7 @@ internal sealed class EventSubscriptions(IReadOnlyList<CallableOwner> owners)
 internal static class EventDeclarations
 {
     public static EventSubscription? Resolve(IReadOnlyList<CallableOwner> owners, ClassModel cls,
-        AssignmentExpressionSyntax assignment, string accessor, string name) => Declaration(cls, name, []) switch
+        AssignmentExpressionSyntax assignment, string accessor, string name) => Declaration(cls, name, new()) switch
         {
             MemberDeclarationSyntax member when IsReplaceable(member) => new EventSubscription(assignment, accessor, null),
             EventDeclarationSyntax custom when Accessor(owners, custom, accessor) is { } owner =>
@@ -72,9 +72,9 @@ internal static class EventDeclarations
         };
 
     /// <summary>The member the class declares with this name, or else the one a same-file base declares.</summary>
-    private static MemberDeclarationSyntax? Declaration(ClassModel cls, string name, HashSet<ClassModel> visited)
+    private static MemberDeclarationSyntax? Declaration(ClassModel cls, string name, Visited<ClassModel> visited)
     {
-        if (!visited.Add(cls)) return null;
+        if (!visited.TryVisit(cls)) return null;
         var declared = cls.Node.ChildNodes().OfType<MemberDeclarationSyntax>().FirstOrDefault(member => Declares(member, name));
         if (declared is not null) return declared;
         return ConstructorTypes.BaseClass(cls) is { } baseClass ? Declaration(baseClass, name, visited) : null;

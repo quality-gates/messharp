@@ -30,6 +30,10 @@ public sealed class Runner : IRunner
         _parser = parser;
     }
 
+    /// <summary>What became of one file on its way in. Only <see cref="Analyzable"/> files are analyzed.</summary>
+    private enum Intake { Analyzable, Unreadable, SyntaxInvalid }
+
+    /// <summary>Discover, then intake every file, then analyze the analyzable ones together, then sort.</summary>
     public Report.Report Run(RunOptions opts)
     {
         var suffixes = opts.Suffixes.Count > 0 ? opts.Suffixes : new[] { ".cs" };
@@ -37,17 +41,27 @@ public sealed class Runner : IRunner
         var report = new Report.Report();
 
         // Parse everything before analyzing: partial types can span files.
-        var parsed = new List<SourceFile>();
+        var analyzable = new List<SourceFile>();
         foreach (var path in files)
         {
-            var sf = TryParse(path, report);
-            if (sf != null && !TryRecordSyntaxErrors(sf, report))
-                parsed.Add(sf);
+            var (outcome, file) = Receive(path, report);
+            if (outcome == Intake.Analyzable) analyzable.Add(file!);
         }
 
-        report.Violations.AddRange(Engine.AnalyzeAll(parsed, opts.RuleSets, opts.Strict));
+        report.Violations.AddRange(Engine.AnalyzeAll(analyzable, opts.RuleSets, opts.Strict));
         report.SortViolations();
         return report;
+    }
+
+    /// <summary>
+    /// Parses one file and records what went wrong. A file that cannot be read, or whose syntax is invalid, is not
+    /// analyzed: its partial tree would only yield spurious violations.
+    /// </summary>
+    private (Intake Outcome, SourceFile? File) Receive(string path, Report.Report report)
+    {
+        var file = TryParse(path, report);
+        if (file is null) return (Intake.Unreadable, null);
+        return TryRecordSyntaxErrors(file, report) ? (Intake.SyntaxInvalid, null) : (Intake.Analyzable, file);
     }
 
     private SourceFile? TryParse(string path, Report.Report report)

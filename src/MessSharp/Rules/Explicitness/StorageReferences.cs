@@ -60,14 +60,14 @@ internal sealed class StorageReferences(StorageContext context, Func<ExpressionS
             ? StorageReference.From(origin(element.Expression), StorageMembers.Index(element.ArgumentList)) : null;
 
     public static bool Supports(CallableOwner owner, ExpressionSyntax expression)
-        => Supports(owner, expression, []);
+        => Supports(owner, expression, new());
 
-    private static bool Supports(CallableOwner owner, ExpressionSyntax expression, HashSet<ExpressionSyntax> visiting)
+    private static bool Supports(CallableOwner owner, ExpressionSyntax expression, Visited<ExpressionSyntax> visited)
     {
-        if (!visiting.Add(expression) || owner.Body is not { } body) return false;
+        if (!visited.TryVisit(expression) || owner.Body is not { } body) return false;
         var context = new StorageContext(body, expression => StorageCallBindings.Root(owner, expression), owner, [], "", new());
         if (expression is IdentifierNameSyntax name && ExpressionTypes.Binding(name)?.Initializer?.Value is RefExpressionSyntax reference)
-            return Supports(owner, reference.Expression, visiting);
+            return Supports(owner, reference.Expression, visited);
         return new StorageReferences(context, _ => StorageOrigin.Private, new StorageEnvironment()).Target(expression) is not null;
     }
 }

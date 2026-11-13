@@ -12,30 +12,18 @@ internal sealed class RuleRefResolver
 
     public RuleRefResolver(Loader loader) => _loader = loader;
 
-    public bool AddRef(RuleSetType set, XmlRule xr, HashSet<string>? visited = null)
+    public bool AddRef(RuleSetType set, XmlRule xr, RefTrail? trail = null)
     {
-        visited ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var (baseName, ruleName) = LoaderFilters.SplitRef(xr.Ref!, Loader.BuiltinNames);
-        // A ref back to an ancestor ruleset is a cycle: it can never resolve,
-        // so fail like any other unresolved ref instead of loading nothing.
-        // InvalidDataException is deliberately not an InvalidOperationException,
-        // which ResolveNestedRule swallows while probing nested sets.
-        if (!visited.Add(baseName))
-            throw new InvalidDataException($"Cyclic ruleset ref: {xr.Ref}");
-
-        byte[] data;
-        try { data = _loader.ReadRuleset(baseName); }
-        catch (Exception ex)
-        {
-            throw new FileNotFoundException($"Cannot resolve ref: {xr.Ref}", ex);
-        }
+        var inner = Descend(trail, baseName, xr.Ref!);
+        var data = ReadOrFail(baseName, xr.Ref!);
 
         var src = XmlRulesetParser.Deserialize(data);
         var excluded = XmlRuleHelpers.ExcludeSet(xr.Exclude);
         var matched = false;
         foreach (var sr in src.Rules ?? new List<XmlRule>())
         {
-            if (ProcessRefRule(set, src.Name ?? "", sr, ruleName, excluded, xr, visited))
+            if (ProcessRefRule(set, src.Name ?? "", sr, ruleName, excluded, xr, inner))
                 matched = true;
         }
 
@@ -45,11 +33,28 @@ internal sealed class RuleRefResolver
         return matched;
     }
 
+    // A ref back to an ancestor ruleset is a cycle: it can never resolve,
+    // so fail like any other unresolved ref instead of loading nothing.
+    // InvalidDataException is deliberately not an InvalidOperationException,
+    // which ResolveNestedRule swallows while probing nested sets.
+    private static RefTrail Descend(RefTrail? trail, string baseName, string reference) =>
+        (trail ?? RefTrail.Start).Enter(baseName)
+        ?? throw new InvalidDataException($"Cyclic ruleset ref: {reference}");
+
+    private byte[] ReadOrFail(string baseName, string reference)
+    {
+        try { return _loader.ReadRuleset(baseName); }
+        catch (Exception ex)
+        {
+            throw new FileNotFoundException($"Cannot resolve ref: {reference}", ex);
+        }
+    }
+
     private bool ProcessRefRule(RuleSetType set, string srcName, XmlRule sr,
-        string ruleName, HashSet<string> excluded, XmlRule overrideXr, HashSet<string> visited)
+        string ruleName, HashSet<string> excluded, XmlRule overrideXr, RefTrail trail)
     {
         if (!string.IsNullOrEmpty(sr.Ref))
-            return ProcessNestedRef(set, sr, ruleName, excluded, overrideXr, visited);
+            return ProcessNestedRef(set, sr, ruleName, excluded, overrideXr, trail);
 
         if (!string.IsNullOrEmpty(sr.Class))
             return ProcessClassRule(set, srcName, sr, ruleName, excluded, overrideXr);
@@ -58,24 +63,24 @@ internal sealed class RuleRefResolver
     }
 
     private bool ProcessNestedRef(RuleSetType set, XmlRule sr, string ruleName,
-        HashSet<string> excluded, XmlRule overrideXr, HashSet<string> visited)
+        HashSet<string> excluded, XmlRule overrideXr, RefTrail trail)
     {
         if (ruleName.Length > 0)
-            return ResolveNestedRule(set, sr, ruleName, excluded, overrideXr, visited);
+            return ResolveNestedRule(set, sr, ruleName, excluded, overrideXr, trail);
 
         if (!string.IsNullOrEmpty(sr.Name) && excluded.Contains(sr.Name))
             return false;
 
-        AddRef(set, XmlRuleHelpers.MergeChildRef(sr, overrideXr), new HashSet<string>(visited, StringComparer.OrdinalIgnoreCase));
+        AddRef(set, XmlRuleHelpers.MergeChildRef(sr, overrideXr), trail);
         return true;
     }
 
     private bool ResolveNestedRule(RuleSetType set, XmlRule sr, string ruleName,
-        HashSet<string> excluded, XmlRule overrideXr, HashSet<string> visited)
+        HashSet<string> excluded, XmlRule overrideXr, RefTrail trail)
     {
         var (_, targetRule) = LoaderFilters.SplitRef(sr.Ref!, Loader.BuiltinNames);
         if (targetRule == ruleName || sr.Name == ruleName)
-            return AddRef(set, XmlRuleHelpers.MergeChildRef(sr, overrideXr), new HashSet<string>(visited, StringComparer.OrdinalIgnoreCase));
+            return AddRef(set, XmlRuleHelpers.MergeChildRef(sr, overrideXr), trail);
 
         if (string.IsNullOrEmpty(targetRule) && !excluded.Contains(ruleName))
         {
@@ -83,7 +88,7 @@ internal sealed class RuleRefResolver
             child.Ref = $"{sr.Ref}/{ruleName}";
             try
             {
-                return AddRef(set, child, new HashSet<string>(visited, StringComparer.OrdinalIgnoreCase));
+                return AddRef(set, child, trail);
             }
             catch (InvalidOperationException)
             {

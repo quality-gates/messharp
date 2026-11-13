@@ -70,20 +70,20 @@ internal sealed class StorageHeap
     public StorageOrigin Materialize(StorageOrigin origin)
     {
         var reachable = origin.Reachable.ToHashSet();
-        Collect(origin, reachable, new HashSet<string>(StringComparer.Ordinal));
+        Collect(origin, reachable, new Visited<string>(StringComparer.Ordinal));
         return origin with { Reachable = reachable };
     }
 
-    private void Collect(StorageOrigin origin, HashSet<string> reachable, HashSet<string> visiting)
+    private void Collect(StorageOrigin origin, HashSet<string> reachable, Visited<string> visited)
     {
         foreach (var identity in origin.Objects)
         {
-            if (!visiting.Add(identity) || !_cells.TryGetValue(identity, out var cell)) continue;
+            if (!visited.TryVisit(identity) || !_cells.TryGetValue(identity, out var cell)) continue;
             foreach (var value in cell.Slots.Values.Append(cell.Default))
             {
                 reachable.UnionWith(value.Outer);
                 reachable.UnionWith(value.Reachable);
-                Collect(value, reachable, visiting);
+                Collect(value, reachable, visited);
             }
         }
     }
