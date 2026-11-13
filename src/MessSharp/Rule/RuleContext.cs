@@ -1,4 +1,6 @@
 using MessSharp.Model;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rule;
 
@@ -12,6 +14,9 @@ public sealed class RuleContext
     public SourceFile File { get; }
     public Properties Props { get; }
     public string CurrentPackage { get; set; }
+
+    /// <summary>Declaration the engine is currently applying a rule to; null for file-level rules.</summary>
+    internal SyntaxNode? Scope { get; set; }
 
     /// <summary>
     /// Parts of partial types across every analysed file, for rules whose
@@ -41,31 +46,49 @@ public sealed class RuleContext
     }
 
     public void Report(int beginLine, int endLine, params object[] args) =>
-        AppendViolation(beginLine, endLine, "", "", "", CurrentPackage, args);
+        AppendViolation(DeclarationAt(beginLine), beginLine, endLine, "", "", "", CurrentPackage, args);
 
     public void ReportMethod(MethodModel method, params object[] args) =>
-        AppendViolation(method.Line, method.EndLine,
+        AppendViolation(method.Node, method.Line, method.EndLine,
             method.DeclaringTypeName, method.Name, "", method.Namespace, args);
 
     internal void ReportMethodAt(MethodModel method, int beginLine, int endLine, params object[] args) =>
-        AppendViolation(beginLine, endLine,
+        AppendViolation(method.Node, beginLine, endLine,
             method.DeclaringTypeName, method.Name, "", method.Namespace, args);
 
     public void ReportClass(ClassModel cls, params object[] args) =>
-        AppendViolation(cls.Line, cls.EndLine, cls.Name, "", "", cls.Namespace, args);
+        AppendViolation(cls.Node, cls.Line, cls.EndLine, cls.Name, "", "", cls.Namespace, args);
 
     public void ReportField(ClassModel cls, FieldModel field, params object[] args) =>
-        AppendViolation(field.Line, field.EndLine > 0 ? field.EndLine : field.Line,
+        AppendViolation(field.Node, field.Line, field.EndLine > 0 ? field.EndLine : field.Line,
             cls.Name, "", "", cls.Namespace, args);
 
     public void ReportField(FieldModel field, params object[] args) =>
-        AppendViolation(field.Line, field.EndLine > 0 ? field.EndLine : field.Line,
+        AppendViolation(field.Node, field.Line, field.EndLine > 0 ? field.EndLine : field.Line,
             "", "", "", CurrentPackage, args);
 
     public void ReportInterface(InterfaceModel iface, params object[] args) =>
-        AppendViolation(iface.Line, iface.EndLine, iface.Name, "", "", iface.Namespace, args);
+        AppendViolation(iface.Node, iface.Line, iface.EndLine, iface.Name, "", "", iface.Namespace, args);
 
-    private void AppendViolation(int beginLine, int endLine,
+    /// <summary>
+    /// The innermost member declaration within the current scope that spans the
+    /// line, so a bare line report is suppressed by the member that contains it.
+    /// </summary>
+    private SyntaxNode DeclarationAt(int line)
+    {
+        var scope = Scope ?? File.Root;
+        SyntaxNode best = scope;
+        foreach (var node in scope.DescendantNodes())
+        {
+            if (node is not (MemberDeclarationSyntax or AccessorDeclarationSyntax)) continue;
+            var span = node.SyntaxTree.GetLineSpan(node.Span);
+            if (line < span.StartLinePosition.Line + 1 || line > span.EndLinePosition.Line + 1) continue;
+            best = node;
+        }
+        return best;
+    }
+
+    private void AppendViolation(SyntaxNode node, int beginLine, int endLine,
         string cls, string method, string function, string package, object[] args)
     {
         _violations.Add(new Violation
@@ -82,6 +105,7 @@ public sealed class RuleContext
             Package = package,
             Priority = _rule.Priority,
             RuleSetName = _rule.SetName,
+            Node = node,
         });
     }
 

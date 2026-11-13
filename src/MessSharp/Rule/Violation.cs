@@ -15,4 +15,11 @@ public sealed class Violation
     public string Package { get; init; } = "";
     public int Priority { get; init; }
     public string RuleSetName { get; init; } = "";
+
+    /// <summary>
+    /// The declaration the rule flagged (or the innermost declaration enclosing the
+    /// flagged line). Suppression is decided from this node's ancestry; null for
+    /// violations built outside <see cref="RuleContext"/>.
+    /// </summary>
+    internal Microsoft.CodeAnalysis.SyntaxNode? Node { get; init; }
 }

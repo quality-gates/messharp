@@ -731,6 +731,40 @@ public class Outer
     }
 
     [Fact]
+    public void Engine_OuterTypeSuppression_CoversNestedTypeMethods()
+    {
+        const string source = @"
+using System.Diagnostics.CodeAnalysis;
+
+[SuppressMessage(""MessSharp"", ""UnusedLocalVariable"")]
+public class Outer {
+    public class Inner {
+        public void M() { int unused = 1; }
+    }
+}";
+        var violations = Engine.Analyze(ModelBuilder.Parse("nested.cs", source),
+            new[] { MakeUnusedLocalVariableSet() }, strict: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedSiblingMember_DoesNotSuppressOtherMember()
+    {
+        const string source = @"
+using System.Diagnostics.CodeAnalysis;
+
+public class C {
+    [SuppressMessage(""MessSharp"", ""UnusedLocalVariable"")]
+    public void Quiet() { int a1 = 1; }
+    public void Loud() { int b2 = 1; }
+}";
+        var violations = Engine.Analyze(ModelBuilder.Parse("sib.cs", source),
+            new[] { MakeUnusedLocalVariableSet() }, strict: false);
+        var v = Assert.Single(violations);
+        Assert.Equal("b2", v.Args[0]);
+    }
+
+    [Fact]
     public void Engine_NestedClassWithoutSuppression_ReportedWhenNotStrict()
     {
         var sf = ModelBuilder.Parse("nested.cs", NestedClassUnsuppressedSource);

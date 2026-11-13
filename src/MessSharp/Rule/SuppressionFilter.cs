@@ -1,11 +1,10 @@
 using MessSharp.Model;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rule;
 
 /// <summary>
-/// Filters suppressed violations by resolving target syntax nodes and delegating
-/// suppression checks to SuppressionMatcher.
+/// Drops violations whose flagged declaration, or any enclosing declaration or
+/// the file itself, carries a suppression recognised by SuppressionMatcher.
 /// </summary>
 internal static class SuppressionFilter
 {
@@ -18,109 +17,7 @@ internal static class SuppressionFilter
     private static bool IsSuppressed(Violation v, SourceFile file)
     {
         if (SuppressionMatcher.IsNodeSuppressed(file.Root, v.Rule)) return true;
-
-        var cls = FindClass(file, v);
-        var iface = FindInterface(file, v);
-        if (IsTypeSuppressed(cls, iface, v.Rule)) return true;
-
-        var method = FindMethod(file, cls, iface, v);
-        if (method != null && IsMethodSuppressed(method, v.Rule)) return true;
-
-        var field = FindField(cls, v);
-        return field != null && SuppressionMatcher.IsNodeSuppressed(field.Node, v.Rule);
-    }
-
-    /// <summary>
-    /// A property accessor is suppressed by its own declaration or by the
-    /// declaring property, mirroring how a method suppression covers its body.
-    /// </summary>
-    private static bool IsMethodSuppressed(MethodModel method, IRule rule)
-    {
-        if (SuppressionMatcher.IsNodeSuppressed(method.Node, rule)) return true;
-        return method.Node is AccessorDeclarationSyntax { Parent.Parent: BasePropertyDeclarationSyntax property }
-            && SuppressionMatcher.IsNodeSuppressed(property, rule);
-    }
-
-    private static bool IsTypeSuppressed(ClassModel? cls, InterfaceModel? iface, IRule rule) =>
-        (cls != null && SuppressionMatcher.IsNodeSuppressed(cls.Node, rule))
-        || (iface != null && SuppressionMatcher.IsNodeSuppressed(iface.Node, rule));
-
-    private static ClassModel? FindClass(SourceFile file, Violation v)
-    {
-        if (!string.IsNullOrEmpty(v.Class))
-            return ResolveByName(file.Classes, v, c => c.Name, c => c.Namespace, c => c.Line, c => c.EndLine);
-
-        return Innermost(file.Classes, v, c => c.Line, c => c.EndLine);
-    }
-
-    private static InterfaceModel? FindInterface(SourceFile file, Violation v)
-    {
-        if (!string.IsNullOrEmpty(v.Class))
-            return ResolveByName(file.Interfaces, v, i => i.Name, i => i.Namespace, i => i.Line, i => i.EndLine);
-
-        return Innermost(file.Interfaces, v, i => i.Line, i => i.EndLine);
-    }
-
-    /// <summary>
-    /// Resolves the named type among candidates sharing that name, disambiguating by
-    /// namespace (when known) and falling back to the innermost enclosing declaration
-    /// when multiple same-named types remain (e.g. same name in the same namespace via
-    /// nesting, or an unknown package).
-    /// </summary>
-    private static T? ResolveByName<T>(
-        IEnumerable<T> declarations,
-        Violation v,
-        Func<T, string> name,
-        Func<T, string> ns,
-        Func<T, int> line,
-        Func<T, int> endLine)
-        where T : class
-    {
-        var matching = declarations
-            .Where(d => name(d) == v.Class && (string.IsNullOrEmpty(v.Package) || ns(d) == v.Package))
-            .ToList();
-
-        if (matching.Count == 1)
-            return matching[0];
-
-        if (matching.Count > 1)
-            return Innermost(matching, v, line, endLine);
-
-        return null;
-    }
-
-    /// <summary>
-    /// Selects the innermost declaration containing the violation's begin line.
-    /// Nested types are recorded outermost-first, so the narrowest containing span wins.
-    /// </summary>
-    private static T? Innermost<T>(
-        IEnumerable<T> declarations,
-        Violation v,
-        Func<T, int> line,
-        Func<T, int> endLine)
-        where T : class
-    {
-        return declarations
-            .Where(d => v.BeginLine >= line(d) && v.BeginLine <= endLine(d))
-            .OrderBy(d => endLine(d) - line(d))
-            .FirstOrDefault();
-    }
-
-    private static MethodModel? FindMethod(SourceFile file, ClassModel? cls, InterfaceModel? iface, Violation v)
-    {
-        var methods = cls?.Methods ?? iface?.Methods ?? file.AllMethods;
-        return methods.FirstOrDefault(m =>
-            (string.IsNullOrEmpty(v.Method) || m.Name == v.Method)
-            && v.BeginLine >= m.Line
-            && v.BeginLine <= m.EndLine);
-    }
-
-    private static FieldModel? FindField(ClassModel? cls, Violation v)
-    {
-        if (cls == null) return null;
-        return cls.Fields.FirstOrDefault(f => f.Line == v.BeginLine
-            || (f.EndLine > 0 && v.BeginLine >= f.Line && v.BeginLine <= f.EndLine))
-            ?? cls.Constants.FirstOrDefault(c => c.Line == v.BeginLine
-            || (c.EndLine > 0 && v.BeginLine >= c.Line && v.BeginLine <= c.EndLine));
+        return v.Node != null
+            && v.Node.AncestorsAndSelf().Any(n => SuppressionMatcher.IsNodeSuppressed(n, v.Rule));
     }
 }
