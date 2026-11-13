@@ -71,6 +71,7 @@ internal static class ModelBuilderHelpers
             {
                 Name = v.Identifier.Text,
                 Type = typeStr,
+                TypeSyntax = field.Declaration.Type,
                 Line = vSpan.StartLinePosition.Line + 1,
                 EndLine = vSpan.EndLinePosition.Line + 1,
                 Exported = IsExported(field.Modifiers),
@@ -96,6 +97,7 @@ internal static class ModelBuilderHelpers
         {
             Name = prop.Identifier.Text,
             Type = prop.Type.ToString(),
+            TypeSyntax = prop.Type,
             Line = span.StartLinePosition.Line + 1,
             EndLine = span.EndLinePosition.Line + 1,
             Exported = IsExported(prop.Modifiers),
@@ -116,6 +118,7 @@ internal static class ModelBuilderHelpers
             {
                 Name = p.Identifier.Text,
                 Type = p.Type?.ToString() ?? "",
+                TypeSyntax = p.Type,
                 Line = span.StartLinePosition.Line + 1,
                 IsOut = p.Modifiers.Any(SyntaxKind.OutKeyword),
                 IsRef = p.Modifiers.Any(SyntaxKind.RefKeyword),

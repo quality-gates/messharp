@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Add syntax-based `TypeShapes` (and `TypeSyntax` on field, parameter and method models) so `BooleanArgumentFlag`, `BooleanGetMethodName`, `CouplingBetweenObjects` and expression-body analysis share type classification instead of re-parsing or string-matching type text. `BooleanArgumentFlag` now also flags `System.Nullable<bool>`, `Nullable<System.Boolean>` and `System.Nullable<System.Boolean>`; boolean type names are now matched case-sensitively in `BooleanGetMethodName`; and `global::Ns.Type` no longer counts the namespace as a coupled type (#218).
 - Share one `LexicalScopes` shadowing resolver across the design, explicitness and unused-code rules, replacing the separate `LocalShadowing` and `ShadowMap`. Indexer parameters and foreach variables now shadow consistently, and range variables now shadow in unused-code rules (#220).
 - Classify assignments, increments, deconstruction targets and `out`/`ref` arguments in one `MutationClassifier` shared by the unused-code, design and explicitness rules; rule output is unchanged (#231).
 - Scan each syntax tree for member reads once for both unused-private-member rules, skip classes without private candidates, and resolve shadowed locals through ancestors instead of searching every same-name scope (#254).

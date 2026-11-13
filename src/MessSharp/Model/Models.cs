@@ -123,6 +123,7 @@ public sealed class FieldModel
 {
     public string Name { get; init; } = "";
     public string Type { get; init; } = "";
+    public TypeSyntax? TypeSyntax { get; init; }
     public int Line { get; init; }
     public int EndLine { get; init; }
     public bool Exported { get; init; }
@@ -138,6 +139,7 @@ public sealed class ParameterModel
 {
     public string Name { get; init; } = "";
     public string Type { get; init; } = "";
+    public TypeSyntax? TypeSyntax { get; init; }
     public int Line { get; init; }
     public bool IsOut { get; init; }
     public bool IsRef { get; init; }

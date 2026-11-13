@@ -1,7 +1,5 @@
 using MessSharp.Model;
 using MessSharp.Rule;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules.Design;
@@ -32,59 +30,30 @@ public sealed class CouplingBetweenObjectsRule : BaseRule, IClassRule
         int threshold = ctx.Props.Int("maximum", 13);
         var types = new HashSet<string>(StringComparer.Ordinal);
 
-        void Collect(string typeStr)
+        void Collect(TypeSyntax? type)
         {
-            types.UnionWith(CoupledTypeNames(typeStr));
+            types.UnionWith(TypeShapes.NamedTypes(type).Where(name => !BuiltinTypes.Contains(name)));
         }
 
         foreach (var f in cls.Fields)
-            Collect(f.Type);
+            Collect(f.TypeSyntax);
 
         foreach (var m in cls.Methods)
         {
             foreach (var p in m.Parameters)
-                Collect(p.Type);
-            Collect(m.ReturnType);
+                Collect(p.TypeSyntax);
+            Collect(TypeShapes.ReturnTypeOf(m));
 
             var body = m.EffectiveBody;
             if (body != null)
             {
                 foreach (var objCreate in body.DescendantNodesAndSelf().OfType<ObjectCreationExpressionSyntax>())
-                    Collect(objCreate.Type.ToString());
+                    Collect(objCreate.Type);
             }
         }
 
         int cbo = types.Count;
         if (cbo >= threshold)
             ctx.ReportClass(cls, cls.Name, cbo, threshold);
-    }
-
-    /// <summary>
-    /// Yields the simple name of every non-builtin named type in <paramref name="t"/>,
-    /// including generic type arguments, tuple elements and array/nullable
-    /// element types. Namespace and alias qualifiers are skipped, so
-    /// <c>System.Threading.Tasks.Task&lt;Customer&gt;</c> yields only Customer.
-    /// </summary>
-    private static IEnumerable<string> CoupledTypeNames(string t)
-    {
-        if (string.IsNullOrWhiteSpace(t)) return [];
-
-        return SyntaxFactory.ParseTypeName(t)
-            .DescendantNodesAndSelf()
-            .OfType<SimpleNameSyntax>()
-            .Where(n => !IsQualifier(n))
-            .Select(n => n.Identifier.ValueText)
-            .Where(name => name.Length > 0 && !BuiltinTypes.Contains(name));
-    }
-
-    private static bool IsQualifier(SimpleNameSyntax name)
-    {
-        SyntaxNode current = name;
-        while (current.Parent is QualifiedNameSyntax qualified)
-        {
-            if (qualified.Left == current) return true;
-            current = qualified;
-        }
-        return current.Parent is AliasQualifiedNameSyntax alias && alias.Alias == current;
     }
 }
