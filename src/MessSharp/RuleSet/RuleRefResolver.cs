@@ -8,27 +8,14 @@ namespace MessSharp.RuleSet;
 /// </summary>
 internal sealed class RuleRefResolver
 {
-    private readonly Func<string, byte[]> _readRuleset;
-    private readonly Func<string, XmlRule, XmlRule, IRule?> _buildRule;
-    private readonly Action<RuleSetType, IRule?> _appendRule;
-    private readonly IReadOnlyDictionary<string, string> _builtins;
+    private readonly Loader _loader;
 
-    public RuleRefResolver(
-        Func<string, byte[]> readRuleset,
-        Func<string, XmlRule, XmlRule, IRule?> buildRule,
-        Action<RuleSetType, IRule?> appendRule,
-        IReadOnlyDictionary<string, string> builtins)
-    {
-        _readRuleset = readRuleset;
-        _buildRule = buildRule;
-        _appendRule = appendRule;
-        _builtins = builtins;
-    }
+    public RuleRefResolver(Loader loader) => _loader = loader;
 
     public bool AddRef(RuleSetType set, XmlRule xr, HashSet<string>? visited = null)
     {
         visited ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var (baseName, ruleName) = LoaderFilters.SplitRef(xr.Ref!, _builtins);
+        var (baseName, ruleName) = LoaderFilters.SplitRef(xr.Ref!, Loader.BuiltinNames);
         // A ref back to an ancestor ruleset is a cycle: it can never resolve,
         // so fail like any other unresolved ref instead of loading nothing.
         // InvalidDataException is deliberately not an InvalidOperationException,
@@ -37,7 +24,7 @@ internal sealed class RuleRefResolver
             throw new InvalidDataException($"Cyclic ruleset ref: {xr.Ref}");
 
         byte[] data;
-        try { data = _readRuleset(baseName); }
+        try { data = _loader.ReadRuleset(baseName); }
         catch (Exception ex)
         {
             throw new FileNotFoundException($"Cannot resolve ref: {xr.Ref}", ex);
@@ -86,7 +73,7 @@ internal sealed class RuleRefResolver
     private bool ResolveNestedRule(RuleSetType set, XmlRule sr, string ruleName,
         HashSet<string> excluded, XmlRule overrideXr, HashSet<string> visited)
     {
-        var (_, targetRule) = LoaderFilters.SplitRef(sr.Ref!, _builtins);
+        var (_, targetRule) = LoaderFilters.SplitRef(sr.Ref!, Loader.BuiltinNames);
         if (targetRule == ruleName || sr.Name == ruleName)
             return AddRef(set, XmlRuleHelpers.MergeChildRef(sr, overrideXr), new HashSet<string>(visited, StringComparer.OrdinalIgnoreCase));
 
@@ -113,12 +100,12 @@ internal sealed class RuleRefResolver
         if (ruleName.Length > 0)
         {
             if (sr.Name != ruleName) return false;
-            _appendRule(set, _buildRule(srcName, sr, overrideXr));
+            _loader.AppendIfNotNull(set, _loader.BuildRule(srcName, sr, overrideXr));
             return true;
         }
 
         if (excluded.Contains(sr.Name ?? "")) return false;
-        _appendRule(set, _buildRule(srcName, sr, sr));
+        _loader.AppendIfNotNull(set, _loader.BuildRule(srcName, sr, sr));
         return true;
     }
 }

@@ -77,11 +77,7 @@ public static class Cli
 
     private static List<RuleSetType> LoadAndFilterRuleSets(CliOptions opts, TextWriter stderr)
     {
-        var sets = LoadRuleSets(opts, stderr);
-        RuleSetLoader.FilterRules(sets,
-            CliArgParser.SplitList(opts.Filters.Only ?? opts.Filters.Enable ?? ""),
-            CliArgParser.SplitList(opts.Filters.Disable));
-        return sets;
+        return LoadRuleSets(opts, stderr);
     }
 
     private static MessSharp.Report.Report? RunAnalysis(CliOptions opts, List<RuleSetType> sets, TextWriter stderr, IRunner? runner = null)
@@ -143,7 +139,9 @@ public static class Cli
             MaxPriority = opts.MaxPriority,
             Warn = msg => { if (opts.Verbose) stderr.WriteLine($"warning: {msg}"); },
         };
-        return loader.Load(opts.Rulesets);
+        return loader.Load(opts.Rulesets,
+            CliArgParser.SplitList(opts.Filters.Only ?? opts.Filters.Enable ?? ""),
+            CliArgParser.SplitList(opts.Filters.Disable));
     }
 }
 

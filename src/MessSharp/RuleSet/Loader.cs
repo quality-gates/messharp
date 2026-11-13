@@ -19,7 +19,7 @@ public sealed class Loader
     public Action<string>? Warn { get; set; }
 
     // Known ruleset short names -> XML file names relative to rulesets/ dir.
-    private static readonly Dictionary<string, string> BuiltinNames =
+    internal static readonly Dictionary<string, string> BuiltinNames =
         new(StringComparer.OrdinalIgnoreCase)
         {
             ["cleancode"] = "cleancode.xml",
@@ -38,17 +38,22 @@ public sealed class Loader
         new[] { "cleancode", "codesize", "controversial", "design", "naming", "unusedcode", "csharp", "opinionated",
             "explicitness", "explicitness-strict" };
 
-    /// <summary>Resolves a comma-separated spec of ruleset names or file paths.</summary>
-    public List<RuleSetType> Load(string spec)
+    /// <summary>
+    /// Resolves a comma-separated spec of ruleset names or file paths, optionally
+    /// narrowed by enable/disable rule-name lists (null or empty means no narrowing).
+    /// </summary>
+    public List<RuleSetType> Load(string spec,
+        IReadOnlyList<string>? enable = null, IReadOnlyList<string>? disable = null)
     {
         var sets = new List<RuleSetType>();
         foreach (var part in spec.Split(',').Select(p => p.Trim()).Where(p => p.Length > 0))
             sets.Add(Parse(ReadRuleset(part)));
         LoaderFilters.DedupeRules(sets);
+        LoaderFilters.FilterRules(sets, enable ?? Array.Empty<string>(), disable ?? Array.Empty<string>());
         return sets;
     }
 
-    private byte[] ReadRuleset(string ident)
+    internal byte[] ReadRuleset(string ident)
     {
         if (BuiltinNames.TryGetValue(ident, out var filename))
         {
@@ -72,7 +77,7 @@ public sealed class Loader
 
     public Loader()
     {
-        _refResolver = new RuleRefResolver(ReadRuleset, BuildRule, AppendIfNotNull, BuiltinNames);
+        _refResolver = new RuleRefResolver(this);
     }
 
     private void AddRule(RuleSetType set, string setName, XmlRule xr)
@@ -81,7 +86,7 @@ public sealed class Loader
         if (!string.IsNullOrEmpty(xr.Class)) { AppendIfNotNull(set, BuildRule(setName, xr, xr)); }
     }
 
-    private IRule? BuildRule(string setName, XmlRule def, XmlRule ov)
+    internal IRule? BuildRule(string setName, XmlRule def, XmlRule ov)
     {
         if (string.IsNullOrEmpty(def.Class)) return null;
         var rule = RuleFactory.Create(def.Class!);
@@ -98,18 +103,13 @@ public sealed class Loader
             WarnMsg($"Invalid priority '{raw}' for rule '{def.Name ?? ov.Name ?? "(unnamed)"}'; using priority 0");
     }
 
-    private void AppendIfNotNull(RuleSetType set, IRule? rule)
+    internal void AppendIfNotNull(RuleSetType set, IRule? rule)
     {
         if (rule is not BaseRule br) return;
         if (MinPriority > 0 && br.Priority > MinPriority) return;
         if (MaxPriority > 0 && br.Priority < MaxPriority) return;
         set.Rules.Add(rule);
     }
-
-    /// <summary>Narrows rule sets in place by enable/disable name lists.</summary>
-    public static void FilterRules(List<RuleSetType> sets,
-        IReadOnlyList<string> enable, IReadOnlyList<string> disable) =>
-        LoaderFilters.FilterRules(sets, enable, disable);
 
     private void WarnMsg(string msg) => Warn?.Invoke(msg);
 }

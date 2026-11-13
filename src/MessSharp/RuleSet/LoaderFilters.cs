@@ -4,8 +4,7 @@ using RuleSetType = MessSharp.Rule.RuleSet;
 namespace MessSharp.RuleSet;
 
 /// <summary>
-/// Static utilities for filtering and deduplicating loaded rule sets.
-/// Extracted from Loader to reduce that class's weighted method count.
+/// Static utilities for filtering and deduplicating loaded rule sets and splitting rule refs.
 /// </summary>
 internal static class LoaderFilters
 {

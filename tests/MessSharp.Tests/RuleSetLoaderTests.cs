@@ -175,8 +175,7 @@ public class RuleSetLoaderTests
     public void FilterRules_Enable_KeepsOnlyNamed()
     {
         var loader = new Loader { MaxPriority = 1 };
-        var sets = loader.Load(Path.Combine(RulesetsDir, "codesize.xml"));
-        Loader.FilterRules(sets, new[] { "CyclomaticComplexity" }, Array.Empty<string>());
+        var sets = loader.Load(Path.Combine(RulesetsDir, "codesize.xml"), new[] { "CyclomaticComplexity" }, Array.Empty<string>());
         Assert.All(sets.SelectMany(s => s.Rules), r => Assert.Equal("CyclomaticComplexity", r.Name));
     }
 
@@ -186,8 +185,8 @@ public class RuleSetLoaderTests
         var loader = new Loader { MaxPriority = 1 };
         var sets = loader.Load(Path.Combine(RulesetsDir, "codesize.xml"));
         var before = sets.SelectMany(s => s.Rules).Count();
-        Loader.FilterRules(sets, Array.Empty<string>(), new[] { "CyclomaticComplexity" });
-        var after = sets.SelectMany(s => s.Rules).Count();
+        var after = loader.Load(Path.Combine(RulesetsDir, "codesize.xml"), Array.Empty<string>(), new[] { "CyclomaticComplexity" })
+            .SelectMany(s => s.Rules).Count();
         Assert.Equal(before - 1, after);
     }
 
