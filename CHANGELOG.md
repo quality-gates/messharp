@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Classify assignments, increments, deconstruction targets and `out`/`ref` arguments in one `MutationClassifier` shared by the unused-code, design and explicitness rules; rule output is unchanged (#231).
 - Scan each syntax tree for member reads once for both unused-private-member rules, skip classes without private candidates, and resolve shadowed locals through ancestors instead of searching every same-name scope (#254).
 - Decide suppression from the flagged declaration's syntax ancestry (`Violation.Node`) instead of re-resolving types, methods and fields by name and line; a suppression on an outer type now also covers its nested types (#159).
 - Discover declared locals once in `LocalDeclarations` so naming, camelCase and unused-local rules support the same declaration forms (#161).
