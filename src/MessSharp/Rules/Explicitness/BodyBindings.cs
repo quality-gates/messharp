@@ -28,6 +28,8 @@ internal sealed class BodyBindings
 
     public IReadOnlyList<StorageBinding> All { get; }
 
+    public bool HasJumps => _jumps;
+
     public IReadOnlyList<StorageStep> Steps => _steps ??= StorageSteps.Gather(_body, All);
 
     public bool Reaches(StorageBinding binding, SyntaxNode site)

@@ -308,4 +308,104 @@ public class ExplicitnessLazyTests
             Assert.Equal(15, found.BeginLine);
         }
     }
+
+    [Fact]
+    public void Rebinding_ConstantIfRebind_ForgetsTheReplacedFactory()
+    {
+        var findings = Analyze("""
+            using System;
+            class Probe {
+             static int Read() {
+              return Console.Read();
+             }
+             static int Seven() {
+              return 7;
+             }
+            
+             static int Run(bool flag) {
+              var cell = new Lazy<int>(Read);
+              if (true) {
+               cell = new Lazy<int>(Seven);
+              }
+              return cell.Value;
+             }
+            }
+            """);
+        Assert.Empty(findings.Where(f => f.Method == "Run"));
+    }
+
+    [Fact]
+    public void Rebinding_ConstantConditional_ForgetsTheReplacedFactory()
+    {
+        var findings = Analyze("""
+            using System;
+            class Probe {
+             static int Read() {
+              return Console.Read();
+             }
+             static int Seven() {
+              return 7;
+             }
+            
+             static int Run() {
+              Lazy<int> lazy = true ? new(Seven) : new(Read);
+              return lazy.Value;
+             }
+            }
+            """);
+        Assert.Empty(findings.Where(f => f.Method == "Run"));
+    }
+
+    [Fact]
+    public void Rebinding_BothArms_ForgetsTheReplacedFactory()
+    {
+        var findings = Analyze("""
+            using System;
+            class Probe {
+             static int Read() {
+              return Console.Read();
+             }
+             static int Seven() {
+              return 7;
+             }
+            
+             static int Run(bool flag) {
+              var cell = new Lazy<int>(Read);
+              if (flag) {
+               cell = new Lazy<int>(Seven);
+              } else {
+               cell = new Lazy<int>(Seven);
+              }
+              return cell.Value;
+             }
+            }
+            """);
+        Assert.Empty(findings.Where(f => f.Method == "Run"));
+    }
+
+    [Fact]
+    public void Rebinding_LoopRebind_ForgetsTheReplacedFactory()
+    {
+        var findings = Analyze("""
+            using System;
+            class Probe {
+             static int Read() {
+              return Console.Read();
+             }
+             static int Seven() {
+              return 7;
+             }
+            
+             static int Run(int n) {
+              var cell = new Lazy<int>(Read);
+              while (true) {
+               cell = new Lazy<int>(Seven);
+               if (n > 0) break;
+              }
+              return cell.Value;
+             }
+            }
+            """);
+        Assert.Empty(findings.Where(f => f.Method == "Run"));
+    }
 }

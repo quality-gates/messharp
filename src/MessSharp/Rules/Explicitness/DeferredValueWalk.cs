@@ -37,7 +37,12 @@ internal sealed class DeferredValueWalk(IReadOnlyList<CallableOwner> owners, int
     /// <summary>The values a conditional, switch or coalescing expression can produce.</summary>
     private static IReadOnlyList<ExpressionSyntax>? Branches(ExpressionSyntax value) => value switch
     {
-        ConditionalExpressionSyntax choice => [choice.WhenTrue, choice.WhenFalse],
+        ConditionalExpressionSyntax choice => LiteralControlFlow.Boolean(choice.Condition) switch
+        {
+            true => [choice.WhenTrue],
+            false => [choice.WhenFalse],
+            _ => [choice.WhenTrue, choice.WhenFalse],
+        },
         SwitchExpressionSyntax choice => choice.Arms.Select(arm => arm.Expression).ToList(),
         BinaryExpressionSyntax { RawKind: (int)SyntaxKind.CoalesceExpression } coalesce => [coalesce.Left, coalesce.Right],
         _ => null,
