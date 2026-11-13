@@ -47,18 +47,17 @@ internal static class UsedMemberNames
     private static HashSet<string> Scan(SyntaxNode root)
     {
         var used = new HashSet<string>(StringComparer.Ordinal);
-        var shadowed = ShadowMap.From(root);
         foreach (var node in root.DescendantNodes())
-            CollectUsedNode(node, shadowed, used);
+            CollectUsedNode(node, used);
         return used;
     }
 
-    private static void CollectUsedNode(SyntaxNode node, ShadowMap shadowed, HashSet<string> used)
+    private static void CollectUsedNode(SyntaxNode node, HashSet<string> used)
     {
         if (TryCollectMemberAccess(node, used)) return;
         if (TryCollectInitializerAssignment(node, used)) return;
         if (TryCollectNameof(node, used)) return;
-        CollectBareIdentifier(node, shadowed, used);
+        CollectBareIdentifier(node, used);
     }
 
     private static bool TryCollectMemberAccess(SyntaxNode node, HashSet<string> used)
@@ -84,13 +83,13 @@ internal static class UsedMemberNames
         return true;
     }
 
-    private static void CollectBareIdentifier(SyntaxNode node, ShadowMap shadowed, HashSet<string> used)
+    private static void CollectBareIdentifier(SyntaxNode node, HashSet<string> used)
     {
         var id = node as IdentifierNameSyntax;
         if (id is null) return;
         if (IsDeclarationContext(id)) return;
         if (WriteOnlyTarget.Matches(id)) return;
-        if (shadowed.IsShadowed(id)) return;
+        if (LexicalScopes.IsShadowed(id)) return;
         used.Add(id.Identifier.Text);
     }
 
