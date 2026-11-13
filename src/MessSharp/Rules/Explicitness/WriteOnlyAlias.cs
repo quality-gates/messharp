@@ -28,7 +28,7 @@ internal static class WriteOnlyAlias
 
     private static bool IsWriteOrPass(IdentifierNameSyntax use) => use.Parent switch
     {
-        ArgumentSyntax argument => argument.RefKindKeyword.IsKind(SyntaxKind.RefKeyword),
+        ArgumentSyntax argument => argument.RefKindKeyword.IsKind(SyntaxKind.RefKeyword) || argument.RefKindKeyword.IsKind(SyntaxKind.OutKeyword),
         AssignmentExpressionSyntax assignment => assignment.IsKind(SyntaxKind.SimpleAssignmentExpression) && assignment.Left == use,
         _ => false,
     };

@@ -44,6 +44,9 @@ internal sealed class ExpressionTypes(CallableOwner owner, IReadOnlyList<Callabl
         if (local?.Parent is VariableDeclarationSyntax declaration)
             return DeclaredType(local, declaration.Type);
         if (DesignationTypes.Find(name) is { } designated) return designated;
+        if (DesignationTypes.Declaration(name) is { } outVar
+            && OutVariableTypes.Find(owner, callableOwners ?? CallableOwnerCache.For(owner.Method.File), outVar) is { } inferred)
+            return inferred;
         return owner.Method.Parameters.FirstOrDefault(p => p.Name == name.Identifier.Text)?.Type
             ?? owner.Method.Class?.MemberType(name.Identifier.Text);
     }
