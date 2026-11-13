@@ -31,8 +31,8 @@ public sealed class LongVariableRule : BaseRule, IClassRule, IMethodRule
 
         if (method.EffectiveBody != null)
         {
-            foreach (var (name, line, _) in ShortVariableRule.CollectLocals(method.EffectiveBody))
-                CheckName(ctx, name, line, max, prefixes, suffixes);
+            foreach (var local in ShortVariableRule.NamedLocals(method.EffectiveBody))
+                CheckName(ctx, local.Name, local.Line, max, prefixes, suffixes);
         }
     }
 
