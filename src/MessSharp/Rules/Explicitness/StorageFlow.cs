@@ -13,23 +13,23 @@ internal sealed class StorageFlow(StorageContext context)
 
     public StorageOrigin Origin(ExpressionSyntax expression, StorageEnvironment state)
     {
-        var weak = context.Weak || BodyBindingsCache.For(context.Body).MayBeSkipped(expression);
+        var weak = context.Weak.OrIf(BodyBindingsCache.For(context.Body).MayBeSkipped(expression));
         if (new StorageDeferred(context, item => Origin(item, state), state).Value(CallableSyntax.Unwrap(expression), weak) is { } deferred)
             return deferred;
         var evaluation = new StorageEvaluations(context, item => Origin(item, state), state);
         StorageOrigin? Call(InvocationExpressionSyntax call) => evaluation.Invoke(call,
-            context.Weak || BodyBindingsCache.For(context.Body).MayBeSkipped(call));
+            context.Weak.OrIf(BodyBindingsCache.For(context.Body).MayBeSkipped(call)));
         return new StorageOriginResolver(context, state, evaluation.Fresh, Call).Origin(expression);
     }
 
-    private bool Execute(SyntaxNode node, StorageEnvironment state, bool weak) =>
+    private bool Execute(SyntaxNode node, StorageEnvironment state, Certainty weak) =>
         StorageStepExecutor.Execute(context, expression => Origin(expression, state), node, state, weak);
 }
 
 internal static class StorageStepExecutor
 {
     public static bool Execute(StorageContext context, Func<ExpressionSyntax, StorageOrigin> origin, SyntaxNode node,
-        StorageEnvironment state, bool weak)
+        StorageEnvironment state, Certainty weak)
     {
         if (new StorageReferences(context, origin, state).Bind(node, weak)) return true;
         if (new StorageDeferred(context, origin, state).Execute(node, weak)) return true;

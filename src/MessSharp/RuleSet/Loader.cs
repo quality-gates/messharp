@@ -5,18 +5,18 @@ namespace MessSharp.RuleSet;
 
 /// <summary>
 /// Loads phpmd-format ruleset XML files into RuleSets.
-/// Mirrors messgo's ruleset.Loader.
+/// Mirrors messgo's ruleset.Loader. Settings are fixed when the loader is created.
 /// </summary>
 public sealed class Loader
 {
     /// <summary>Drop rules with priority > MinPriority (less important). 0 = no limit.</summary>
-    public int MinPriority { get; set; }
+    public int MinPriority { get; init; }
 
     /// <summary>Drop rules with priority &lt; MaxPriority (more important). 0 = no limit.</summary>
-    public int MaxPriority { get; set; } = 1;
+    public int MaxPriority { get; init; } = 1;
 
     /// <summary>Receives diagnostic messages about skipped/unknown rules.</summary>
-    public Action<string>? Warn { get; set; }
+    public Action<string>? Warn { get; init; }
 
     // Known ruleset short names -> XML file names relative to rulesets/ dir.
     internal static readonly Dictionary<string, string> BuiltinNames =
@@ -75,9 +75,14 @@ public sealed class Loader
 
     private readonly RuleRefResolver _refResolver;
 
-    public Loader()
+    public Loader() { _refResolver = new RuleRefResolver(this); }
+
+    /// <summary>Creates a loader whose settings are exactly <paramref name="options"/> for its whole life.</summary>
+    public Loader(LoaderOptions options) : this()
     {
-        _refResolver = new RuleRefResolver(this);
+        MinPriority = options.MinPriority;
+        MaxPriority = options.MaxPriority;
+        Warn = options.Warn;
     }
 
     private void AddRule(RuleSetType set, string setName, XmlRule xr)
@@ -112,4 +117,12 @@ public sealed class Loader
     }
 
     private void WarnMsg(string msg) => Warn?.Invoke(msg);
+}
+
+/// <summary>Everything that tunes a <see cref="Loader"/>. It is a value: change it by making a new one.</summary>
+public sealed record LoaderOptions
+{
+    public int MinPriority { get; init; }
+    public int MaxPriority { get; init; } = 1;
+    public Action<string>? Warn { get; init; }
 }

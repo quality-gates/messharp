@@ -10,9 +10,9 @@ internal sealed record StorageReference(IReadOnlyDictionary<string, StorageOrigi
     public StorageOrigin Read(StorageHeap heap) => Locations.Aggregate(StorageOrigin.Private,
         (current, location) => current.Join(heap.Read(location.Value, location.Key)));
 
-    public void Write(StorageHeap heap, StorageOrigin value, bool weak)
+    public void Write(StorageHeap heap, StorageOrigin value, Certainty weak)
     {
-        foreach (var (slot, receiver) in Locations) heap.Write(receiver, slot, value, weak || Locations.Count != 1);
+        foreach (var (slot, receiver) in Locations) heap.Write(receiver, slot, value, weak.OrIf(Locations.Count != 1));
     }
 
     public StorageReference Join(StorageReference other)

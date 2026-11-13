@@ -6,11 +6,11 @@ internal sealed class StorageHeap
 
     public IReadOnlyDictionary<string, StorageCell> Contents => _cells;
 
-    public StorageOrigin Allocate(string identity, StorageCell cell, bool weak = false)
+    public StorageOrigin Allocate(string identity, StorageCell cell, Certainty weak = default)
     {
-        if (weak && _cells.TryGetValue(identity, out var previous)) previous.Join(cell);
+        if (weak.IsPossible && _cells.TryGetValue(identity, out var previous)) previous.Join(cell);
         else _cells[identity] = cell;
-        return StorageOrigin.Private with { Objects = new HashSet<string> { identity } };
+        return StorageOrigin.Object(identity);
     }
 
     public StorageOrigin Shared(string root)
@@ -21,32 +21,33 @@ internal sealed class StorageHeap
         return origin with { Objects = new HashSet<string> { identity } };
     }
 
-    public StorageOrigin Read(StorageOrigin receiver, string slot)
+    /// <summary>What <paramref name="slot"/> of the objects at <paramref name="receiver"/> may hold; with no slot, what any element may hold.</summary>
+    public StorageOrigin Read(StorageOrigin receiver, string slot = StorageCell.AnyElement)
     {
         if (receiver.Objects.Count == 0) return receiver.Element();
         return Cells(receiver).Select(cell => slot == StorageCell.AnyElement ? Join(cell.Elements) : cell.Read(slot))
             .Aggregate(StorageOrigin.Private, (current, next) => current.Join(next));
     }
 
-    public void Write(StorageOrigin receiver, string slot, StorageOrigin value, bool weak)
+    public void Write(StorageOrigin receiver, string slot, StorageOrigin value, Certainty weak)
     {
         foreach (var cell in Cells(receiver))
         {
             if (slot == StorageCell.AnyElement) { Widen(cell, value); continue; }
-            cell.Slots[slot] = weak || receiver.Objects.Count != 1 ? cell.Read(slot).Join(value) : value;
+            cell.Slots[slot] = weak.OrIf(receiver.Objects.Count != 1).IsPossible ? cell.Read(slot).Join(value) : value;
         }
     }
 
-    public void Change(StorageOrigin receiver, StorageMutation mutation, bool weak)
+    public void Change(StorageOrigin receiver, StorageMutation mutation, Certainty weak)
     {
-        foreach (var cell in Cells(receiver)) cell.Change(mutation, weak || receiver.Objects.Count != 1);
+        foreach (var cell in Cells(receiver)) cell.Change(mutation, weak.OrIf(receiver.Objects.Count != 1));
     }
 
-    public void ReplaceElements(StorageOrigin receiver, StorageOrigin value, bool weak)
+    public void ReplaceElements(StorageOrigin receiver, StorageOrigin value, Certainty weak)
     {
         foreach (var cell in Cells(receiver))
         {
-            if (weak || receiver.Objects.Count != 1) { Widen(cell, value); continue; }
+            if (weak.IsPossible || receiver.Objects.Count != 1) { Widen(cell, value); continue; }
             foreach (var slot in cell.Slots.Keys.Where(key => !key.StartsWith(".", StringComparison.Ordinal)).ToList())
                 cell.Slots.Remove(slot);
             cell.Default = value;
@@ -69,20 +70,20 @@ internal sealed class StorageHeap
     public StorageOrigin Materialize(StorageOrigin origin)
     {
         var reachable = origin.Reachable.ToHashSet();
-        Collect(origin, reachable, new HashSet<string>(StringComparer.Ordinal));
+        Collect(origin, reachable, new Visited<string>(StringComparer.Ordinal));
         return origin with { Reachable = reachable };
     }
 
-    private void Collect(StorageOrigin origin, HashSet<string> reachable, HashSet<string> visiting)
+    private void Collect(StorageOrigin origin, HashSet<string> reachable, Visited<string> visited)
     {
         foreach (var identity in origin.Objects)
         {
-            if (!visiting.Add(identity) || !_cells.TryGetValue(identity, out var cell)) continue;
+            if (!visited.TryVisit(identity) || !_cells.TryGetValue(identity, out var cell)) continue;
             foreach (var value in cell.Slots.Values.Append(cell.Default))
             {
                 reachable.UnionWith(value.Outer);
                 reachable.UnionWith(value.Reachable);
-                Collect(value, reachable, visiting);
+                Collect(value, reachable, visited);
             }
         }
     }

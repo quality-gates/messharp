@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace MessSharp.Rules.Explicitness;
 
 internal sealed record StorageContext(SyntaxNode Body, Func<ExpressionSyntax, string?> Root,
-    CallableOwner? Owner, IReadOnlyList<CallableOwner> Owners, string Scope, HashSet<CallableOwner> Visiting, bool Weak = false)
+    CallableOwner? Owner, IReadOnlyList<CallableOwner> Owners, string Scope, ActiveSet<CallableOwner> Visiting, Certainty Weak = default)
 {
     public const string ThisBinding = "$this";
 
@@ -17,9 +17,9 @@ internal sealed record StorageContext(SyntaxNode Body, Func<ExpressionSyntax, st
     /// </summary>
     internal const int ScopeDepth = 4;
 
-    public StorageContext For(CallableOwner target, SyntaxNode body, SyntaxNode call, bool weak) =>
+    public StorageContext For(CallableOwner target, SyntaxNode body, SyntaxNode call, Certainty weak) =>
         new(body, expression => StorageCallBindings.Root(target, expression), target, Owners,
-            Extend(call, target), Visiting, Weak || weak);
+            Extend(call, target), Visiting, Weak.OrIf(weak.IsPossible));
 
     private string Extend(SyntaxNode call, CallableOwner target)
     {

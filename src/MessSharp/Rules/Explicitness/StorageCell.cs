@@ -46,7 +46,7 @@ internal sealed class StorageCell
         return changed;
     }
 
-    public void Change(StorageMutation mutation, bool weak)
+    public void Change(StorageMutation mutation, Certainty weak)
     {
         switch (mutation)
         {
@@ -56,7 +56,7 @@ internal sealed class StorageCell
             case StorageMutation.Insert insert:
                 Insert(insert.Value, insert.Index, insert.Site, weak);
                 break;
-            case StorageMutation.Clear when !weak:
+            case StorageMutation.Clear when weak.IsDefinite:
                 Slots.Clear();
                 Default = StorageOrigin.Private;
                 Length = 0;
@@ -71,9 +71,9 @@ internal sealed class StorageCell
         }
     }
 
-    private void Append(StorageOrigin value, string site, bool weak)
+    private void Append(StorageOrigin value, string site, Certainty weak)
     {
-        if (weak || !Appends.Add(site)) Length = null;
+        if (weak.IsPossible || !Appends.Add(site)) Length = null;
         if (Length is { } length)
         {
             Slots["[" + length + "]"] = value;
@@ -85,10 +85,10 @@ internal sealed class StorageCell
             Slots[slot] = Slots[slot].Join(value);
     }
 
-    private void Insert(StorageOrigin value, int? index, string site, bool weak)
+    private void Insert(StorageOrigin value, int? index, string site, Certainty weak)
     {
         if (InsertionPosition(index) is not { } position || !TracksInsert(site, weak))
-        { Append(value, site, true); return; }
+        { Append(value, site, Certainty.Possible); return; }
         for (var at = position.Length; at > position.Index; at--) Slots["[" + at + "]"] = Read("[" + (at - 1) + "]");
         Slots["[" + position.Index + "]"] = value;
         Length = position.Length + 1;
@@ -100,5 +100,5 @@ internal sealed class StorageCell
         return position < 0 || position > length ? null : (length, position);
     }
 
-    private bool TracksInsert(string site, bool weak) => !weak && Appends.Add(site);
+    private bool TracksInsert(string site, Certainty weak) => weak.IsDefinite && Appends.Add(site);
 }

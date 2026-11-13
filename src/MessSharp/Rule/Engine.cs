@@ -62,7 +62,7 @@ public static class Engine
     {
         if (rule is IFileRule fr)
         {
-            ctx.Scope = null;
+            ctx.FocusOnFile();
             fr.Apply(ctx);
         }
 
@@ -70,8 +70,7 @@ public static class Engine
         {
             foreach (var cls in file.Classes)
             {
-                ctx.CurrentPackage = cls.Namespace;
-                ctx.Scope = cls.Node;
+                ctx.FocusOn(cls.Namespace, cls.Node);
                 cr.Apply(ctx, cls);
             }
         }
@@ -80,8 +79,7 @@ public static class Engine
         {
             foreach (var iface in file.Interfaces)
             {
-                ctx.CurrentPackage = iface.Namespace;
-                ctx.Scope = iface.Node;
+                ctx.FocusOn(iface.Namespace, iface.Node);
                 ir.Apply(ctx, iface);
             }
         }
@@ -100,17 +98,15 @@ public static class Engine
     {
         foreach (var m in file.AllMethods)
         {
-            ctx.CurrentPackage = m.Namespace;
-            ctx.Scope = m.Node;
+            ctx.FocusOn(m.Namespace, m.Node);
             mr.Apply(ctx, m);
         }
 
         foreach (var iface in file.Interfaces)
         {
-            ctx.CurrentPackage = iface.Namespace;
             foreach (var m in iface.Methods)
             {
-                ctx.Scope = m.Node;
+                ctx.FocusOn(iface.Namespace, m.Node);
                 mr.Apply(ctx, m);
             }
         }

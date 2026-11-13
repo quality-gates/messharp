@@ -32,6 +32,11 @@ internal sealed class BodyBindings
 
     public IReadOnlyList<StorageStep> Steps => _steps ??= StorageSteps.Gather(_body, All);
 
+    /// <summary>Whether <paramref name="binding"/> names a variable declared outside <paramref name="loop"/>, so each pass sees the last one's value.</summary>
+    public bool IsCarried(StorageBinding binding, SyntaxNode loop) => !All.Any(declaration =>
+        declaration.Name == binding.Name && declaration.Node is VariableDeclaratorSyntax
+            && loop.Span.Contains(declaration.Node.Span));
+
     public bool Reaches(StorageBinding binding, SyntaxNode site)
     {
         if (!InScope(binding, site)) return false;
