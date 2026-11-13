@@ -14,7 +14,8 @@ internal sealed class DeferredValueBindings(CallableOwner owner, SyntaxNode body
     public IReadOnlyList<DeferredSource>? Values(ExpressionSyntax reference)
     {
         var declaration = _declarations.Find(reference);
-        if (declaration is null) return LazyValues(reference) ?? new DeferredGetters(owner, owners).Values(reference);
+        if (declaration is null) return LazyValues(reference) ?? new DeferredGetters(owner, owners).Values(reference)
+            ?? new DeferredForeignFields(owner, owners).Values(reference);
         var values = new DeclarationFlow(body, _declarations).Reaching(declaration, reference);
         var writers = new DeferredWriters(owner, body, owners, _declarations);
         values.AddRange(writers.Outside(declaration));
