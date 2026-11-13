@@ -22,6 +22,7 @@ internal sealed record CallableOwner(MethodModel Method, SyntaxNode? Body, Calla
             AddChildren(top, owners);
         }
         CallableParameterTypes.Apply(owners);
+        TransitiveCaptures.Apply(owners);
         return owners;
     }
 

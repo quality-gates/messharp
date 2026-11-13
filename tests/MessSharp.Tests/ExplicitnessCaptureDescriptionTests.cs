@@ -51,6 +51,26 @@ public class ExplicitnessCaptureDescriptionTests
     }
 
     [Fact]
+    public void AliasedCaptureMutationPropagatesThroughIntermediateLocalFunction()
+    {
+        var findings = Engine.Analyze(ModelBuilder.Parse("test.cs", """
+            class Probe {
+                static void Run(int[] xs) {
+                    var c = xs;
+                    void Poke() { c[0] = 7; }
+                    void Outer() { Poke(); }
+                    Outer();
+                }
+            }
+            """), new Loader().Load("explicitness"));
+
+        Assert.Contains(findings, f => f.Method == "Poke" && f.Rule.Name == "ImplicitOutput" && f.Description ==
+            "The method Poke() has an implicit output: changes captured storage 'c'.");
+        Assert.Contains(findings, f => f.Method == "Run" && f.Rule.Name == "ImplicitOutput" && f.Description ==
+            "The method Run() has an implicit output: changes argument 'xs'.");
+    }
+
+    [Fact]
     public void LambdaMutationNamesCapturedStorage()
     {
         var findings = Engine.Analyze(ModelBuilder.Parse("test.cs", """
