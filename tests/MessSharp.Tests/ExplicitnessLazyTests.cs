@@ -242,4 +242,36 @@ public class ExplicitnessLazyTests
         Assert.Contains(forced, f => f.Rule.Name == "ImplicitOutput");
         Assert.DoesNotContain(forced, f => f.Rule.Name == "UnknownEffect" || f.Description.Contains("uses Console.Read"));
     }
+
+    [Fact]
+    public void ImplicitConstructionRunsFieldInitializerInputAtTheForcingSite()
+    {
+        var findings = Analyze("""
+            using System;
+            class Cell { public int V = Console.Read(); }
+            class Probe {
+                static int Force() {
+                    var lazy = new Lazy<Cell>();
+                    return lazy.Value.V;
+                }
+            }
+            """);
+        Assert.Contains(findings, f => f.Method == "Force" && f.Rule.Name == "ImplicitInput" && f.BeginLine == 6);
+    }
+
+    [Fact]
+    public void ImplicitConstructionOfPureInitializersRemainsQuiet()
+    {
+        var findings = Analyze("""
+            using System;
+            class Cell { public int V = 7; }
+            class Probe {
+                static int Force() {
+                    var lazy = new Lazy<Cell>();
+                    return lazy.Value.V;
+                }
+            }
+            """);
+        Assert.Empty(findings);
+    }
 }
