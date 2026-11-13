@@ -9,18 +9,18 @@ namespace MessSharp.Rules.Explicitness;
 /// written arguments to the work they hold. A value revisited while it is being resolved is unknown.
 /// </summary>
 internal sealed class DeferredValueWalk(IReadOnlyList<CallableOwner> owners, int arity = 0,
-    HashSet<SyntaxNode>? visiting = null)
+    ActiveResolutions? visiting = null)
 {
     private static readonly DeferredResolution Unknown = new([], false);
     private static readonly DeferredResolution Nothing = new([], true);
-    private readonly HashSet<SyntaxNode> _visiting = visiting ?? [];
+    private readonly ActiveResolutions _visiting = visiting ?? new();
 
     public DeferredResolution Resolve(DeferredValueContext context, ExpressionSyntax value, DeferredKind kind)
     {
         value = CallableSyntax.Unwrap(value);
-        if (!_visiting.Add(value)) return Unknown;
+        if (_visiting.Enter(context, value) is { } revisit) return revisit;
         try { return ResolveValue(context, value, kind); }
-        finally { _visiting.Remove(value); }
+        finally { _visiting.Leave(value); }
     }
 
     private DeferredResolution ResolveValue(DeferredValueContext context, ExpressionSyntax value, DeferredKind kind) =>
@@ -30,7 +30,7 @@ internal sealed class DeferredValueWalk(IReadOnlyList<CallableOwner> owners, int
             InvocationExpressionSyntax call => new DeferredCallResolver(owners, Resolve, Callables).Resolve(context, call, kind),
             ElementAccessExpressionSyntax element => ResolveElements(context, element.Expression, kind),
             LiteralExpressionSyntax { RawKind: (int)SyntaxKind.NullLiteralExpression } or DefaultExpressionSyntax => Nothing,
-            _ when Branches(value) is { } branches => Merge(context, branches, kind),
+            _ when ValueBranches.Find(value) is { } branches => Merge(context, branches, kind),
             _ => ResolveCreation(context, value, kind),
         };
 
@@ -49,25 +49,21 @@ internal sealed class DeferredValueWalk(IReadOnlyList<CallableOwner> owners, int
         return factories.Resolved ? returned : returned with { Complete = false };
     }
 
-    /// <summary>The values a conditional, switch or coalescing expression can produce.</summary>
-    private static IReadOnlyList<ExpressionSyntax>? Branches(ExpressionSyntax value) => value switch
-    {
-        ConditionalExpressionSyntax choice => LiteralControlFlow.Boolean(choice.Condition) switch
-        {
-            true => [choice.WhenTrue],
-            false => [choice.WhenFalse],
-            _ => [choice.WhenTrue, choice.WhenFalse],
-        },
-        SwitchExpressionSyntax choice => choice.Arms.Select(arm => arm.Expression).ToList(),
-        BinaryExpressionSyntax { RawKind: (int)SyntaxKind.CoalesceExpression } coalesce => [coalesce.Left, coalesce.Right],
-        _ => null,
-    };
-
     private DeferredResolution Merge(DeferredValueContext context, IReadOnlyList<ExpressionSyntax> values, DeferredKind kind) =>
         DeferredResolution.Merge(values.Select(value => Resolve(context, value, kind)));
 
-    private DeferredResolution ResolveElements(DeferredValueContext context, ExpressionSyntax collection, DeferredKind kind) =>
-        DeferredElements.ElementsOf(context, collection) is { } elements ? Merge(context, elements, kind) : Unknown;
+    /// <summary>What the elements of <paramref name="collection"/> hold, as work of <paramref name="kind"/>.</summary>
+    public DeferredResolution ResolveElements(DeferredValueContext context, ExpressionSyntax collection, DeferredKind kind) =>
+        DeferredElements.ElementsOf(context, collection) is { } elements ? Merge(context, elements, kind)
+            : ResolveParameterElements(context, collection, kind);
+
+    /// <summary>The elements of a read-only collection parameter are the elements of the caller's argument.</summary>
+    private DeferredResolution ResolveParameterElements(DeferredValueContext context, ExpressionSyntax collection, DeferredKind kind)
+    {
+        if (DeferredElements.ReadOnlyParameter(context, collection) is not { } parameter) return Unknown;
+        if (context.Argument(parameter) is { } argument) return ResolveElements(context.Caller!.Context, argument, kind);
+        return context.Caller is null && !context.Foreign ? DeferredResolution.ElementsOfParameter(parameter) : Unknown;
+    }
 
     private DeferredResolution ResolveBindings(DeferredValueContext context, ExpressionSyntax value, DeferredKind kind)
     {

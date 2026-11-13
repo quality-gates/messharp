@@ -11,7 +11,7 @@ namespace MessSharp.Rules.Explicitness;
 internal enum DeferredKind { Sequence, Lazy, Call }
 
 internal sealed record DeferredWork(DeferredKind Kind, CallableOwner Target, InvocationExpressionSyntax Call,
-    IReadOnlyDictionary<string, StorageOrigin> Bindings)
+    IReadOnlyDictionary<string, StorageOrigin> Bindings, DeferredValueContext? Frame = null)
 {
     /// <summary>Forcing a Lazy whose factory is an iterator only creates the sequence; iterating it runs the body.</summary>
     public bool RunsWhenForced(DeferredKind forced) =>
@@ -31,6 +31,10 @@ internal sealed class DeferredValueResolver(RuleContext ctx, IReadOnlyList<Calla
 {
     public DeferredResolution Resolve(CallableOwner caller, ExpressionSyntax value, SyntaxNode body, DeferredKind kind) =>
         new DeferredValueWalk(owners).Resolve(new DeferredValueContext(ctx, owners, caller, body), value, kind);
+
+    /// <summary>What the elements of the caller's collection hold, as work of <paramref name="kind"/>.</summary>
+    public DeferredResolution Elements(CallableOwner caller, ExpressionSyntax collection, SyntaxNode body, DeferredKind kind) =>
+        new DeferredValueWalk(owners).ResolveElements(new DeferredValueContext(ctx, owners, caller, body), collection, kind);
 
     /// <summary>The callables a delegate value can hold when it is invoked with <paramref name="arity"/> arguments.</summary>
     public DeferredResolution Callables(CallableOwner caller, ExpressionSyntax value, SyntaxNode body, int arity) =>

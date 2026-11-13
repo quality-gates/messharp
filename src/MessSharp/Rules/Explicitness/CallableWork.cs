@@ -17,6 +17,6 @@ internal static class CallableWork
         new CallableLookup(owners).Group(context.Owner, value, arity) is { } target ? Call(context, target, value) : Unknown;
 
     private static DeferredResolution Call(DeferredValueContext context, CallableOwner target, ExpressionSyntax value) =>
-        new([new DeferredWork(DeferredKind.Call, target, SyntaxFactory.InvocationExpression(value), context.Captures(target))],
+        new([new DeferredWork(DeferredKind.Call, target, SyntaxFactory.InvocationExpression(value), context.Captures(target), context)],
             true);
 }

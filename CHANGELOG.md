@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Explicitness: Lazy values that flow through generic or extension identity helpers, bounded recursion, and List or array element reads, so these report ImplicitInput instead of UnknownEffect (#245).
 - Explicitness: `out var` declarations take the callee parameter's type, a `ref` argument the callee always overwrites loses its earlier value, `out` through a write-only `ref` alias reads nothing, and a by-value overload beats an `in` overload for an unmarked argument (#243).
 - Explicitness: an iterator reached through `Lazy<IEnumerable<T>>.Value` or a delegate is reported where it is iterated, not where it is created, and no longer adds an unresolved-deferred `UnknownEffect` (#247).
 - Explicitness: a `ref` argument is reported as a read only when the callee reads it, write-only `ref` aliases no longer report reads, and tuple swaps such as `(f, g) = (g, f)` resolve callables from before the assignment (#252).

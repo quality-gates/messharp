@@ -21,7 +21,15 @@ internal static class DeferredElements
     {
         if (Declaration(context, collection) is not { } declaration || context.Values(collection) is not { } sources) return null;
         var elements = Assigned(sources);
-        return elements is not null && Writes(context.Body, declaration, elements) ? elements : null;
+        return elements is not null && Writes(context, declaration, elements) ? elements : null;
+    }
+
+    /// <summary>The name of the parameter <paramref name="collection"/> reads when the body only reads its elements.</summary>
+    public static string? ReadOnlyParameter(DeferredValueContext context, ExpressionSyntax collection)
+    {
+        if (CallableSyntax.Unwrap(collection) is not IdentifierNameSyntax name || ExpressionTypes.Binding(name) is not null)
+            return null;
+        return ElementUses.OnlyReads(context.Owner, context.Body, name.Identifier.Text) ? name.Identifier.Text : null;
     }
 
     private static SyntaxNode? Declaration(DeferredValueContext context, ExpressionSyntax collection) =>
@@ -48,6 +56,8 @@ internal static class DeferredElements
         ImplicitArrayCreationExpressionSyntax creation => creation.Initializer.Expressions,
         CollectionExpressionSyntax list when list.Elements.All(element => element is ExpressionElementSyntax) =>
             list.Elements.OfType<ExpressionElementSyntax>().Select(element => element.Expression).ToList(),
+        ObjectCreationExpressionSyntax { Type: GenericNameSyntax { Identifier.Text: "List" }, Initializer: null }
+            creation when creation.ArgumentList is not { Arguments.Count: > 0 } => [],
         BaseObjectCreationExpressionSyntax { Initializer: { } initializer }
             when initializer.IsKind(SyntaxKind.CollectionInitializerExpression)
                 && initializer.Expressions.All(item => item is not InitializerExpressionSyntax) => initializer.Expressions,
@@ -55,10 +65,10 @@ internal static class DeferredElements
     };
 
     /// <summary>Adds element writes; false when the array escapes or is written another way.</summary>
-    private static bool Writes(SyntaxNode body, SyntaxNode declaration, List<ExpressionSyntax> elements)
+    private static bool Writes(DeferredValueContext context, SyntaxNode declaration, List<ExpressionSyntax> elements)
     {
-        foreach (var use in Uses(body, declaration))
-            if (!Record(use, elements)) return false;
+        foreach (var use in Uses(context.Body, declaration))
+            if (!ElementUses.PassedToReader(context, use) && !ElementUses.Record(use, elements)) return false;
         return true;
     }
 
@@ -68,19 +78,4 @@ internal static class DeferredElements
         return body.DescendantNodes().OfType<IdentifierNameSyntax>()
             .Where(id => id.Identifier.Text == name && ExpressionTypes.Binding(id) == declaration);
     }
-
-    /// <summary>Adds the value of an element write; false when the use is not an element read or simple write.</summary>
-    private static bool Record(IdentifierNameSyntax use, List<ExpressionSyntax> elements)
-    {
-        if (ElementAccess(use) is not { } access) return false;
-        if (access.Parent is not AssignmentExpressionSyntax assignment || assignment.Left != access) return true;
-        if (!assignment.IsKind(SyntaxKind.SimpleAssignmentExpression)) return false;
-        elements.Add(assignment.Right);
-        return true;
-    }
-
-    /// <summary>The element access <paramref name="use"/> indexes, unless that element is passed by reference.</summary>
-    private static ElementAccessExpressionSyntax? ElementAccess(IdentifierNameSyntax use) =>
-        use.Parent is ElementAccessExpressionSyntax access && access.Expression == use
-            && access.Parent is not ArgumentSyntax { RefKindKeyword.RawKind: not (int)SyntaxKind.None } ? access : null;
 }
