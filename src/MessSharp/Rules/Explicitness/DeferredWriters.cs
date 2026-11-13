@@ -20,12 +20,15 @@ internal sealed class DeferredWriters(CallableOwner owner, SyntaxNode body, IRea
     /// </summary>
     public IEnumerable<DeferredSource> Nested(SyntaxNode declaration)
     {
-        var writes = Writers(declaration, node => body.Span.Contains(node.Span) && IsNested(node)).ToList();
+        var writes = Writers(declaration, node => body.Span.Contains(node.Span) && IsNested(node) && !IsOrdered(node)).ToList();
         return writes.Count == 0 ? [] : writes.Append(new DeferredSource.Opaque());
     }
 
     private bool WrittenElsewhere(SyntaxNode declaration) => DeferredDeclarations.IsShared(declaration)
         || (declaration is ParameterSyntax parameter ? !declarations.IsOwnParameter(parameter) : !body.Span.Contains(declaration.Span));
+
+    /// <summary>A closure write this body orders itself, at the statements that invoke the closure.</summary>
+    private bool IsOrdered(SyntaxNode node) => node is AssignmentExpressionSyntax assignment && InvokedClosures.Find(body, assignment) is not null;
 
     private bool IsNested(SyntaxNode node) => node.Ancestors().TakeWhile(parent => parent != body)
         .Any(parent => parent is AnonymousFunctionExpressionSyntax or LocalFunctionStatementSyntax);
