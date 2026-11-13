@@ -5,7 +5,10 @@ namespace MessSharp.Rules.Explicitness;
 
 internal static class OperatorDispatch
 {
-    public static bool RequiresExecution(CallableOwner owner, SyntaxNode node) => node switch
+    public static bool RequiresExecution(CallableOwner owner, SyntaxNode node) =>
+        Operator(owner, node) || ConversionDispatch.RequiresExecution(owner, node);
+
+    private static bool Operator(CallableOwner owner, SyntaxNode node) => node switch
     {
         BinaryExpressionSyntax binary => Overloaded(owner, binary.OperatorToken.Text, binary.Left, binary.Right),
         PrefixUnaryExpressionSyntax prefix => Overloaded(owner, prefix.OperatorToken.Text, prefix.Operand),
@@ -24,18 +27,8 @@ internal static class OperatorDispatch
             .Any(operation => operation.OperatorToken.Text == token);
     }
 
-    private static bool Converted(CallableOwner owner, CastExpressionSyntax cast)
-    {
-        var source = new ExpressionTypes(owner).TypeOf(cast.Expression);
-        var destination = cast.Type.ToString();
-        if (source is null || TypeName(source) == TypeName(destination)) return false;
-        var types = new[] { source, destination }.Select(TypeName).ToHashSet();
-        return owner.Method.File.Classes.Where(c => types.Contains(c.Name))
-            .SelectMany(c => c.Node.DescendantNodes().OfType<ConversionOperatorDeclarationSyntax>())
-            .Any(operation => TypeName(operation.Type.ToString()) == TypeName(destination)
-                && operation.ParameterList.Parameters.Count == 1
-                && TypeName(operation.ParameterList.Parameters[0].Type?.ToString() ?? "") == TypeName(source));
-    }
+    private static bool Converted(CallableOwner owner, CastExpressionSyntax cast) =>
+        ConversionDispatch.Converts(owner, cast.Expression, cast.Type.ToString());
 
     private static string TypeName(string type) => type.Split('<')[0].Split('.').Last();
 }
