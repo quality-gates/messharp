@@ -119,36 +119,14 @@ internal static class BodyAnalysis
     }
 
     /// <summary>
-    /// Collects declared local variable names from a body node.
-    /// Returns (name, line) pairs. Excludes `_` discards.
-    /// Covers: LocalDeclarationStatement, local deconstruction declarations,
-    /// foreach variables, top-level declaration-pattern variables (`is`,
-    /// switch case labels, switch-expression arms), catch variables,
-    /// out-variable declarations, and range-loop variables.
+    /// Declared local (name, line) pairs from a body node: every declaration the
+    /// shared walk finds except lambda parameters. Excludes `_` discards.
     /// </summary>
-    internal static List<(string Name, int Line)> LocalVariables(SyntaxNode body)
-    {
-        var result = new List<(string, int)>();
-        foreach (var node in body.DescendantNodesAndSelf())
-        {
-            if (node is DeclarationPatternSyntax pattern)
-            {
-                result.AddRange(LocalVariableCollector.TopLevelPatternVariables(pattern));
-                continue;
-            }
-
-            if (node is AssignmentExpressionSyntax
-                { Left: DeclarationExpressionSyntax declaration } assignment)
-            {
-                LocalVariableCollector.CollectDeclarationNames(
-                    declaration, assignment.SyntaxTree, result);
-                continue;
-            }
-
-            CollectLocalNode(node, result);
-        }
-        return result;
-    }
+    internal static List<(string Name, int Line)> LocalVariables(SyntaxNode body) =>
+        LocalDeclarations.Collect(body)
+            .Where(l => l.Kind != LocalKind.LambdaParameter)
+            .Select(l => (l.Name, l.Line))
+            .ToList();
 
     /// <summary>
     /// Collects the (name, line) pairs of locals declared as <c>using</c>
@@ -161,42 +139,6 @@ internal static class BodyAnalysis
             .SelectMany(LocalVariableCollector.CollectVariables)
             .ToHashSet();
 
-    private static void CollectLocalNode(SyntaxNode node, List<(string, int)> result)
-    {
-        switch (node)
-        {
-            // var x = expr;, for (int i = 0; ...), using (var s = ...), fixed (int* p = ...)
-            case VariableDeclarationSyntax vd
-                when LocalVariableCollector.IsLocalStatementDeclaration(vd):
-                result.AddRange(LocalVariableCollector.CollectVariables(vd));
-                break;
-
-            // foreach (var item in ...)
-            case ForEachStatementSyntax fe:
-                if (fe.Identifier.Text != "_")
-                    result.Add((fe.Identifier.Text,
-                        fe.SyntaxTree.GetLineSpan(fe.Identifier.Span).StartLinePosition.Line + 1));
-                break;
-
-            // foreach (var (k, v) in dict)
-            case ForEachVariableStatementSyntax feVar:
-                LocalVariableCollector.CollectDeclarationNames(feVar.Variable, feVar.SyntaxTree, result);
-                break;
-
-            // out var x in argument lists
-            case DeclarationExpressionSyntax decl
-                when decl.Designation is SingleVariableDesignationSyntax outVar:
-                if (outVar.Identifier.Text != "_")
-                    result.Add((outVar.Identifier.Text,
-                        decl.SyntaxTree.GetLineSpan(decl.Span).StartLinePosition.Line + 1));
-                break;
-
-            // catch (Exception ex)
-            case CatchDeclarationSyntax catchDecl:
-                result.AddRange(LocalVariableCollector.CatchVariables(catchDecl));
-                break;
-        }
-    }
     /// <summary>
     /// Returns the effective body syntax node for a method. Handles both
     /// block bodies `{ ... }` and expression bodies `=> expr`.

@@ -31,10 +31,10 @@ public sealed class ShortVariableRule : BaseRule, IClassRule, IMethodRule
 
         if (method.EffectiveBody != null)
         {
-            foreach (var (name, line, isLoop) in CollectLocals(method.EffectiveBody))
+            foreach (var local in NamedLocals(method.EffectiveBody))
             {
-                if (isLoop) continue;
-                CheckName(ctx, name, line, min, exceptions);
+                if (local.Kind == LocalKind.ForInitializer) continue;
+                CheckName(ctx, local.Name, local.Line, min, exceptions);
             }
         }
     }
@@ -48,90 +48,10 @@ public sealed class ShortVariableRule : BaseRule, IClassRule, IMethodRule
     }
 
     /// <summary>
-    /// Walks a method body and yields (name, line, isLoop) for lambda parameters,
-    /// local declarations, deconstruction variables, foreach variables, and direct
-    /// <c>is</c> declaration patterns. isLoop is true for a for-statement initializer
-    /// (phpmd skips those).
+    /// Declared locals that naming rules check: everything the shared walk finds
+    /// except catch variables and switch-case patterns.
     /// </summary>
-    internal static IEnumerable<(string Name, int Line, bool IsLoop)> CollectLocals(
-        Microsoft.CodeAnalysis.SyntaxNode body)
-    {
-        foreach (var node in body.DescendantNodes())
-            foreach (var local in CollectFromNode(node))
-                yield return local;
-    }
-
-    private static IEnumerable<(string Name, int Line, bool IsLoop)> CollectFromNode(
-        Microsoft.CodeAnalysis.SyntaxNode node) => node switch
-        {
-            VariableDeclarationSyntax varDecl
-                when LocalVariableCollector.IsLocalStatementDeclaration(varDecl)
-                => CollectVariableDeclaration(varDecl),
-            AssignmentExpressionSyntax or DeclarationExpressionSyntax => CollectDeclarationNames(node),
-            DeclarationPatternSyntax pattern => CollectDeclarationPattern(pattern),
-            ForEachStatementSyntax forEach => CollectForEach(forEach),
-            ForEachVariableStatementSyntax forEachVariable => CollectForEachVariable(forEachVariable),
-            ParameterSyntax parameter when IsLambdaParameter(parameter)
-                => CollectLambdaParameter(parameter),
-            _ => [],
-        };
-
-    private static bool IsLambdaParameter(ParameterSyntax parameter) =>
-        parameter.Parent is SimpleLambdaExpressionSyntax
-        || parameter.Parent is ParameterListSyntax
-        { Parent: ParenthesizedLambdaExpressionSyntax or AnonymousMethodExpressionSyntax };
-
-    private static IEnumerable<(string Name, int Line, bool IsLoop)> CollectLambdaParameter(
-        ParameterSyntax parameter)
-    {
-        var name = parameter.Identifier.Text;
-        if (name == "_") yield break;
-
-        int line = parameter.SyntaxTree.GetLineSpan(parameter.Identifier.Span)
-            .StartLinePosition.Line + 1;
-        yield return (name, line, false);
-    }
-
-    private static IEnumerable<(string Name, int Line, bool IsLoop)> CollectVariableDeclaration(
-        VariableDeclarationSyntax varDecl)
-    {
-        bool isForInit = varDecl.Parent is ForStatementSyntax;
-        foreach (var (name, line) in LocalVariableCollector.CollectVariables(varDecl))
-            yield return (name, line, isForInit);
-    }
-
-    private static IEnumerable<(string Name, int Line, bool IsLoop)> CollectDeclarationNames(
-        Microsoft.CodeAnalysis.SyntaxNode node)
-    {
-        var variables = new List<(string Name, int Line)>();
-        LocalVariableCollector.CollectDeclarationNames(node, variables);
-        foreach (var (name, line) in variables)
-            yield return (name, line, false);
-    }
-
-    private static IEnumerable<(string Name, int Line, bool IsLoop)> CollectDeclarationPattern(
-        DeclarationPatternSyntax pattern)
-    {
-        foreach (var (name, line) in LocalVariableCollector.DeclarationPatternVariables(pattern))
-            yield return (name, line, false);
-    }
-
-    private static IEnumerable<(string Name, int Line, bool IsLoop)> CollectForEach(
-        ForEachStatementSyntax forEach)
-    {
-        if (forEach.Identifier.Text == "_") yield break;
-        var span = forEach.SyntaxTree.GetLineSpan(forEach.Identifier.Span);
-        int line = span.StartLinePosition.Line + 1;
-        yield return (forEach.Identifier.Text, line, false);
-    }
-
-    private static IEnumerable<(string Name, int Line, bool IsLoop)> CollectForEachVariable(
-        ForEachVariableStatementSyntax forEachVariable)
-    {
-        var variables = new List<(string Name, int Line)>();
-        LocalVariableCollector.CollectDeclarationNames(
-            forEachVariable.Variable, forEachVariable.SyntaxTree, variables);
-        foreach (var (name, line) in variables)
-            yield return (name, line, false);
-    }
+    internal static IEnumerable<LocalDeclaration> NamedLocals(Microsoft.CodeAnalysis.SyntaxNode body) =>
+        LocalDeclarations.Collect(body)
+            .Where(l => l.Kind is not (LocalKind.Catch or LocalKind.CasePattern));
 }
