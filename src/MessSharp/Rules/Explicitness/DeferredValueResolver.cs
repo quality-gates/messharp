@@ -13,6 +13,10 @@ internal enum DeferredKind { Sequence, Lazy, Call }
 internal sealed record DeferredWork(DeferredKind Kind, CallableOwner Target, InvocationExpressionSyntax Call,
     IReadOnlyDictionary<string, StorageOrigin> Bindings)
 {
+    /// <summary>Forcing a Lazy whose factory is an iterator only creates the sequence; iterating it runs the body.</summary>
+    public bool RunsWhenForced(DeferredKind forced) =>
+        Kind == forced && !(forced == DeferredKind.Lazy && KnownExecutionOperations.IsIterator(Target));
+
     public CallEdge CallbackEdge(CallEdge edge, InvocationExpressionSyntax call, IReadOnlyList<StorageOrigin> arguments)
     {
         var bindings = this.Captured(edge.Site);

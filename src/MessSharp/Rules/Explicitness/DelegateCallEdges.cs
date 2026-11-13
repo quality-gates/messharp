@@ -6,7 +6,7 @@ namespace MessSharp.Rules.Explicitness;
 
 /// <summary>
 /// A call through a delegate runs every callable the delegate can hold at the call. A holder that cannot be
-/// resolved is unknown; a delegate parameter is left for each caller to resolve.
+/// resolved is unknown; an iterator only creates its sequence, so it runs where the sequence is consumed; a delegate parameter is left for each caller to resolve.
 /// </summary>
 internal sealed class DelegateCallEdges(RuleContext ctx, IReadOnlyList<CallableOwner> owners, ICollection<CallEdge> edges)
 {
@@ -19,7 +19,7 @@ internal sealed class DelegateCallEdges(RuleContext ctx, IReadOnlyList<CallableO
             return;
         }
         var held = new DeferredValueResolver(ctx, owners).Callables(owner, callee, body, call.ArgumentList.Arguments.Count);
-        foreach (var work in held.Work)
+        foreach (var work in held.Work.Where(work => !KnownExecutionOperations.IsIterator(work.Target)))
             edges.Add(new CallEdge(owner, work.Target, call, Bindings: work.Captured(call)));
         if (!held.Complete) summary.Add(new EffectFact(EffectKind.Unknown, unresolved), call);
         if (held.Pending.Count == 0) return;

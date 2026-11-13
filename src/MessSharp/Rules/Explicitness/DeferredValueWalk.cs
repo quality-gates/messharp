@@ -26,13 +26,28 @@ internal sealed class DeferredValueWalk(IReadOnlyList<CallableOwner> owners, int
     private DeferredResolution ResolveValue(DeferredValueContext context, ExpressionSyntax value, DeferredKind kind) =>
         value switch
         {
-            IdentifierNameSyntax or MemberAccessExpressionSyntax => ResolveBindings(context, value, kind),
+            IdentifierNameSyntax or MemberAccessExpressionSyntax => ResolveName(context, value, kind),
             InvocationExpressionSyntax call => new DeferredCallResolver(owners, Resolve, Callables).Resolve(context, call, kind),
             ElementAccessExpressionSyntax element => ResolveElements(context, element.Expression, kind),
             LiteralExpressionSyntax { RawKind: (int)SyntaxKind.NullLiteralExpression } or DefaultExpressionSyntax => Nothing,
             _ when Branches(value) is { } branches => Merge(context, branches, kind),
             _ => ResolveCreation(context, value, kind),
         };
+
+    private DeferredResolution ResolveName(DeferredValueContext context, ExpressionSyntax value, DeferredKind kind) =>
+        kind == DeferredKind.Sequence && value is MemberAccessExpressionSyntax { Name.Identifier.Text: "Value" } member
+            && KnownExecutionOperations.IsLazyValue(context.Owner, member.Expression)
+            ? ResolveLazyResult(context, member.Expression) : ResolveBindings(context, value, kind);
+
+    /// <summary>A sequence read from a Lazy's value is whatever its factories return; forcing it only creates the sequence.</summary>
+    private DeferredResolution ResolveLazyResult(DeferredValueContext context, ExpressionSyntax lazy)
+    {
+        var factories = Resolve(context, lazy, DeferredKind.Lazy);
+        var calls = new DeferredCallResolver(owners, Resolve, Callables);
+        var returned = DeferredResolution.Merge(factories.Work.Select(work =>
+            calls.Returned(context, work.Target, work.Call, DeferredKind.Sequence)));
+        return factories.Resolved ? returned : returned with { Complete = false };
+    }
 
     /// <summary>The values a conditional, switch or coalescing expression can produce.</summary>
     private static IReadOnlyList<ExpressionSyntax>? Branches(ExpressionSyntax value) => value switch

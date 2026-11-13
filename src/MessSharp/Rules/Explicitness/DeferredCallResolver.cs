@@ -14,7 +14,8 @@ internal sealed class DeferredCallResolver(
             ? Returned(context, target, call, kind) : Delegated(context, call, kind);
     }
 
-    private DeferredResolution Returned(DeferredValueContext context, CallableOwner target, InvocationExpressionSyntax call,
+    /// <summary>What running <paramref name="target"/> through <paramref name="call"/> returns, as work of <paramref name="kind"/>.</summary>
+    public DeferredResolution Returned(DeferredValueContext context, CallableOwner target, InvocationExpressionSyntax call,
         DeferredKind kind)
     {
         if (target.Body is not { } body) return Opaque(context, call, kind);

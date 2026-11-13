@@ -37,7 +37,7 @@ internal sealed class ExecutionEdges(RuleContext ctx, IReadOnlyList<CallableOwne
         SyntaxNode body)
     {
         var resolution = _values.Resolve(owner, value, body, kind);
-        foreach (var item in resolution.Work.Where(work => work.Kind == kind))
+        foreach (var item in resolution.Work.Where(work => work.RunsWhenForced(kind)))
             edges.Add(new CallEdge(owner, item.Target, item.Call, site, item.Bindings));
         if (!resolution.Resolved && KnownExecutionOperations.RequiresExecution(owner, value, kind))
             summary.Add(new EffectFact(EffectKind.Unknown, "unresolved deferred execution",

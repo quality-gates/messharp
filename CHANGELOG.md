@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Explicitness: an iterator reached through `Lazy<IEnumerable<T>>.Value` or a delegate is reported where it is iterated, not where it is created, and no longer adds an unresolved-deferred `UnknownEffect` (#247).
 - Explicitness: a `ref` argument is reported as a read only when the callee reads it, write-only `ref` aliases no longer report reads, and tuple swaps such as `(f, g) = (g, f)` resolve callables from before the assignment (#252).
 - Storage analysis of layered helpers that each call the next one twice no longer takes exponential time: call-memo keys cap the call-path scope at four frames and ignore cached call values that belong to other frames (#255).
 - Forget a Lazy factory that a definite rebinding replaces: constant `if (true)` and `?:` conditions, both arms of an if/else, and loops that always assign (part of #241; closure-captured rebinding is not covered).
