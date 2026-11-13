@@ -2,9 +2,9 @@ namespace MessSharp.Rules.Explicitness;
 
 internal sealed class StorageSequenceEdits(StorageCell cell)
 {
-    public void Apply(StorageMutation mutation, bool weak)
+    public void Apply(StorageMutation mutation, Certainty weak)
     {
-        if (weak) { Widen(); return; }
+        if (weak.IsPossible) { Widen(); return; }
         switch (mutation)
         {
             case StorageMutation.Remove remove:

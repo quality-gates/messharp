@@ -17,7 +17,7 @@ internal static class StorageCallMemo
 {
     private static readonly ConditionalWeakTable<SyntaxNode, Dictionary<string, StorageCallResult>> Results = new();
 
-    public static StorageCallResult For(StorageContext callee, CallableOwner target, bool weak, StorageEnvironment initial)
+    public static StorageCallResult For(StorageContext callee, CallableOwner target, Certainty weak, StorageEnvironment initial)
     {
         var results = Results.GetOrCreateValue(callee.Body);
         DropForeignCalls(callee, initial);
@@ -39,23 +39,19 @@ internal static class StorageCallMemo
             initial.Calls.Remove(key);
     }
 
-    private static StorageCallResult Run(StorageContext callee, CallableOwner target, bool weak, StorageEnvironment initial)
+    private static StorageCallResult Run(StorageContext callee, CallableOwner target, Certainty weak, StorageEnvironment initial)
     {
-        callee.Visiting.Add(target);
-        try
-        {
-            var flow = new StorageFlow(callee);
-            var final = flow.Before(callee.Body, initial, true);
-            var returned = StorageResults.Collect(callee.Body, flow, initial, final, weak);
-            return new StorageCallResult(returned, final.Heap, final.Deferred);
-        }
-        finally { callee.Visiting.Remove(target); }
+        using var active = callee.Visiting.Enter(target);
+        var flow = new StorageFlow(callee);
+        var final = flow.Before(callee.Body, initial, true);
+        var returned = StorageResults.Collect(callee.Body, flow, initial, final, weak);
+        return new StorageCallResult(returned, final.Heap, final.Deferred);
     }
 
-    private static string Key(StorageContext callee, bool weak, StorageEnvironment initial)
+    private static string Key(StorageContext callee, Certainty weak, StorageEnvironment initial)
     {
-        var visiting = string.Join(",", callee.Visiting.Select(InstanceKeys.For).Order(StringComparer.Ordinal));
-        var text = string.Join("|", callee.Scope, callee.Weak, weak, InstanceKeys.For(callee.Owner!),
+        var visiting = string.Join(",", callee.Visiting.Items.Select(InstanceKeys.For).Order(StringComparer.Ordinal));
+        var text = string.Join("|", callee.Scope, callee.Weak.IsPossible, weak.IsPossible, InstanceKeys.For(callee.Owner!),
             InstanceKeys.For(callee.Owners), visiting, StorageFingerprint.For(initial));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
     }

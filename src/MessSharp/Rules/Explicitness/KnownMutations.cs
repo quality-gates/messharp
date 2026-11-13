@@ -1,3 +1,5 @@
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+
 namespace MessSharp.Rules.Explicitness;
 
 internal static class KnownMutations
@@ -9,6 +11,9 @@ internal static class KnownMutations
     };
 
     public static bool IsMutation(string name) => Mutators.Contains(name);
+
+    public static bool IsCollectionMutation(CallableOwner owner, MemberAccessExpressionSyntax member) =>
+        IsCollectionMutation(owner, new SyntaxNodeCall(member.Expression, member.Name.Identifier.Text));
 
     public static bool IsCollectionMutation(CallableOwner owner, SyntaxNodeCall call)
     {

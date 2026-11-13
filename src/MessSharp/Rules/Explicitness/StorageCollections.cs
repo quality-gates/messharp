@@ -4,14 +4,14 @@ namespace MessSharp.Rules.Explicitness;
 
 internal sealed class StorageCollections(StorageContext context, Func<ExpressionSyntax, StorageOrigin> origin, StorageEnvironment state)
 {
-    public bool Mutate(InvocationExpressionSyntax call, bool weak)
+    public bool Mutate(InvocationExpressionSyntax call, Certainty weak)
     {
         if (call.Expression is not MemberAccessExpressionSyntax member || context.Owner is not { } owner
-            || !KnownMutations.IsCollectionMutation(owner, new SyntaxNodeCall(member.Expression, member.Name.Identifier.Text))) return false;
+            || !KnownMutations.IsCollectionMutation(owner, member)) return false;
         var name = member.Name.Identifier.Text;
         var receiver = origin(member.Expression);
         var mutation = Mutation(call, name) ?? new StorageMutation.Reorder();
-        state.Heap.Change(receiver, mutation, weak || IsRange(name));
+        state.Heap.Change(receiver, mutation, weak.OrIf(IsRange(name)));
         return true;
     }
 
@@ -22,7 +22,7 @@ internal sealed class StorageCollections(StorageContext context, Func<Expression
         if (StorageCollectionEdits.Find(call, name, origin) is { } edit) return edit;
         if (call.ArgumentList.Arguments.LastOrDefault() is not { } argument) return null;
         var value = origin(argument.Expression);
-        if (IsRange(name)) return new StorageMutation.Append(state.Heap.Read(value, StorageCell.AnyElement), context.Identity(call));
+        if (IsRange(name)) return new StorageMutation.Append(state.Heap.Read(value), context.Identity(call));
         return IsAppend(name) ? new StorageMutation.Append(value, context.Identity(call)) : null;
     }
 

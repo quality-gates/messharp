@@ -5,14 +5,14 @@ namespace MessSharp.Rules.Explicitness;
 
 internal static class StorageResults
 {
-    public static StorageOrigin Collect(SyntaxNode body, StorageFlow flow, StorageEnvironment initial, StorageEnvironment final, bool weak)
+    public static StorageOrigin Collect(SyntaxNode body, StorageFlow flow, StorageEnvironment initial, StorageEnvironment final, Certainty weak)
     {
         var returned = StorageOrigin.Private;
         foreach (var expression in Expressions(body))
         {
             var atReturn = flow.Before(expression, initial);
             returned = returned.Join(flow.Origin(expression, atReturn));
-            if (weak || expression.Parent is not YieldStatementSyntax) final.Heap.Join(atReturn.Heap);
+            if (weak.IsPossible || expression.Parent is not YieldStatementSyntax) final.Heap.Join(atReturn.Heap);
         }
         return returned;
     }

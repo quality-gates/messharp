@@ -10,11 +10,11 @@ internal sealed class ArgumentOwnership
 
     public ArgumentOwnership(SyntaxNode body, Func<ExpressionSyntax, string?> parameterName,
         CallableOwner? callableOwner = null, IReadOnlyList<CallableOwner>? callableOwners = null,
-        HashSet<CallableOwner>? visiting = null)
+        ActiveSet<CallableOwner>? visiting = null)
     {
         _parameterName = parameterName;
         _locations = new StorageLocations(new StorageContext(body, parameterName, callableOwner, callableOwners ?? [],
-            body.SpanStart.ToString(System.Globalization.CultureInfo.InvariantCulture), visiting ?? []));
+            body.SpanStart.ToString(System.Globalization.CultureInfo.InvariantCulture), visiting ?? new()));
     }
 
     public string? Resolve(ExpressionSyntax expression)

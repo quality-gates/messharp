@@ -14,7 +14,7 @@ internal sealed class StorageInitializers(StorageContext context, Func<Expressio
         {
             var value = initializer.Expressions[index];
             if (initializer.IsKind(SyntaxKind.ObjectInitializerExpression)) Member(receiver, value);
-            else state.Heap.Write(receiver, "[" + index + "]", origin(value), false);
+            else state.Heap.Write(receiver, "[" + index + "]", origin(value), Certainty.Definite);
         }
     }
 
@@ -27,7 +27,7 @@ internal sealed class StorageInitializers(StorageContext context, Func<Expressio
             ImplicitElementAccessSyntax element => StorageMembers.Index(element.ArgumentList),
             _ => null,
         };
-        if (slot is not null) state.Heap.Write(receiver, slot, origin(assignment.Right), false);
+        if (slot is not null) state.Heap.Write(receiver, slot, origin(assignment.Right), Certainty.Definite);
     }
 
     public void Apply(StorageOrigin receiver, CollectionExpressionSyntax collection)
@@ -35,10 +35,10 @@ internal sealed class StorageInitializers(StorageContext context, Func<Expressio
         foreach (var element in collection.Elements)
         {
             if (element is ExpressionElementSyntax item)
-                state.Heap.Change(receiver, new StorageMutation.Append(origin(item.Expression), context.Identity(item)), false);
+                state.Heap.Change(receiver, new StorageMutation.Append(origin(item.Expression), context.Identity(item)), Certainty.Definite);
             else if (element is SpreadElementSyntax spread)
                 state.Heap.Change(receiver, new StorageMutation.Append(
-                    state.Heap.Read(origin(spread.Expression), StorageCell.AnyElement), context.Identity(spread)), true);
+                    state.Heap.Read(origin(spread.Expression), StorageCell.AnyElement), context.Identity(spread)), Certainty.Possible);
         }
     }
 }

@@ -5,18 +5,18 @@ namespace MessSharp.RuleSet;
 
 /// <summary>
 /// Loads phpmd-format ruleset XML files into RuleSets.
-/// Mirrors messgo's ruleset.Loader.
+/// Mirrors messgo's ruleset.Loader. Settings are fixed when the loader is created.
 /// </summary>
 public sealed class Loader
 {
     /// <summary>Drop rules with priority > MinPriority (less important). 0 = no limit.</summary>
-    public int MinPriority { get; set; }
+    public int MinPriority { get; init; }
 
     /// <summary>Drop rules with priority &lt; MaxPriority (more important). 0 = no limit.</summary>
-    public int MaxPriority { get; set; } = 1;
+    public int MaxPriority { get; init; } = 1;
 
     /// <summary>Receives diagnostic messages about skipped/unknown rules.</summary>
-    public Action<string>? Warn { get; set; }
+    public Action<string>? Warn { get; init; }
 
     // Known ruleset short names -> XML file names relative to rulesets/ dir.
     internal static readonly Dictionary<string, string> BuiltinNames =

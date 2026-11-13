@@ -12,7 +12,7 @@ internal sealed class StorageEvaluations(StorageContext context, Func<Expression
         return value;
     });
 
-    public StorageOrigin? Invoke(InvocationExpressionSyntax call, bool weak) => Cached(call, () =>
+    public StorageOrigin? Invoke(InvocationExpressionSyntax call, Certainty weak) => Cached(call, () =>
     {
         var deferred = new StorageDeferred(context, origin, state);
         deferred.BeforeCall(call, weak);

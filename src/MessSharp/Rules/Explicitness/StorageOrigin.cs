@@ -15,6 +15,9 @@ internal sealed record StorageOrigin(IReadOnlySet<string> Outer, IReadOnlySet<st
     public IReadOnlySet<string> Deep { get; init; } = Deep;
     public IReadOnlySet<string> Objects { get; init; } = None;
 
+    /// <summary>A private value that is the one object <paramref name="identity"/>.</summary>
+    public static StorageOrigin Object(string identity) => Private with { Objects = new HashSet<string> { identity } };
+
     public static StorageOrigin Shared(string name) => new(new HashSet<string> { name }, new HashSet<string> { name }, None);
 
     public static StorageOrigin Holding(StorageOrigin elements) =>

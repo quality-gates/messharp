@@ -8,7 +8,7 @@ internal sealed class StorageReferences(StorageContext context, Func<ExpressionS
     /// <summary>The one slot of the shared object that stands for a static field's storage.</summary>
     private const string StaticSlot = ".value";
 
-    public bool Bind(SyntaxNode node, bool weak)
+    public bool Bind(SyntaxNode node, Certainty weak)
     {
         var binding = Binding(node);
         if (binding is null) return false;
@@ -19,7 +19,7 @@ internal sealed class StorageReferences(StorageContext context, Func<ExpressionS
             state.Bindings[name] = StorageOrigin.Unknown;
             return true;
         }
-        if (weak && state.References.TryGetValue(name, out var previous)) reference = previous.Join(reference);
+        if (weak.IsPossible && state.References.TryGetValue(name, out var previous)) reference = previous.Join(reference);
         state.References[name] = reference;
         state.Bindings.Remove(name);
         return true;
@@ -65,7 +65,7 @@ internal sealed class StorageReferences(StorageContext context, Func<ExpressionS
     private static bool Supports(CallableOwner owner, ExpressionSyntax expression, HashSet<ExpressionSyntax> visiting)
     {
         if (!visiting.Add(expression) || owner.Body is not { } body) return false;
-        var context = new StorageContext(body, expression => StorageCallBindings.Root(owner, expression), owner, [], "", []);
+        var context = new StorageContext(body, expression => StorageCallBindings.Root(owner, expression), owner, [], "", new());
         if (expression is IdentifierNameSyntax name && ExpressionTypes.Binding(name)?.Initializer?.Value is RefExpressionSyntax reference)
             return Supports(owner, reference.Expression, visiting);
         return new StorageReferences(context, _ => StorageOrigin.Private, new StorageEnvironment()).Target(expression) is not null;

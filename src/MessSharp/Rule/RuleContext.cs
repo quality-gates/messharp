@@ -12,10 +12,29 @@ public sealed class RuleContext
 
     public SourceFile File { get; }
     public Properties Props { get; }
-    public string CurrentPackage { get; set; }
+
+    /// <summary>Namespace of the declaration in focus; the file's namespace while a file-level rule runs.</summary>
+    public string CurrentPackage { get; private set; }
 
     /// <summary>Declaration the engine is currently applying a rule to; null for file-level rules.</summary>
-    internal SyntaxNode? Scope { get; set; }
+    internal SyntaxNode? Scope { get; private set; }
+
+    /// <summary>
+    /// The engine's only way to move the context: package and declaration always change together, so a rule never
+    /// sees the package of one declaration paired with the scope of another.
+    /// </summary>
+    internal void FocusOn(string package, SyntaxNode scope)
+    {
+        CurrentPackage = package;
+        Scope = scope;
+    }
+
+    /// <summary>Back to the whole file: no declaration, and the file's own namespace.</summary>
+    internal void FocusOnFile()
+    {
+        CurrentPackage = File.Namespace;
+        Scope = null;
+    }
 
     /// <summary>
     /// Parts of partial types across every analysed file, for rules whose
