@@ -8,6 +8,8 @@ internal static class StorageRoots
 
     public static string Static(string name) => StaticPrefix + name;
 
+    public static bool IsStatic(string root) => root.StartsWith(StaticPrefix, StringComparison.Ordinal);
+
     public static string Member(string name) => MemberPrefix + name;
 
     public static string Capture(string name, int owner) => CapturePrefix + owner + ":" + name;

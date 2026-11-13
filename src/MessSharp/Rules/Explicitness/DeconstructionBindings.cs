@@ -12,7 +12,19 @@ internal static class DeconstructionBindings
 {
     public static IEnumerable<StorageBinding> Assigned(AssignmentExpressionSyntax assignment, TupleExpressionSyntax tuple) =>
         Targets(tuple).Select(target =>
-            new StorageBinding(target.Identifier.Text, assignment, assignment.Span.End, Source(assignment, target)));
+            new StorageBinding(target.Identifier.Text, assignment, assignment.Span.End, Source(assignment, target))
+            { Simultaneous = Simultaneous(assignment, target) });
+
+    /// <summary>
+    /// The element a target takes when the right side reads a target written before it. Those reads see the values from
+    /// before the assignment, so a flow that rebinds targets one by one must evaluate it against its state from before the
+    /// first write.
+    /// </summary>
+    private static ExpressionSyntax? Simultaneous(AssignmentExpressionSyntax assignment, SyntaxNode target)
+    {
+        var value = Element(assignment.Right, Path(target, assignment.Left));
+        return value is not null && ReadsEarlierTarget(value, assignment.Left, target) ? value : null;
+    }
 
     public static IEnumerable<IdentifierNameSyntax> Targets(TupleExpressionSyntax tuple) =>
         tuple.Arguments.SelectMany(argument => argument.Expression switch
@@ -31,8 +43,7 @@ internal static class DeconstructionBindings
     public static BindingSource Source(AssignmentExpressionSyntax assignment, SyntaxNode target)
     {
         var value = Element(assignment.Right, Path(target, assignment.Left));
-        return value is null || ReadsEarlierTarget(value, assignment.Left, target)
-            ? new BindingSource.Unknown() : new BindingSource.Value(value);
+        return value is null ? new BindingSource.Unknown() : new BindingSource.Value(value);
     }
 
     private static List<int> Path(SyntaxNode target, SyntaxNode left)
