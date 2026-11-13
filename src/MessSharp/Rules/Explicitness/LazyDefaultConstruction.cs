@@ -27,6 +27,8 @@ internal static class LazyDefaultConstruction
         if (ConstructorCall.Resolve(owners, creation, element) is { } constructor)
             return new DeferredResolution([new DeferredWork(DeferredKind.Lazy, constructor.Target,
                 constructor.Invocation, new Dictionary<string, StorageOrigin>())], true);
+        if (ConstructorTypes.ImplicitlyConstructed(owner, element, creation) is { } cls)
+            return ImplicitInitializers.Resolve(owners, cls);
         return new DeferredResolution([], IsScalar(owner, element) || ConstructorDefaults.IsEmpty(owner, element, creation));
     }
 
