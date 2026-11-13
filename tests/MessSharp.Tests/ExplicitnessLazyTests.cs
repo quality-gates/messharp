@@ -274,4 +274,38 @@ public class ExplicitnessLazyTests
             """);
         Assert.Empty(findings);
     }
+
+    [Theory]
+    [InlineData("Probe.Read()", "ImplicitInput")]
+    [InlineData("Probe.Seven()", null)]
+    public void InstanceLazyFieldReadThroughAnotherReceiverTransfersItsFactory(string body, string? rule)
+    {
+        var findings = Analyze($$"""
+            using System;
+            class Holder {
+             public readonly Lazy<int> cell = new Lazy<int>(() =>
+              {{body}});
+            }
+            class Probe {
+             public static int Read() {
+              return Console.Read();
+             }
+             public static int Seven() {
+              return 7;
+             }
+             static int Run() {
+              var h = new Holder();
+              return h.cell.Value;
+             }
+            }
+            """);
+        var run = findings.Where(f => f.Method == "Run").ToList();
+        if (rule is null) Assert.Empty(run);
+        else
+        {
+            var found = Assert.Single(run);
+            Assert.Equal(rule, found.Rule.Name);
+            Assert.Equal(15, found.BeginLine);
+        }
+    }
 }
