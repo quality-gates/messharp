@@ -66,8 +66,17 @@ internal sealed class DeclarationFlow(SyntaxNode body, DeferredDeclarations decl
     {
         var name = DeferredDeclarations.Name(declaration);
         return _bindings.All.Where(b => b.Name == name && declarations.IsWrittenBy(b.Node, declaration))
-            .Concat(MemberWrites(name, declaration)).OrderBy(b => b.Position);
+            .Concat(MemberWrites(name, declaration)).Concat(ClosureWrites(name, declaration)).OrderBy(b => b.Position);
     }
+
+    /// <summary>Writes by closures the body invokes, ordered at each invocation.</summary>
+    private IEnumerable<StorageBinding> ClosureWrites(string name, SyntaxNode declaration) => body.DescendantNodes()
+        .OfType<AssignmentExpressionSyntax>()
+        .Where(a => declarations.IsWrittenBy(a, declaration))
+        .Select(a => InvokedClosures.Find(body, a))
+        .OfType<ClosureWrite>()
+        .SelectMany(write => write.Sites.Select(site =>
+            new StorageBinding(name, site, site.Span.End, new BindingSource.Value(write.Value), Scope: body)));
 
     private IEnumerable<StorageBinding> MemberWrites(string name, SyntaxNode declaration) => BodyWalk.Nodes(body)
         .OfType<AssignmentExpressionSyntax>()
