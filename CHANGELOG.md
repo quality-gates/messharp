@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Report a caller's implicit output when a captured alias is changed through an intermediate local function that never mentions the alias (#260).
 - Warn through `Loader.Warn` (shown with `--verbose`) when a same-named rule from an earlier comma-separated ruleset is replaced by a later one; last-wins selection and in-ruleset overrides are unchanged (#169).
 - Report iterator effects when sequences are consumed by `Contains`, spread, list construction, or `AddRange`.
 - Group interleaved violations by file in XML, HTML, JSON, and Checkstyle reports, and combine Checkstyle processing errors with their file's findings.
