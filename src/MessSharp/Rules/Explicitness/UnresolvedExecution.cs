@@ -18,12 +18,19 @@ internal static class UnresolvedExecution
         RefExpressionSyntax reference when !RefAliasCache.For(owner.Body!).Initializes(reference)
             && !StorageReferences.Supports(owner, reference.Expression) => "reference location",
         AssignmentExpressionSyntax assignment when CapturedAssignments.IsRebinding(owner, assignment) => "captured binding overwrite",
+        _ when Dispatch(owner, node) is { } dispatch => dispatch,
+        _ when OperatorDispatch.RequiresExecution(owner, node) => "operator dispatch",
+        _ => null,
+    };
+
+    private static string? Dispatch(CallableOwner owner, SyntaxNode node) => node switch
+    {
         IdentifierNameSyntax name when PropertyDispatch.IsBare(owner, name) => "property access '" + name + "'",
         MemberAccessExpressionSyntax member when PropertyDispatch.IsMember(owner, member) => "property access '" + member + "'",
         MemberBindingExpressionSyntax member when PropertyDispatch.IsConditional(owner, member) => "conditional property access '" + member + "'",
+        SubpatternSyntax pattern when PropertyDispatch.IsPattern(owner, pattern) => "property pattern 'Value'",
         ElementAccessExpressionSyntax element when PropertyDispatch.IsIndexer(owner, element.Expression) => "indexer dispatch",
         ElementBindingExpressionSyntax element when ConditionalIndexer(owner, element) => "conditional indexer dispatch",
-        _ when OperatorDispatch.RequiresExecution(owner, node) => "operator dispatch",
         _ => null,
     };
 

@@ -25,7 +25,7 @@ internal sealed class ExecutionEdges(RuleContext ctx, IReadOnlyList<CallableOwne
         }
     }
 
-    private static ExpressionSyntax? LazyReceiver(SyntaxNode node) => node switch
+    private static ExpressionSyntax? LazyReceiver(SyntaxNode node) => PatternReceivers.ValueReceiver(node) ?? node switch
     {
         MemberAccessExpressionSyntax member when member.Name.Identifier.Text == "Value" => member.Expression,
         MemberBindingExpressionSyntax member when member.Name.Identifier.Text == "Value" =>
