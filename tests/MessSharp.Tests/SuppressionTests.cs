@@ -731,6 +731,77 @@ public class Outer
     }
 
     [Fact]
+    public void Engine_OuterTypeSuppression_CoversNestedTypeMethods()
+    {
+        const string source = @"
+using System.Diagnostics.CodeAnalysis;
+
+[SuppressMessage(""MessSharp"", ""UnusedLocalVariable"")]
+public class Outer {
+    public class Inner {
+        public void M() { int unused = 1; }
+    }
+}";
+        var violations = Engine.Analyze(ModelBuilder.Parse("nested.cs", source),
+            new[] { MakeUnusedLocalVariableSet() }, strict: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Engine_CommentBeforeNamespace_DoesNotSuppressTypesInside()
+    {
+        const string source = @"
+using System;
+// @SuppressWarnings(PHPMD.UnusedLocalVariable)
+namespace N {
+    public class C { public void M() { int unused = 1; } }
+}";
+        var violations = Engine.Analyze(ModelBuilder.Parse("ns.cs", source),
+            new[] { MakeUnusedLocalVariableSet() }, strict: false);
+        Assert.Single(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedMultiDeclarationLine_SuppressesEveryNameOnTheLine()
+    {
+        const string source = @"
+public class C {
+    // @SuppressWarnings(PHPMD.ShortVariable)
+    public int a, b; public int c;
+}";
+        var rule = new ShortVariableRule
+        {
+            Name = "ShortVariable",
+            Message = "{0}",
+            Priority = 3,
+            SetName = "naming",
+            ExternalUrl = "",
+            Description = "",
+            Since = "0.1",
+            RuleProps = new Properties(null),
+        };
+        var violations = Engine.Analyze(ModelBuilder.Parse("multi.cs", source), new IRule[] { rule }, strict: false);
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void Engine_SuppressedSiblingMember_DoesNotSuppressOtherMember()
+    {
+        const string source = @"
+using System.Diagnostics.CodeAnalysis;
+
+public class C {
+    [SuppressMessage(""MessSharp"", ""UnusedLocalVariable"")]
+    public void Quiet() { int a1 = 1; }
+    public void Loud() { int b2 = 1; }
+}";
+        var violations = Engine.Analyze(ModelBuilder.Parse("sib.cs", source),
+            new[] { MakeUnusedLocalVariableSet() }, strict: false);
+        var v = Assert.Single(violations);
+        Assert.Equal("b2", v.Args[0]);
+    }
+
+    [Fact]
     public void Engine_NestedClassWithoutSuppression_ReportedWhenNotStrict()
     {
         var sf = ModelBuilder.Parse("nested.cs", NestedClassUnsuppressedSource);

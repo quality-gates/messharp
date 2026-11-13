@@ -61,13 +61,17 @@ public static class Engine
     private static void ApplyRule(RuleContext ctx, IRule rule, SourceFile file)
     {
         if (rule is IFileRule fr)
+        {
+            ctx.Scope = null;
             fr.Apply(ctx);
+        }
 
         if (rule is IClassRule cr)
         {
             foreach (var cls in file.Classes)
             {
                 ctx.CurrentPackage = cls.Namespace;
+                ctx.Scope = cls.Node;
                 cr.Apply(ctx, cls);
             }
         }
@@ -77,6 +81,7 @@ public static class Engine
             foreach (var iface in file.Interfaces)
             {
                 ctx.CurrentPackage = iface.Namespace;
+                ctx.Scope = iface.Node;
                 ir.Apply(ctx, iface);
             }
         }
@@ -96,6 +101,7 @@ public static class Engine
         foreach (var m in file.AllMethods)
         {
             ctx.CurrentPackage = m.Namespace;
+            ctx.Scope = m.Node;
             mr.Apply(ctx, m);
         }
 
@@ -103,7 +109,10 @@ public static class Engine
         {
             ctx.CurrentPackage = iface.Namespace;
             foreach (var m in iface.Methods)
+            {
+                ctx.Scope = m.Node;
                 mr.Apply(ctx, m);
+            }
         }
     }
 }
