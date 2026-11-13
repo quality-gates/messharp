@@ -14,14 +14,22 @@ internal sealed class DeclarationFlow(SyntaxNode body, DeferredDeclarations decl
 
     public List<DeferredSource> Reaching(SyntaxNode declaration, SyntaxNode reference)
     {
-        var values = DeferredBindingSources.Initial(declaration).ToList();
-        foreach (var binding in Writing(declaration).Where(b => _bindings.Reaches(b, reference)))
+        var killed = Replacement(declaration, reference);
+        var values = killed is null ? DeferredBindingSources.Initial(declaration).ToList() : [];
+        foreach (var binding in Writing(declaration).Where(b => _bindings.Reaches(b, reference) && Survives(b, killed, reference)))
         {
             RemoveReplaced(values, binding);
             values.AddRange(DeferredBindingSources.Stored(binding));
         }
         return values;
     }
+
+    private SyntaxNode? Replacement(SyntaxNode declaration, SyntaxNode reference) =>
+        _bindings.HasJumps || declaration is not (VariableDeclaratorSyntax or ParameterSyntax) ? null
+            : new DefiniteAssignment(node => declarations.IsWrittenBy(node, declaration)).LatestBefore(body, reference);
+
+    private static bool Survives(StorageBinding binding, SyntaxNode? killed, SyntaxNode reference) =>
+        killed is null || (binding.Position >= killed.SpanStart && binding.Position < reference.SpanStart);
 
     /// <summary>Every value a callee can leave in <paramref name="parameter"/> when it returns.</summary>
     public IReadOnlyList<DeferredSource> Exit(ParameterSyntax parameter)
