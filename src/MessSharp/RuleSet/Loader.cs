@@ -19,7 +19,7 @@ public sealed class Loader
     public Action<string>? Warn { get; set; }
 
     // Known ruleset short names -> XML file names relative to rulesets/ dir.
-    private static readonly Dictionary<string, string> BuiltinNames =
+    internal static readonly Dictionary<string, string> BuiltinNames =
         new(StringComparer.OrdinalIgnoreCase)
         {
             ["cleancode"] = "cleancode.xml",
@@ -48,7 +48,7 @@ public sealed class Loader
         return sets;
     }
 
-    private byte[] ReadRuleset(string ident)
+    internal byte[] ReadRuleset(string ident)
     {
         if (BuiltinNames.TryGetValue(ident, out var filename))
         {
@@ -72,7 +72,7 @@ public sealed class Loader
 
     public Loader()
     {
-        _refResolver = new RuleRefResolver(ReadRuleset, BuildRule, AppendIfNotNull, BuiltinNames);
+        _refResolver = new RuleRefResolver(this);
     }
 
     private void AddRule(RuleSetType set, string setName, XmlRule xr)
@@ -81,7 +81,7 @@ public sealed class Loader
         if (!string.IsNullOrEmpty(xr.Class)) { AppendIfNotNull(set, BuildRule(setName, xr, xr)); }
     }
 
-    private IRule? BuildRule(string setName, XmlRule def, XmlRule ov)
+    internal IRule? BuildRule(string setName, XmlRule def, XmlRule ov)
     {
         if (string.IsNullOrEmpty(def.Class)) return null;
         var rule = RuleFactory.Create(def.Class!);
@@ -98,7 +98,7 @@ public sealed class Loader
             WarnMsg($"Invalid priority '{raw}' for rule '{def.Name ?? ov.Name ?? "(unnamed)"}'; using priority 0");
     }
 
-    private void AppendIfNotNull(RuleSetType set, IRule? rule)
+    internal void AppendIfNotNull(RuleSetType set, IRule? rule)
     {
         if (rule is not BaseRule br) return;
         if (MinPriority > 0 && br.Priority > MinPriority) return;

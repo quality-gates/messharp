@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Remove the unused `Rules.Registry` and replace the delegate callbacks of `RuleRefResolver` with a direct `Loader` dependency (#162).
 - Strengthen explicitness regression tests to preserve distinct findings and detect duplicate records.
 - Cache parsed rule property lists, sets, and culture-aware regular expressions for reuse during analysis. Cache entries persist for the lifetime of each properties instance.
 - Replace the public `RuleContext.CompileRegex` method with `Properties.Regex`.
