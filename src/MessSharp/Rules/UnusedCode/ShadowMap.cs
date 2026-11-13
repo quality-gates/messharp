@@ -11,14 +11,14 @@ namespace MessSharp.Rules.UnusedCode;
 /// </summary>
 internal sealed class ShadowMap
 {
-    private readonly Dictionary<string, List<SyntaxNode>> _declarations;
+    private readonly Dictionary<string, HashSet<SyntaxNode>> _declarations;
 
-    private ShadowMap(Dictionary<string, List<SyntaxNode>> declarations) =>
+    private ShadowMap(Dictionary<string, HashSet<SyntaxNode>> declarations) =>
         _declarations = declarations;
 
     public static ShadowMap From(SyntaxNode root)
     {
-        var declarations = new Dictionary<string, List<SyntaxNode>>(StringComparer.Ordinal);
+        var declarations = new Dictionary<string, HashSet<SyntaxNode>>(StringComparer.Ordinal);
         foreach (var node in root.DescendantNodes())
             AddDeclaration(node, declarations);
         return new ShadowMap(declarations);
@@ -32,17 +32,17 @@ internal sealed class ShadowMap
     {
         if (!_declarations.TryGetValue(identifier.Identifier.Text, out var scopes))
             return false;
-        return scopes.Any(scope => scope.Span.Contains(identifier.Span));
+        return identifier.Ancestors().Any(scopes.Contains);
     }
 
-    private static void AddDeclaration(SyntaxNode node, Dictionary<string, List<SyntaxNode>> declarations)
+    private static void AddDeclaration(SyntaxNode node, Dictionary<string, HashSet<SyntaxNode>> declarations)
     {
         var (name, scope) = ScopeOf(node);
         if (scope is null) return;
 
         if (!declarations.TryGetValue(name, out var scopes))
         {
-            scopes = new List<SyntaxNode>();
+            scopes = new HashSet<SyntaxNode>();
             declarations[name] = scopes;
         }
         scopes.Add(scope);

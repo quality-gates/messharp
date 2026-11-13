@@ -1792,4 +1792,30 @@ public partial class Gauge
             vs.Any(v => v.Rule.Name == "UnusedFormalParameter"),
             $"Unexpected UnusedFormalParameter ({reason}): {string.Join(", ", vs.Select(v => v.Description))}");
     }
+
+    [Fact]
+    public void UnusedPrivateMembers_ManyClassesSharingAParameterName_StaysLinearish()
+    {
+        var source = string.Join('\n', Enumerable.Range(0, 1500)
+            .Select(i => $"public class C{i} {{ private int _f{i}; public int F(int value) => value; }}"));
+
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var violations = Analyze(source);
+        watch.Stop();
+
+        Assert.Equal(1500, violations.Count(v => v.Rule.Name == "UnusedPrivateField"));
+        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(20), $"took {watch.Elapsed}");
+    }
+
+    [Fact]
+    public void UnusedPrivateField_UsedInAnotherClassOfTheSameFile_IsStillReportedPerClass()
+    {
+        var violations = Analyze("""
+            public class A { private int _a; public int F(int value) => value; }
+            public class B { private int _b; public int G() => _b; }
+            """);
+
+        Assert.Single(violations, v => v.Rule.Name == "UnusedPrivateField");
+        Assert.Contains(violations, v => v.Rule.Name == "UnusedPrivateField" && v.Description.Contains("_a"));
+    }
 }

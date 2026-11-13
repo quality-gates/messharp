@@ -1,5 +1,6 @@
 using MessSharp.Model;
 using MessSharp.Rule;
+using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -21,20 +22,35 @@ internal static class UsedMemberNames
     /// lexically bound to a local variable or parameter that shadows the
     /// member name.
     /// </summary>
-    public static HashSet<string> Collect(RuleContext ctx, ClassModel cls)
+    public static IReadOnlyList<IReadOnlySet<string>> Collect(RuleContext ctx, ClassModel cls)
     {
-        var used = new HashSet<string>(StringComparer.Ordinal);
-        CollectUsedNames(ctx.File.Root, used);
+        var sets = new List<IReadOnlySet<string>> { UsedIn(ctx.File.Root) };
         foreach (var part in ctx.Partials.PartsInOtherFiles(cls))
-            CollectUsedNames(part.Node, used);
-        return used;
+            sets.Add(UsedIn(part.Node));
+        return sets;
     }
 
-    private static void CollectUsedNames(SyntaxNode root, HashSet<string> used)
+    /// <summary>True when any collected set contains <paramref name="name"/>.</summary>
+    public static bool Contains(this IReadOnlyList<IReadOnlySet<string>> used, string name)
     {
+        foreach (var set in used)
+            if (set.Contains(name)) return true;
+        return false;
+    }
+
+    // Names read by a syntax tree never change, so every class and both rules share one scan per root.
+    // Keyed by node identity, so nothing carries over between files or analyses.
+    private static readonly ConditionalWeakTable<SyntaxNode, HashSet<string>> Scans = new();
+
+    private static HashSet<string> UsedIn(SyntaxNode root) => Scans.GetValue(root, Scan);
+
+    private static HashSet<string> Scan(SyntaxNode root)
+    {
+        var used = new HashSet<string>(StringComparer.Ordinal);
         var shadowed = ShadowMap.From(root);
         foreach (var node in root.DescendantNodes())
             CollectUsedNode(node, shadowed, used);
+        return used;
     }
 
     private static void CollectUsedNode(SyntaxNode node, ShadowMap shadowed, HashSet<string> used)

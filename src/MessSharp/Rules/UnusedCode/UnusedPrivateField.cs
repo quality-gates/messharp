@@ -13,11 +13,11 @@ public sealed class UnusedPrivateFieldRule : BaseRule, IClassRule
 {
     public void Apply(RuleContext ctx, ClassModel cls)
     {
+        var candidates = cls.Fields.Where(field => field.IsPrivate && field.Name != "_").ToList();
+        if (candidates.Count == 0) return;
         var used = UsedMemberNames.Collect(ctx, cls);
-        foreach (var field in cls.Fields)
+        foreach (var field in candidates)
         {
-            if (!field.IsPrivate) continue;
-            if (field.Name == "_") continue;
             if (used.Contains(field.Name)) continue;
             ctx.ReportField(cls, field, field.Name);
         }

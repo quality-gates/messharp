@@ -12,12 +12,13 @@ public sealed class UnusedPrivateMethodRule : BaseRule, IClassRule
 {
     public void Apply(RuleContext ctx, ClassModel cls)
     {
+        var candidates = cls.Methods
+            .Where(method => method.IsPrivate && !method.IsExplicitInterfaceImplementation && !method.IsConstructor)
+            .ToList();
+        if (candidates.Count == 0) return;
         var used = UsedMemberNames.Collect(ctx, cls);
-        foreach (var method in cls.Methods)
+        foreach (var method in candidates)
         {
-            if (!method.IsPrivate) continue;
-            if (method.IsExplicitInterfaceImplementation) continue;
-            if (method.IsConstructor) continue;
             if (used.Contains(method.Name)) continue;
             ctx.ReportMethod(method, method.Name);
         }
