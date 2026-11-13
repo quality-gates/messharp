@@ -31,7 +31,7 @@ internal static class BodyAnalysis
     /// </summary>
     internal static HashSet<string> IdentReads(SyntaxNode body, Func<IdentifierNameSyntax, bool> isExcluded)
     {
-        var writes = WriteIdentCollector.Collect(body);
+        var writes = MutationClassifier.Identifiers(body, pureWritesOnly: true).ToHashSet<SyntaxNode>(ReferenceEqualityComparer.Instance);
         var reads = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var node in body.DescendantNodesAndSelf())
@@ -89,34 +89,7 @@ internal static class BodyAnalysis
     /// Collects the set of identifier names that are written to as assignment targets
     /// (including tuple deconstruction targets) or passed as `out` arguments in a syntax node.
     /// </summary>
-    internal static HashSet<string> IdentWrites(SyntaxNode body)
-    {
-        var writes = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var node in body.DescendantNodesAndSelf())
-            CollectWrite(node, writes);
-        return writes;
-    }
-
-    private static void CollectWrite(SyntaxNode node, HashSet<string> writes)
-    {
-        switch (node)
-        {
-            case AssignmentExpressionSyntax { Left: IdentifierNameSyntax lhsId }:
-                writes.Add(lhsId.Identifier.Text);
-                break;
-
-            // (x, y) = (1, 2); writes every identifier target in the tuple.
-            case AssignmentExpressionSyntax { Left: TupleExpressionSyntax tuple }:
-                foreach (var id in WriteIdentCollector.TupleTargetIdents(tuple))
-                    writes.Add(id.Identifier.Text);
-                break;
-
-            case ArgumentSyntax { Expression: IdentifierNameSyntax outId } arg
-                when arg.RefOrOutKeyword.IsKind(SyntaxKind.OutKeyword):
-                writes.Add(outId.Identifier.Text);
-                break;
-        }
-    }
+    internal static HashSet<string> IdentWrites(SyntaxNode body) => MutationClassifier.CollectWrittenNames(body, pureWritesOnly: false);
 
     /// <summary>
     /// Declared local (name, line) pairs from a body node: every declaration the
