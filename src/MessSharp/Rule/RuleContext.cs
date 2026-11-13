@@ -1,6 +1,5 @@
 using MessSharp.Model;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rule;
 
@@ -46,7 +45,7 @@ public sealed class RuleContext
     }
 
     public void Report(int beginLine, int endLine, params object[] args) =>
-        AppendViolation(DeclarationAt(beginLine), beginLine, endLine, "", "", "", CurrentPackage, args);
+        AppendViolation(DeclarationLocator.Find(Scope ?? File.Root, beginLine), beginLine, endLine, "", "", "", CurrentPackage, args);
 
     public void ReportMethod(MethodModel method, params object[] args) =>
         AppendViolation(method.Node, method.Line, method.EndLine,
@@ -69,24 +68,6 @@ public sealed class RuleContext
 
     public void ReportInterface(InterfaceModel iface, params object[] args) =>
         AppendViolation(iface.Node, iface.Line, iface.EndLine, iface.Name, "", "", iface.Namespace, args);
-
-    /// <summary>
-    /// The innermost member declaration within the current scope that spans the
-    /// line, so a bare line report is suppressed by the member that contains it.
-    /// </summary>
-    private SyntaxNode DeclarationAt(int line)
-    {
-        var scope = Scope ?? File.Root;
-        SyntaxNode best = scope;
-        foreach (var node in scope.DescendantNodes())
-        {
-            if (node is not (MemberDeclarationSyntax or AccessorDeclarationSyntax)) continue;
-            var span = node.SyntaxTree.GetLineSpan(node.Span);
-            if (line < span.StartLinePosition.Line + 1 || line > span.EndLinePosition.Line + 1) continue;
-            best = node;
-        }
-        return best;
-    }
 
     private void AppendViolation(SyntaxNode node, int beginLine, int endLine,
         string cls, string method, string function, string package, object[] args)
