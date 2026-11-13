@@ -8,8 +8,12 @@ namespace MessSharp.Rules.Explicitness;
 /// Finds the declaration a reference reads: a local, an out or pattern variable, a parameter of the
 /// reading owner, or a field or auto-property of its class.
 /// </summary>
-internal sealed class DeferredDeclarations(CallableOwner owner)
+internal sealed class DeferredDeclarations(CallableOwner owner, IReadOnlyList<CallableOwner>? owners = null)
 {
+    /// <summary>Whether <paramref name="node"/> passes storage to a resolved callee that always overwrites it.</summary>
+    public bool Overwrites(SyntaxNode node) =>
+        owners is not null && node is ArgumentSyntax argument && DeferredArgumentExits.Overwrites(owners, owner, argument);
+
     public SyntaxNode? Find(ExpressionSyntax reference) => reference switch
     {
         IdentifierNameSyntax name => Identifier(name),

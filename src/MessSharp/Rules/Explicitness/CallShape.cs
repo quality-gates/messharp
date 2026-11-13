@@ -9,11 +9,12 @@ namespace MessSharp.Rules.Explicitness;
 /// What a call supplies to the callable it names: an argument count for a delegate conversion, or an argument list
 /// whose positions, names, <c>ref</c> kinds and literals rule out overloads that cannot accept it. When several
 /// overloads remain, one needing no default or <c>params</c> expansion wins only if every other takes the supplied
-/// arguments at the same parameter types; otherwise the call stays unresolved.
+/// arguments at the same parameter types; otherwise the call stays unresolved. An overload that reads an argument
+/// through an <c>in</c> parameter the call did not mark loses to one that takes the argument by value.
 /// </summary>
 internal sealed record CallShape(int Count, IReadOnlyList<ArgumentSyntax>? Arguments = null)
 {
-    private sealed record Candidate(CallableOwner Owner, bool Exact, IReadOnlyList<string> Types);
+    private sealed record Candidate(CallableOwner Owner, bool Exact, IReadOnlyList<string> Types, bool ViaIn = false);
 
     public static CallShape From(ArgumentListSyntax list) => new(list.Arguments.Count, list.Arguments);
 
@@ -21,6 +22,7 @@ internal sealed record CallShape(int Count, IReadOnlyList<ArgumentSyntax>? Argum
     public CallableOwner? Best(IEnumerable<CallableOwner> candidates, int receivers = 0)
     {
         var fits = candidates.Select(owner => Match(owner, receivers)).OfType<Candidate>().ToList();
+        if (fits.Any(candidate => !candidate.ViaIn)) fits.RemoveAll(candidate => candidate.ViaIn);
         if (fits.Count == 1) return fits[0].Owner;
         var exact = fits.Where(candidate => candidate.Exact).ToList();
         return exact.Count == 1 && fits.All(candidate => candidate.Types.SequenceEqual(exact[0].Types)) ? exact[0].Owner : null;
@@ -37,7 +39,9 @@ internal sealed record CallShape(int Count, IReadOnlyList<ArgumentSyntax>? Argum
         var omitted = parameters.Where((_, index) => !mapped.Contains(index)).ToList();
         if (!omitted.All(IsOptional)) return null;
         var exact = omitted.Count == 0 && Arguments.Count == parameters.Count && !parameters.Any(IsParams);
-        return new(owner, exact, mapped.Select(index => parameters[index].Type).ToList());
+        var viaIn = mapped.Where((index, position) => parameters[index].Node.Modifiers.Any(SyntaxKind.InKeyword)
+            && Arguments[position].RefKindKeyword.IsKind(SyntaxKind.None)).Any();
+        return new(owner, exact, mapped.Select(index => parameters[index].Type).ToList(), viaIn);
     }
 
     private static IEnumerable<ParameterModel> Own(CallableOwner owner) => owner.Parent is null

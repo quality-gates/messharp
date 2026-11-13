@@ -9,7 +9,7 @@ namespace MessSharp.Rules.Explicitness;
 /// </summary>
 internal sealed class DeferredValueBindings(CallableOwner owner, SyntaxNode body, IReadOnlyList<CallableOwner> owners)
 {
-    private readonly DeferredDeclarations _declarations = new(owner);
+    private readonly DeferredDeclarations _declarations = new(owner, owners);
 
     public IReadOnlyList<DeferredSource>? Values(ExpressionSyntax reference)
     {

@@ -36,13 +36,22 @@ internal sealed class DeclarationFlow(SyntaxNode body, DeferredDeclarations decl
     {
         List<DeferredSource> values = parameter.Modifiers.Any(SyntaxKind.OutKeyword)
             ? [] : [.. DeferredBindingSources.Initial(parameter)];
-        values.AddRange(Writing(parameter).SelectMany(DeferredBindingSources.Stored));
+        foreach (var binding in Writing(parameter))
+        {
+            RemoveReplaced(values, binding);
+            values.AddRange(DeferredBindingSources.Stored(binding));
+        }
         return values;
     }
 
+    /// <summary>A <c>ref</c> argument is skipped unless the callee it reaches always overwrites it.</summary>
+    private bool MayBeSkipped(StorageBinding binding) =>
+        binding.Joins && declarations.Overwrites(binding.Node)
+            ? _bindings.MayBeSkipped(binding.Node) : _bindings.MayBeSkipped(binding);
+
     private void RemoveReplaced(List<DeferredSource> values, StorageBinding binding)
     {
-        if (!_bindings.MayBeSkipped(binding))
+        if (!MayBeSkipped(binding))
         {
             values.Clear();
             return;

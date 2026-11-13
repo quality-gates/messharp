@@ -17,4 +17,14 @@ internal static class DeferredArgumentExits
         var sources = new DeclarationFlow(body, new DeferredDeclarations(target)).Exit(parameter);
         return new DeferredExit(context.Bind(target, call, body), sources);
     }
+
+    /// <summary>Whether the resolved callee always writes the <c>ref</c> argument, so its earlier value is lost.</summary>
+    public static bool Overwrites(IReadOnlyList<CallableOwner> owners, CallableOwner caller, ArgumentSyntax argument)
+    {
+        if (argument.Parent?.Parent is not InvocationExpressionSyntax call
+            || new CallResolver(owners).Resolve(caller, call) is not { Body: { } body } target
+            || DeclaredParameters.Bound(target, call, argument) is not { } parameter) return false;
+        var exit = new DeclarationFlow(body, new DeferredDeclarations(target)).Exit(parameter);
+        return exit.Count > 0 && !exit.OfType<DeferredSource.Entry>().Any();
+    }
 }
