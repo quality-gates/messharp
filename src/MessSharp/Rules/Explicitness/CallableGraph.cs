@@ -50,7 +50,11 @@ internal sealed class CallableGraph
 /// </summary>
 internal sealed record CallEdge(CallableOwner Caller, CallableOwner Target, InvocationExpressionSyntax Call,
     SyntaxNode? ExecutionSite = null, IReadOnlyDictionary<string, StorageOrigin>? Bindings = null,
-    IReadOnlyDictionary<string, ExpressionSyntax>? Actuals = null)
+    IReadOnlyDictionary<string, ExpressionSyntax>? Actuals = null, DeferredValueContext? Frame = null)
 {
     public SyntaxNode Site => ExecutionSite ?? Call;
+
+    /// <summary>The edge along which deferred work this edge's caller resolved runs.</summary>
+    public CallEdge Through(DeferredWork work) =>
+        new(Caller, work.Target, work.Call, Site, work.Bindings, Frame: work.Frame);
 }

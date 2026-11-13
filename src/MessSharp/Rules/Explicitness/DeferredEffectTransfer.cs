@@ -1,5 +1,6 @@
 using MessSharp.Model;
 using MessSharp.Rule;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MessSharp.Rules.Explicitness;
 
@@ -11,21 +12,17 @@ internal sealed class DeferredEffectTransfer(
 {
     public IEnumerable<EffectFact> Map(EffectFact fact)
     {
-        if (fact.Deferred is not { } execution
-            || !edge.Target.Method.Parameters.Any(parameter => parameter.Name == execution.ParameterName)
-            || CallArguments.Actual(edge, execution.ParameterName) is not { } actual
-            || edge.Caller.Body is not { } body) return [fact];
-        var resolved = new DeferredValueResolver(ctx, owners).Resolve(edge.Caller, actual, body, execution.Kind);
-        var effects = resolved.Work.Where(work => work.Kind == execution.Kind).SelectMany(MapWork).ToList();
-        if (!resolved.Resolved)
-            effects.Add(fact with { Deferred = DeferredExecution.From(resolved, execution.Kind) });
+        if (fact.Deferred is not { } execution || new ParameterEntry(ctx, edge, owners).Resolve(execution) is not { } resolved) return [fact];
+        var effects = resolved.Work.Where(work => work.Kind == execution.Kind).Select(edge.Through).SelectMany(MapWork).ToList();
+        if (!resolved.Resolved) effects.Add(fact with { Deferred = execution.Residual(resolved) });
         return effects;
     }
 
-    private IEnumerable<EffectFact> MapWork(DeferredWork work)
+    private IEnumerable<EffectFact> MapWork(CallEdge executionEdge)
     {
-        var executionEdge = new CallEdge(edge.Caller, work.Target, work.Call, edge.Site, work.Bindings);
-        var transfer = new EffectTransfer(ctx, executionEdge, owners, fact => [fact with { Deferred = null }]);
-        return summary(work.Target.Method).Facts.SelectMany(fact => transfer.Map(fact.Key));
+        var nested = new DeferredEffectTransfer(ctx, executionEdge, owners, summary);
+        var transfer = new EffectTransfer(ctx, executionEdge, owners,
+            fact => (fact.Deferred is null ? [fact] : nested.Map(fact)).Select(item => item with { Deferred = null }));
+        return summary(executionEdge.Target.Method).Facts.SelectMany(fact => transfer.Map(fact.Key));
     }
 }

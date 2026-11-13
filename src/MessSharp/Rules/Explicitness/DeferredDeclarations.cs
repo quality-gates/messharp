@@ -41,6 +41,7 @@ internal sealed class DeferredDeclarations(CallableOwner owner, IReadOnlyList<Ca
         VariableDeclaratorSyntax variable => variable.Identifier.Text,
         SingleVariableDesignationSyntax designation => designation.Identifier.Text,
         ParameterSyntax parameter => parameter.Identifier.Text,
+        ForEachStatementSyntax loop => loop.Identifier.Text,
         PropertyDeclarationSyntax property => property.Identifier.Text,
         _ => "",
     };
@@ -48,7 +49,8 @@ internal sealed class DeferredDeclarations(CallableOwner owner, IReadOnlyList<Ca
     public bool IsOwnParameter(ParameterSyntax parameter) => DeclaredParameters.Declared(owner.Method.Node).Contains(parameter);
 
     private static SyntaxNode? Local(IdentifierNameSyntax name) =>
-        (SyntaxNode?)ExpressionTypes.Binding(name) ?? DesignationTypes.Declaration(name);
+        (SyntaxNode?)ExpressionTypes.Binding(name) ?? (SyntaxNode?)DesignationTypes.Declaration(name)
+            ?? LoopVariables.Find(name);
 
     private static ParameterSyntax? Parameter(IdentifierNameSyntax name) => name.Ancestors()
         .TakeWhile(node => node is not BaseTypeDeclarationSyntax)
@@ -58,7 +60,7 @@ internal sealed class DeferredDeclarations(CallableOwner owner, IReadOnlyList<Ca
     /// <summary>Whether <paramref name="node"/> declares or writes <paramref name="declaration"/>.</summary>
     public bool IsWrittenBy(SyntaxNode node, SyntaxNode declaration) => node switch
     {
-        VariableDeclaratorSyntax or SingleVariableDesignationSyntax => node == declaration,
+        VariableDeclaratorSyntax or SingleVariableDesignationSyntax or ForEachStatementSyntax => node == declaration,
         AssignmentExpressionSyntax { Left: TupleExpressionSyntax tuple } =>
             DeconstructionBindings.Targets(tuple).Any(target => Find(target) == declaration),
         AssignmentExpressionSyntax assignment => Find(assignment.Left) == declaration,

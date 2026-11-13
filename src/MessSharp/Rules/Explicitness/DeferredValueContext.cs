@@ -20,6 +20,7 @@ internal sealed class DeferredValueContext(
     public DeferredValueContext(RuleContext ctx, IReadOnlyList<CallableOwner> owners, CallableOwner owner, SyntaxNode body)
         : this(ctx, owners, owner, body, ImmutableDictionary<string, StorageOrigin>.Empty) { }
 
+    public IReadOnlyList<CallableOwner> Owners { get; } = owners;
     public CallableOwner Owner { get; } = owner;
     public SyntaxNode Body { get; } = body;
     public IReadOnlyDictionary<string, StorageOrigin> Bindings { get; } = bindings;
@@ -27,19 +28,19 @@ internal sealed class DeferredValueContext(
     public bool Foreign { get; } = foreign;
 
     public IReadOnlyList<DeferredSource>? Values(ExpressionSyntax reference) =>
-        new DeferredValueBindings(Owner, Body, owners).Values(reference);
+        new DeferredValueBindings(Owner, Body, Owners).Values(reference);
 
     public DeferredValueContext Bind(CallableOwner target, InvocationExpressionSyntax call, SyntaxNode targetBody)
     {
         var bound = target.Method.Parameters.Select((parameter, index) =>
             (parameter.Name, Value: CallArguments.Actual(target, call, parameter.Name, index)))
             .ToDictionary(pair => pair.Name, pair => pair.Value is null ? StorageOrigin.Unknown : Storage(pair.Value));
-        return new DeferredValueContext(ctx, owners, target, targetBody, bound, new DeferredCaller(this, call));
+        return new DeferredValueContext(ctx, Owners, target, targetBody, bound, new DeferredCaller(this, call));
     }
 
     /// <summary>A root context for a writer that <paramref name="writer"/> evaluates on its own.</summary>
     public DeferredValueContext For(CallableOwner writer) =>
-        new(ctx, owners, writer, writer.Body!, ImmutableDictionary<string, StorageOrigin>.Empty, foreign: true);
+        new(ctx, Owners, writer, writer.Body!, ImmutableDictionary<string, StorageOrigin>.Empty, foreign: true);
 
     /// <summary>The caller's argument for an own parameter of a bound context, or null when unknown.</summary>
     public ExpressionSyntax? Argument(string parameter)
@@ -52,7 +53,7 @@ internal sealed class DeferredValueContext(
 
     public StorageOrigin Storage(ExpressionSyntax value)
     {
-        var origin = CallArguments.Ownership(ctx, Owner, owners, Body).StorageAt(value, value);
+        var origin = CallArguments.Ownership(ctx, Owner, Owners, Body).StorageAt(value, value);
         return StorageProjection.Apply(origin, root => Bindings.GetValueOrDefault(root) ?? StorageOrigin.Shared(root));
     }
 }

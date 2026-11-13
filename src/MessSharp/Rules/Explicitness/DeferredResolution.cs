@@ -8,9 +8,14 @@ internal sealed record DeferredResolution(IReadOnlyList<DeferredWork> Work, bool
 {
     public IReadOnlyList<string> Pending { get; init; } = [];
 
-    public bool Resolved => Complete && Pending.Count == 0;
+    /// <summary>Collection parameters of the analysed owner whose elements only a caller knows.</summary>
+    public IReadOnlyList<string> PendingElements { get; init; } = [];
+
+    public bool Resolved => Complete && Pending.Count == 0 && PendingElements.Count == 0;
 
     public static DeferredResolution Parameter(string name) => new([], true) { Pending = [name] };
+
+    public static DeferredResolution ElementsOfParameter(string name) => new([], true) { PendingElements = [name] };
 
     public static DeferredResolution Merge(IEnumerable<DeferredResolution> alternatives)
     {
@@ -19,6 +24,7 @@ internal sealed record DeferredResolution(IReadOnlyList<DeferredWork> Work, bool
             resolved.Count > 0 && resolved.All(value => value.Complete))
         {
             Pending = resolved.SelectMany(value => value.Pending).Distinct(StringComparer.Ordinal).ToList(),
+            PendingElements = resolved.SelectMany(value => value.PendingElements).Distinct(StringComparer.Ordinal).ToList(),
         };
     }
 }

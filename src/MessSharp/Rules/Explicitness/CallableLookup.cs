@@ -56,8 +56,7 @@ internal sealed class CallableLookup(IReadOnlyList<CallableOwner> owners)
         && owner.Method.Class?.Node is ClassDeclarationSyntax or StructDeclarationSyntax or RecordDeclarationSyntax
         && owner.Method.Class.Name == TypeNames.Simple(receiver);
 
-    private static bool IsExtensionOf(CallableOwner owner, string receiver) => ExtensionMethods.IsExtension(owner)
-        && ExtensionMethods.ReceiverType(owner) is { } declared && TypeNames.Simple(declared) == TypeNames.Simple(receiver);
+    private static bool IsExtensionOf(CallableOwner owner, string receiver) => ExtensionMethods.Binds(owner, receiver);
 
     private static bool IsMatchingLocal(CallableOwner owner, IdentifierNameSyntax name) =>
         owner.Method.Node is LocalFunctionStatementSyntax function

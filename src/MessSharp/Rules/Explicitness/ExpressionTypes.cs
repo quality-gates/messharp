@@ -43,6 +43,7 @@ internal sealed class ExpressionTypes(CallableOwner owner, IReadOnlyList<Callabl
         var local = Binding(name);
         if (local?.Parent is VariableDeclarationSyntax declaration)
             return DeclaredType(local, declaration.Type);
+        if (LoopVariables.Find(name) is { } loop) return LoopVariables.TypeOf(loop, TypeOf, Element);
         if (DesignationTypes.Find(name) is { } designated) return designated;
         if (DesignationTypes.Declaration(name) is { } outVar
             && OutVariableTypes.Find(owner, callableOwners ?? CallableOwnerCache.For(owner.Method.File), outVar) is { } inferred)
@@ -69,20 +70,13 @@ internal sealed class ExpressionTypes(CallableOwner owner, IReadOnlyList<Callabl
 
     private string? InvocationResult(InvocationExpressionSyntax invocation)
     {
-        if (invocation.Expression is MemberAccessExpressionSyntax member && Result(member) is { } known)
+        if (invocation.Expression is MemberAccessExpressionSyntax member && SequenceResultTypes.Find(member, TypeOf) is { } known)
             return known;
         var owners = callableOwners ?? CallableOwnerCache.For(owner.Method.File);
-        if (new CallResolver(owners).Resolve(owner, invocation) is { } target) return target.Method.ReturnType;
+        if (new CallResolver(owners).Resolve(owner, invocation) is { } target)
+            return GenericReturnTypes.ReturnType(owner, target, invocation, TypeOf);
         return DelegateCallee.Value(invocation) is { } callee ? DelegateParameterTypes.Result(TypeOf(callee)) : null;
     }
-
-    private string? Result(MemberAccessExpressionSyntax member) => member.Name.Identifier.Text switch
-    {
-        "ToList" => "List<" + Element(TypeOf(member.Expression)) + ">",
-        "ToArray" => Element(TypeOf(member.Expression)) + "[]",
-        "Select" or "Where" => "IEnumerable<" + Element(TypeOf(member.Expression)) + ">",
-        _ => null,
-    };
 
     internal static string? Element(string? type)
     {
