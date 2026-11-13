@@ -162,4 +162,23 @@ public class ExplicitStateTests
         Assert.NotEqual(a, a with { Entry = "e2" });
         Assert.NotEqual(a, a with { CallWeak = MessSharp.Rules.Explicitness.Certainty.Possible });
     }
+
+    [Theory]
+    [InlineData("MinPriority")]
+    [InlineData("MaxPriority")]
+    [InlineData("Warn")]
+    public void Loader_SettingsCanOnlyBeChosenWhenTheLoaderIsCreated(string name)
+    {
+        var setter = typeof(MessSharp.RuleSet.Loader).GetProperty(name)!.SetMethod!;
+        Assert.Contains(setter.ReturnParameter.GetRequiredCustomModifiers(),
+            m => m == typeof(System.Runtime.CompilerServices.IsExternalInit));
+    }
+
+    [Fact]
+    public void Loader_PrioritySettingsChosenAtCreationNarrowTheRules()
+    {
+        var all = new MessSharp.RuleSet.Loader { MinPriority = 5, MaxPriority = 1 }.Load("design").Sum(s => s.Rules.Count);
+        var onlyTop = new MessSharp.RuleSet.Loader { MinPriority = 1, MaxPriority = 1 }.Load("design").Sum(s => s.Rules.Count);
+        Assert.True(all > onlyTop);
+    }
 }
