@@ -447,4 +447,67 @@ public class RuleSetLoaderTests
         }
         finally { File.Delete(tmpFile); }
     }
+
+    private static string WriteRuleset(string name, string message, string rulesetBody = "")
+    {
+        var path = Path.GetTempFileName() + ".xml";
+        File.WriteAllText(path, $@"<ruleset name=""{name}"">
+  <rule name=""CyclomaticComplexity"" message=""{message}"" class=""PHPMD\Rule\CyclomaticComplexity"">
+    <priority>3</priority>
+  </rule>{rulesetBody}
+</ruleset>");
+        return path;
+    }
+
+    [Fact]
+    public void Load_IndependentRulesetsWithSameRuleName_KeepsLastAndWarnsWithSources()
+    {
+        var first = WriteRuleset("SetOne", "SET1_MSG");
+        var second = WriteRuleset("SetTwo", "SET2_MSG");
+        try
+        {
+            var warnings = new List<string>();
+            var loader = new Loader { Warn = warnings.Add };
+
+            var sets = loader.Load($"{first},{second}");
+
+            Assert.Empty(sets[0].Rules);
+            Assert.Single(sets[1].Rules);
+            var warning = Assert.Single(warnings);
+            Assert.Contains("CyclomaticComplexity", warning);
+            Assert.Contains("SetOne", warning);
+            Assert.Contains("SetTwo", warning);
+        }
+        finally { File.Delete(first); File.Delete(second); }
+    }
+
+    [Fact]
+    public void Load_RuleOverrideInsideOneRuleset_DoesNotWarn()
+    {
+        var path = WriteRuleset("Team", "TEAM_MSG",
+            @"
+  <rule ref=""rulesets/codesize.xml/CyclomaticComplexity"" message=""OVERRIDE""/>");
+        try
+        {
+            var warnings = new List<string>();
+            var loader = new Loader { Warn = warnings.Add };
+
+            var sets = loader.Load(path);
+
+            Assert.Empty(warnings);
+            Assert.Single(sets.Single().Rules, r => r.Name == "CyclomaticComplexity");
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void Load_DistinctRuleNamesAcrossRulesets_DoesNotWarn()
+    {
+        var warnings = new List<string>();
+        var loader = new Loader { Warn = warnings.Add };
+
+        loader.Load("codesize,design,csharp");
+
+        Assert.Empty(warnings);
+    }
 }

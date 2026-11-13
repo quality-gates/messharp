@@ -48,7 +48,7 @@ public sealed class Loader
         var sets = new List<RuleSetType>();
         foreach (var part in spec.Split(',').Select(p => p.Trim()).Where(p => p.Length > 0))
             sets.Add(Parse(ReadRuleset(part)));
-        LoaderFilters.DedupeRules(sets);
+        LoaderFilters.DedupeRules(sets, Warn);
         LoaderFilters.FilterRules(sets, enable ?? Array.Empty<string>(), disable ?? Array.Empty<string>());
         return sets;
     }
