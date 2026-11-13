@@ -38,7 +38,7 @@ internal static class PropertyAccessorModelBuilder
             EndLine = span.EndLinePosition.Line + 1,
             Exported = ModelBuilderHelpers.IsExported(modifiers),
             IsPrivate = ModelBuilderHelpers.IsPrivate(modifiers),
-            Parameters = BuildAccessorParameters(accessor, propertyType),
+            Parameters = BuildAccessorParameters(accessor, property.Type),
             ReturnType = isSetter ? "void" : propertyType,
             Class = cls,
             Node = accessor,
@@ -51,7 +51,7 @@ internal static class PropertyAccessorModelBuilder
         accessor.Body != null || accessor.ExpressionBody != null;
 
     private static List<ParameterModel> BuildAccessorParameters(
-        AccessorDeclarationSyntax accessor, string propertyType)
+        AccessorDeclarationSyntax accessor, TypeSyntax propertyType)
     {
         var isSetter = accessor.Keyword.IsKind(SyntaxKind.SetKeyword) ||
                        accessor.Keyword.IsKind(SyntaxKind.InitKeyword);
@@ -64,7 +64,8 @@ internal static class PropertyAccessorModelBuilder
             new ParameterModel
             {
                 Name = "value",
-                Type = propertyType,
+                Type = propertyType.ToString(),
+                TypeSyntax = propertyType,
                 Line = line,
                 Node = AccessorValue.Parameter(accessor),
             },

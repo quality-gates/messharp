@@ -22,7 +22,7 @@ public sealed class BooleanArgumentFlagRule : BaseRule, IMethodRule
 
         foreach (var param in method.Parameters)
         {
-            if (IsBoolType(param.Type) && param.Name.Length > 0)
+            if (TypeShapes.IsBoolean(param.TypeSyntax) && param.Name.Length > 0)
                 ctx.Report(param.Line, param.Line, image, param.Name);
         }
     }
@@ -34,13 +34,4 @@ public sealed class BooleanArgumentFlagRule : BaseRule, IMethodRule
         var ignorePattern = ctx.Props.Regex("ignorepattern");
         return ignorePattern != null && ignorePattern.IsMatch(method.Name);
     }
-
-    private static bool IsBoolType(string type)
-    {
-        var t = type.Trim();
-        return t == "bool" || t == "Boolean" || t == "System.Boolean"
-            || t == "bool?" || t == "Boolean?" || t == "System.Boolean?"
-            || t == "Nullable<bool>" || t == "Nullable<Boolean>";
-    }
-
 }

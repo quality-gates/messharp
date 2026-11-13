@@ -1,3 +1,4 @@
+using MessSharp.Model;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -21,13 +22,6 @@ internal static class ExpressionBodies
 
     /// <summary><c>void</c>, or <c>async</c> with a <c>Task</c> or <c>ValueTask</c> that has no result.</summary>
     private static bool ReturnsNothing(TypeSyntax returnType, SyntaxTokenList modifiers) =>
-        (returnType is PredefinedTypeSyntax predefined && predefined.Keyword.IsKind(SyntaxKind.VoidKeyword))
-        || (modifiers.Any(SyntaxKind.AsyncKeyword) && IsTaskWithoutResult(returnType));
-
-    private static bool IsTaskWithoutResult(TypeSyntax type) => type switch
-    {
-        IdentifierNameSyntax id => id.Identifier.Text is "Task" or "ValueTask",
-        QualifiedNameSyntax q => IsTaskWithoutResult(q.Right),
-        _ => false,
-    };
+        TypeShapes.IsVoid(returnType)
+        || (modifiers.Any(SyntaxKind.AsyncKeyword) && TypeShapes.IsTaskWithoutResult(returnType));
 }
