@@ -9,7 +9,7 @@ internal sealed class EffectTransfer(
     Func<EffectFact, IEnumerable<EffectFact>> mapUnknown)
 {
     private static readonly IReadOnlySet<EffectKind> RelativeKinds = new HashSet<EffectKind>
-        { EffectKind.ParameterChange, EffectKind.ParameterWrite, EffectKind.CaptureRead, EffectKind.CaptureWrite };
+        { EffectKind.ParameterChange, EffectKind.ParameterWrite, EffectKind.ParameterRead, EffectKind.CaptureRead, EffectKind.CaptureWrite };
 
     public IEnumerable<EffectFact> Map(EffectFact fact)
     {
@@ -38,7 +38,17 @@ internal sealed class EffectTransfer(
     {
         if (root == StorageOrigin.UnknownRoot) return [new EffectFact(EffectKind.Unknown, "unresolved storage binding")];
         if (fact.Kind == EffectKind.ParameterChange) return [StorageRoots.Change(root, fact.Reachable || deep)];
+        if (fact.Kind == EffectKind.ParameterRead) return MapParameterRead(root, deep);
         return fact.Kind == EffectKind.CaptureRead ? MapCaptureRead(fact, root, deep) : [MapWrite(root, deep)];
+    }
+
+    /// <summary>A callee that reads its <c>ref</c> parameter reads whatever storage the caller passed.</summary>
+    private IEnumerable<EffectFact> MapParameterRead(string root, bool deep)
+    {
+        if (CaptureState.Contains(edge.Caller, root)) return [new EffectFact(EffectKind.CaptureRead, root, deep)];
+        if (StorageRoots.IsExternal(root)) return [StorageRoots.Read(root)];
+        return edge.Caller.Method.Parameters.Any(p => p.Name == root && p.IsRef)
+            ? [new EffectFact(EffectKind.ParameterRead, root, deep)] : [];
     }
 
     private IEnumerable<EffectFact> MapCaptureRead(EffectFact fact, string root, bool deep) =>

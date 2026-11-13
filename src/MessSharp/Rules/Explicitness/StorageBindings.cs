@@ -14,7 +14,7 @@ internal abstract record BindingSource
 
 internal sealed record StorageBinding(
     string Name, SyntaxNode Node, int Position, BindingSource Source,
-    SyntaxNode? Scope = null, bool Joins = false);
+    SyntaxNode? Scope = null, bool Joins = false, ExpressionSyntax? Simultaneous = null);
 
 internal static class StorageBindings
 {

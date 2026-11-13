@@ -123,7 +123,7 @@ public class ExplicitnessCallableIdentityTests
     }
 
     [Fact]
-    public void ElementReadingAnEarlierTargetStaysUnresolved()
+    public void SwapResolvesElementsFromBeforeTheAssignment()
     {
         var findings = Analyze("""
             using System;
@@ -136,7 +136,7 @@ public class ExplicitnessCallableIdentityTests
                 }
             }
             """);
-        Assert.Equal([Unknown("Run", 7, "unresolved call 'g'")], findings);
+        Assert.Equal([], findings);
     }
 
     [Theory]

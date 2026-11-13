@@ -75,7 +75,7 @@ internal sealed class StateAccessCollector : IBodyVisitor
 
     private void RecordRead(SyntaxNode node)
     {
-        if (_recordsReads && node is ExpressionSyntax expr && !_pureWrites.Contains(expr))
+        if (_recordsReads && WriteOnlyAlias.ReadSite(node, _pureWrites) is { } expr)
             foreach (var state in _resolve(expr))
                 _reads.Add(new StateAccess(state.Name, AccessKind.Read, expr));
     }

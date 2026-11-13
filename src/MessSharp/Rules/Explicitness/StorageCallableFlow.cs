@@ -24,9 +24,9 @@ internal sealed class StorageCallableFlow(
     }
 
     /// <summary>Rebinds the local; true when a loop-carried callable changed and the pass must repeat.</summary>
-    public bool Bind(StorageBinding binding, SyntaxNode? loop, bool carried, StorageEnvironment state)
+    public bool Bind(StorageBinding binding, SyntaxNode? loop, bool carried, StorageEnvironment state, StorageEnvironment reads)
     {
-        var next = Next(binding, state);
+        var next = Next(binding, reads);
         var previous = state.Callables.GetValueOrDefault(binding.Name);
         var kept = bindings.MayBeSkipped(binding) && previous?.Target != next?.Target ? null : next;
         if (kept is null) state.Callables.Remove(binding.Name);

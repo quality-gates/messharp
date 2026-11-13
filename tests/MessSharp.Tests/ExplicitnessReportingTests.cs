@@ -170,8 +170,8 @@ public class ExplicitnessReportingTests
 
     [Theory]
     [InlineData("out", false)]
-    [InlineData("ref", true)]
-    public void OnlyRefArgumentsReadStaticStorage(string modifier, bool reads)
+    [InlineData("ref", false)]
+    public void WriteOnlyCalleesDoNotReadStaticStorageThroughOutOrRef(string modifier, bool reads)
     {
         var findings = Analyze($$"""
             using System;

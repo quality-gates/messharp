@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis;
 
 namespace MessSharp.Rules.Explicitness;
 
-internal enum EffectKind { Input, Output, InstanceInput, InstanceOutput, ParameterChange, ParameterWrite, CaptureRead, CaptureWrite, Unknown }
+internal enum EffectKind { Input, Output, InstanceInput, InstanceOutput, ParameterChange, ParameterWrite, ParameterRead, CaptureRead, CaptureWrite, Unknown }
 
 internal readonly record struct EffectFact(
     EffectKind Kind,
@@ -75,6 +75,8 @@ internal sealed class EffectSummary(CallableOwner? reportingOwner = null)
         {
             if (captured && CaptureState.MayChange(owner, access.Name, owners))
                 Add(new EffectFact(EffectKind.CaptureRead, access.Name, access.Deep), access.Site);
+            else if (!captured && owner.Method.Parameters.Any(p => p.Name == access.Name && p.IsRef))
+                Add(new EffectFact(EffectKind.ParameterRead, access.Name, access.Deep), access.Site);
             return;
         }
         if (access.Kind == AccessKind.Change)

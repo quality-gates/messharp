@@ -5,6 +5,9 @@ namespace MessSharp.Rules.Explicitness;
 
 internal sealed class StorageReferences(StorageContext context, Func<ExpressionSyntax, StorageOrigin> origin, StorageEnvironment state)
 {
+    /// <summary>The one slot of the shared object that stands for a static field's storage.</summary>
+    private const string StaticSlot = ".value";
+
     public bool Bind(SyntaxNode node, bool weak)
     {
         var binding = Binding(node);
@@ -35,15 +38,21 @@ internal sealed class StorageReferences(StorageContext context, Func<ExpressionS
     {
         expression = CallableSyntax.Unwrap(expression);
         if (expression is IdentifierNameSyntax name && state.References.TryGetValue(name.Identifier.Text, out var bound)) return bound;
-        if (StorageMembers.OwnField(context, expression) is { } own
-            && state.Bindings.TryGetValue(StorageContext.ThisBinding, out var receiver)) return StorageReference.From(receiver, own);
-        return expression switch
+        return OwnOrStatic(expression) ?? expression switch
         {
             MemberAccessExpressionSyntax member when StorageMembers.IsField(context, member) =>
                 StorageReference.From(origin(member.Expression), "." + member.Name.Identifier.Text),
             ElementAccessExpressionSyntax element => Element(element),
             _ => null,
         };
+    }
+
+    private StorageReference? OwnOrStatic(ExpressionSyntax expression)
+    {
+        if (StorageMembers.OwnField(context, expression) is { } own
+            && state.Bindings.TryGetValue(StorageContext.ThisBinding, out var receiver)) return StorageReference.From(receiver, own);
+        return expression is IdentifierNameSyntax && context.Root(expression) is { } root && StorageRoots.IsStatic(root)
+            ? StorageReference.From(state.Heap.Shared(root), StaticSlot) : null;
     }
 
     private StorageReference? Element(ElementAccessExpressionSyntax element) => context.Owner is { } owner
@@ -56,7 +65,7 @@ internal sealed class StorageReferences(StorageContext context, Func<ExpressionS
     private static bool Supports(CallableOwner owner, ExpressionSyntax expression, HashSet<ExpressionSyntax> visiting)
     {
         if (!visiting.Add(expression) || owner.Body is not { } body) return false;
-        var context = new StorageContext(body, _ => null, owner, [], "", []);
+        var context = new StorageContext(body, expression => StorageCallBindings.Root(owner, expression), owner, [], "", []);
         if (expression is IdentifierNameSyntax name && ExpressionTypes.Binding(name)?.Initializer?.Value is RefExpressionSyntax reference)
             return Supports(owner, reference.Expression, visiting);
         return new StorageReferences(context, _ => StorageOrigin.Private, new StorageEnvironment()).Target(expression) is not null;
