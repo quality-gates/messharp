@@ -12,6 +12,12 @@ messharp <paths> <format> <ruleset[,ruleset...]> [options]
   `checkstyle`, or `sarif`.
 - **ruleset** — one or more built-in names or paths to phpmd-format ruleset XML.
 
+When several rulesets define a rule with the same name, the **last** one listed
+wins, so a later custom ruleset overrides an earlier one. The replaced definition
+does not run; with `--verbose` messharp prints a warning naming the rule and both
+rulesets. Overrides written inside one ruleset (`<rule ref=...>` with changed
+properties) are intentional and do not warn.
+
 `text` format prints one finding per line as `file:line  Rule  message`.
 
 ## Examples

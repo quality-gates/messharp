@@ -8,9 +8,15 @@ namespace MessSharp.RuleSet;
 /// </summary>
 internal static class LoaderFilters
 {
-    internal static void DedupeRules(List<RuleSetType> sets)
+    /// <summary>
+    /// Keeps the last definition of each rule name. A definition dropped in favour of one
+    /// from a different top-level ruleset is reported through <paramref name="warn"/>,
+    /// because the two may be independent rules rather than an intentional override.
+    /// </summary>
+    internal static void DedupeRules(List<RuleSetType> sets, Action<string>? warn = null)
     {
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var winners = new Dictionary<string, int>(StringComparer.Ordinal);
+        var winnerRules = new Dictionary<string, IRule>(StringComparer.Ordinal);
         for (int i = sets.Count - 1; i >= 0; i--)
         {
             var set = sets[i];
@@ -18,14 +24,33 @@ internal static class LoaderFilters
             for (int j = set.Rules.Count - 1; j >= 0; j--)
             {
                 var r = set.Rules[j];
-                if (seen.Add(r.Name))
+                if (winners.TryAdd(r.Name, i))
+                {
+                    winnerRules[r.Name] = r;
                     kept.Add(r);
+                }
+                else if (winners[r.Name] != i && !IsSameDefinition(r, winnerRules[r.Name]))
+                    warn?.Invoke(CollisionMessage(r.Name, Label(sets, i), Label(sets, winners[r.Name])));
             }
             kept.Reverse();
             set.Rules.Clear();
             set.Rules.AddRange(kept);
         }
     }
+
+    // Composite rulesets re-export the same bundled rule; identical definitions are not a conflict.
+    private static bool IsSameDefinition(IRule a, IRule b) =>
+        a is BaseRule x && b is BaseRule y
+        && x.GetType() == y.GetType()
+        && x.Priority == y.Priority
+        && x.Message == y.Message
+        && x.RuleProps.HasSameValuesAs(y.RuleProps);
+
+    private static string CollisionMessage(string rule, string dropped, string kept) =>
+        $"Rule '{rule}' from {dropped} is replaced by the later definition in {kept}; only the last definition runs";
+
+    private static string Label(List<RuleSetType> sets, int index) =>
+        string.IsNullOrEmpty(sets[index].Name) ? $"ruleset #{index + 1}" : $"ruleset '{sets[index].Name}'";
 
     internal static void FilterRules(List<RuleSetType> sets,
         IReadOnlyList<string> enable, IReadOnlyList<string> disable)

@@ -107,6 +107,11 @@ public sealed class Properties
         _map = map ?? new();
     }
 
+    /// <summary>True when both instances hold exactly the same key/value pairs.</summary>
+    internal bool HasSameValuesAs(Properties other) =>
+        _map.Count == other._map.Count
+        && _map.All(kv => other._map.TryGetValue(kv.Key, out var v) && v == kv.Value);
+
     public int Int(string key, int def)
     {
         if (_map.TryGetValue(key, out var v) && int.TryParse(v, out var n))
