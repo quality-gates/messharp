@@ -11,12 +11,46 @@ internal sealed class CallResolver(IReadOnlyList<CallableOwner> owners)
 {
     private readonly CallableLookup _lookup = new(owners);
 
-    public CallableOwner? Resolve(CallableOwner caller, InvocationExpressionSyntax call) => call.Expression switch
+    public CallableOwner? Resolve(CallableOwner caller, InvocationExpressionSyntax call)
     {
-        IdentifierNameSyntax bare => ResolveBare(caller, bare, CallShape.From(call.ArgumentList)),
-        MemberAccessExpressionSyntax member => _lookup.MemberTarget(caller, member, CallShape.From(call.ArgumentList)),
-        _ => null,
-    };
+        var target = call.Expression switch
+        {
+            IdentifierNameSyntax bare => ResolveBare(caller, bare, CallShape.From(call.ArgumentList)),
+            MemberAccessExpressionSyntax member => _lookup.MemberTarget(caller, member, CallShape.From(call.ArgumentList)),
+            _ => null,
+        };
+        return target is not null && ExtensionMethods.IsExtension(target)
+            ? SelectedExtension(caller, target, call) : target;
+    }
+
+    private static CallableOwner? SelectedExtension(CallableOwner caller, CallableOwner target, InvocationExpressionSyntax call)
+    {
+        var compatibility = ExtensionArgumentTypes.Classify(caller, target, call);
+        if (compatibility == ArgumentCompatibility.Incompatible) return null;
+        if (!IsSequenceConsumer(caller, call)) return target;
+        if (KnownCollectionContains.Receiver(caller, call) is not null
+            || KnownListConsumption.AddRangeArgument(caller, call) is not null) return null;
+        return compatibility == ArgumentCompatibility.Exact ? target : null;
+    }
+
+    public bool IsResolvedConsumerOverride(CallableOwner caller, InvocationExpressionSyntax call) =>
+        Resolve(caller, call) is not null;
+
+    private static bool IsSequenceConsumer(CallableOwner caller, InvocationExpressionSyntax call) =>
+        call.Expression is MemberAccessExpressionSyntax member
+        && member.Name.Identifier.Text is "Contains" or "AddRange"
+        && KnownExecutionOperations.IsSequence(caller, member.Expression);
+
+    public bool HasPossibleExtension(CallableOwner caller, InvocationExpressionSyntax call)
+    {
+        if (call.Expression is not MemberAccessExpressionSyntax member) return false;
+        var shape = CallShape.From(call.ArgumentList);
+        return owners.Any(candidate => ExtensionMethods.IsExtension(candidate)
+            && candidate.Method.Name == member.Name.Identifier.Text && shape.CouldMatch(candidate, 1)
+            && ExtensionMethods.ReceiverType(candidate) is { } receiver
+            && PrimitiveTypeNames.Name(receiver) is null
+            && ExtensionArgumentTypes.Classify(caller, candidate, call) != ArgumentCompatibility.Incompatible);
+    }
 
     private CallableOwner? ResolveBare(CallableOwner caller, IdentifierNameSyntax name, CallShape shape)
     {

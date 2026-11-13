@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Report iterator effects when sequences are consumed by `Contains`, spread, list construction, or `AddRange`.
 - Group interleaved violations by file in XML, HTML, JSON, and Checkstyle reports, and combine Checkstyle processing errors with their file's findings.
 - Detect static field access outside the scopes of catch variables and query range variables.
 - Count paths inside `checked` and `unchecked` statement blocks when calculating NPath complexity.

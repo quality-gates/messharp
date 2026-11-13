@@ -8,6 +8,7 @@ internal static class KnownOperations
     {
         if (call.Expression is IdentifierNameSyntax { Identifier.Text: "nameof" }) return true;
         if (KnownParseOperations.IsKnown(call)) return true;
+        if (KnownEnumerableContains.Source(owner, call) is not null) return true;
         if (CallParts(call) is not { } parts) return false;
         var (receiver, name, member) = parts;
         return IsKnownMember(owner, receiver, name, member);
@@ -18,10 +19,10 @@ internal static class KnownOperations
     {
         if (KnownAmbientOperations.Matches(owner, receiver, member)) return true;
         if (KnownMathOperations.Matches(owner, receiver, name)) return true;
-        var type = new ExpressionTypes(owner).TypeOf(receiver);
-        if (type is null || KnownTypeChecks.IsCustomType(owner, type)) return false;
         if (KnownExecutionOperations.IsSequence(owner, receiver))
             return KnownQueries.IsCollectionQuery(name) || KnownMutations.IsMutation(name) || name is "Select" or "Where";
+        var type = new ExpressionTypes(owner).TypeOf(receiver);
+        if (type is null || KnownTypeChecks.IsCustomType(owner, type)) return false;
         return KnownQueries.IsStringCalculation(type, name);
     }
 

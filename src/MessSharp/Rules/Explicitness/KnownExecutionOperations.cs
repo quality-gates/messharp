@@ -22,14 +22,18 @@ internal static class KnownExecutionOperations
             ["ForEach"] = ExecutionTiming.EagerCallback,
             ["ToList"] = ExecutionTiming.ForceSequence,
             ["ToArray"] = ExecutionTiming.ForceSequence,
+            ["Contains"] = ExecutionTiming.ForceSequence,
         };
     public static bool IsIterator(CallableOwner owner) => owner.Body is not null
         && BodyWalk.Nodes(owner.Body).OfType<YieldStatementSyntax>().Any();
 
     public static bool IsSequence(CallableOwner owner, ExpressionSyntax receiver, IReadOnlyList<CallableOwner>? owners = null)
     {
+        if (receiver is ImplicitArrayCreationExpressionSyntax) return true;
         var type = new ExpressionTypes(owner, owners).TypeOf(receiver);
-        if (type is null || KnownTypeChecks.IsCustomType(owner, type)) return false;
+        if (type is null) return false;
+        type = SequenceTypeAliases.Resolve(owner, type);
+        if (KnownTypeChecks.IsCustomType(owner, type)) return false;
         var name = type.Split('<')[0].Split('.').Last();
         return StorageTypes.IsMutable(type) || name is "IEnumerable" or "IReadOnlyList" or "IList" or "ICollection";
     }
@@ -63,7 +67,8 @@ internal static class KnownExecutionOperations
     public static bool RequiresExecution(CallableOwner owner, ExpressionSyntax value, DeferredKind kind)
     {
         if (kind != DeferredKind.Sequence) return true;
+        if (value is ImplicitArrayCreationExpressionSyntax) return false;
         var type = new ExpressionTypes(owner).TypeOf(value);
-        return type is null || !StorageTypes.IsMutable(type);
+        return type is null || !StorageTypes.IsMutable(SequenceTypeAliases.Resolve(owner, type));
     }
 }

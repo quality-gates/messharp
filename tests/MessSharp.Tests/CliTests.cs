@@ -127,6 +127,119 @@ public class CliTests
     }
 
     [Fact]
+    public void Explicitness_SequenceConsumersTransferIteratorEffects()
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-cli-");
+        try
+        {
+            var sourceFile = Path.Combine(directory.FullName, "Probe.cs");
+            File.WriteAllText(sourceFile, """
+                using System;
+                using System.Collections.Generic;
+                using System.Linq;
+                class Probe {
+                    static int Read() => Console.Read();
+                    static IEnumerable<int> Gen() { yield return Read(); }
+                    static IEnumerable<int> Pure() { yield return 7; }
+                    static bool ContainsAction() => Gen().Contains(65);
+                    static bool ContainsPure() => Pure().Contains(65);
+                    static int[] SpreadAction() => [.. Gen()];
+                    static int[] SpreadPure() => [.. Pure()];
+                    static List<int> ListAction() => new List<int>(Gen());
+                    static List<int> ListPure() => new List<int>(Pure());
+                    static void AddAction() { var xs = new List<int>(); xs.AddRange(Gen()); }
+                    static void AddPure() { var xs = new List<int>(); xs.AddRange(Pure()); }
+                }
+                """);
+
+            var (code, stdout, stderr) = RunCli(sourceFile, "text", "explicitness", "--strict");
+
+            Assert.Equal(2, code);
+            Assert.Empty(stderr);
+            foreach (var (name, line) in new[] { ("ContainsAction", 8), ("SpreadAction", 10), ("ListAction", 12), ("AddAction", 14) })
+                Assert.Matches($@"Probe\.cs:{line}\s+ImplicitInput\s+The method {name}\(\) has an implicit input: uses Console\.Read\.", stdout);
+            foreach (var name in new[] { "ContainsPure", "SpreadPure", "ListPure", "AddPure" })
+                Assert.DoesNotContain($"The method {name}()", stdout);
+            Assert.DoesNotContain("UnknownEffect", stdout);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Explicitness_ContainsForcesColdQueryAtTheConsumer()
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-cli-");
+        try
+        {
+            var sourceFile = Path.Combine(directory.FullName, "Probe.cs");
+            File.WriteAllText(sourceFile, """
+                using System;
+                using System.Linq;
+                class Probe {
+                    static int Read() => Console.Read();
+                    static bool Action() {
+                        var q = new[] { 1 }.Select(x => Read());
+                        return q.Contains(65);
+                    }
+                    static bool Pure() {
+                        var q = new[] { 1 }.Select(x => 7);
+                        return q.Contains(65);
+                    }
+                }
+                """);
+
+            var (code, stdout, stderr) = RunCli(sourceFile, "text", "explicitness", "--strict");
+
+            Assert.Equal(2, code);
+            Assert.Empty(stderr);
+            Assert.Matches(@"Probe\.cs:7\s+ImplicitInput\s+The method Action\(\) has an implicit input: uses Console\.Read\.", stdout);
+            Assert.DoesNotContain("The method Action() has an unknown effect", stdout);
+            Assert.DoesNotContain("The method Pure()", stdout);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Explicitness_ListConstructionDoesNotLoseCrossFileAliasSequences()
+    {
+        var directory = Directory.CreateTempSubdirectory("messharp-cli-");
+        try
+        {
+            File.WriteAllText(Path.Combine(directory.FullName, "Aliases.cs"),
+                "global using GlobalSeq = System.Collections.Generic.IEnumerable<int>;");
+            File.WriteAllText(Path.Combine(directory.FullName, "Probe.cs"), """
+                using System;
+                using System.Collections.Generic;
+                class Probe {
+                    static IEnumerable<int> Gen() { yield return Console.Read(); }
+                    static List<int> Action() {
+                        GlobalSeq sequence = Gen();
+                        return new List<int>(sequence);
+                    }
+                    static List<int> Opaque(GlobalSeq sequence) => new List<int>(sequence);
+                }
+                """);
+
+            var (code, stdout, stderr) = RunCli(directory.FullName, "text", "explicitness", "--strict");
+
+            Assert.Equal(2, code);
+            Assert.Empty(stderr);
+            Assert.Matches(@"Probe\.cs:7\s+ImplicitInput\s+The method Action\(\) has an implicit input: uses Console\.Read\.", stdout);
+            Assert.Matches(@"Probe\.cs:9\s+UnknownEffect\s+The method Opaque\(\) has an unknown effect: unresolved deferred execution\.", stdout);
+        }
+        finally
+        {
+            Directory.Delete(directory.FullName, recursive: true);
+        }
+    }
+
+    [Fact]
     public void GlobalVariable_QueryRangeDoesNotHideLaterFieldWrite()
     {
         var directory = Directory.CreateTempSubdirectory("messharp-cli-");
