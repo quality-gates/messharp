@@ -9,6 +9,18 @@ internal sealed class StorageEnvironment
     public Dictionary<string, StorageDeferredValue> Deferred { get; } = new(StringComparer.Ordinal);
     public StorageHeap Heap { get; set; } = new();
 
+    /// <summary>
+    /// Cached call values belong to the frame that computed them. Values from other frames never answer this
+    /// frame's queries, yet they would make every path to it look different and defeat the call memo.
+    /// This changes the environment in place.
+    /// </summary>
+    public void ForgetCallsOutside(string scope)
+    {
+        var prefix = scope + ":";
+        foreach (var key in Calls.Keys.Where(key => !key.StartsWith(prefix, StringComparison.Ordinal)).ToList())
+            Calls.Remove(key);
+    }
+
     public StorageEnvironment Copy()
     {
         var copy = new StorageEnvironment();

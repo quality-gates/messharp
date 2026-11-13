@@ -143,4 +143,23 @@ public class ExplicitStateTests
         File.WriteAllText(Path.Combine(dir, "b.xml"), "<ruleset name=\"b\"><rule ref=\"a.xml\"/></ruleset>");
         Assert.ThrowsAny<Exception>(() => new Loader().Load(Path.Combine(dir, "a.xml")));
     }
+
+    [Fact]
+    public void ForgetCallsOutside_KeepsOnlyThisFramesCalls()
+    {
+        var env = new MessSharp.Rules.Explicitness.StorageEnvironment();
+        env.Calls["f:1"] = MessSharp.Rules.Explicitness.StorageOrigin.Unknown;
+        env.Calls["g:1"] = MessSharp.Rules.Explicitness.StorageOrigin.Unknown;
+        env.ForgetCallsOutside("f");
+        Assert.Equal(["f:1"], env.Calls.Keys);
+    }
+
+    [Fact]
+    public void CallKey_EqualPartsAreEqualAndAnyPartChangesIt()
+    {
+        var a = new MessSharp.Rules.Explicitness.StorageCallKey("s", default, default, "o", "os", "v", "e");
+        Assert.Equal(a, a with { });
+        Assert.NotEqual(a, a with { Entry = "e2" });
+        Assert.NotEqual(a, a with { CallWeak = MessSharp.Rules.Explicitness.Certainty.Possible });
+    }
 }

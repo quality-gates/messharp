@@ -1,6 +1,4 @@
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.CodeAnalysis;
 
 namespace MessSharp.Rules.Explicitness;
@@ -15,28 +13,17 @@ internal sealed record StorageCallResult(StorageOrigin Returned, StorageHeap Hea
 /// </summary>
 internal static class StorageCallMemo
 {
-    private static readonly ConditionalWeakTable<SyntaxNode, Dictionary<string, StorageCallResult>> Results = new();
+    private static readonly ConditionalWeakTable<SyntaxNode, Dictionary<StorageCallKey, StorageCallResult>> Results = new();
 
     public static StorageCallResult For(StorageContext callee, CallableOwner target, Certainty weak, StorageEnvironment initial)
     {
         var results = Results.GetOrCreateValue(callee.Body);
-        DropForeignCalls(callee, initial);
+        initial.ForgetCallsOutside(callee.Scope);
         var key = Key(callee, weak, initial);
         if (results.TryGetValue(key, out var cached)) return cached;
         var result = Run(callee, target, weak, initial);
         results[key] = result;
         return result;
-    }
-
-    /// <summary>
-    /// Cached call values belong to the frame that computed them. Entries from other frames never answer this callee's
-    /// queries, yet they would make every path to the callee look different and defeat the memo.
-    /// </summary>
-    private static void DropForeignCalls(StorageContext callee, StorageEnvironment initial)
-    {
-        var prefix = callee.Scope + ":";
-        foreach (var key in initial.Calls.Keys.Where(key => !key.StartsWith(prefix, StringComparison.Ordinal)).ToList())
-            initial.Calls.Remove(key);
     }
 
     private static StorageCallResult Run(StorageContext callee, CallableOwner target, Certainty weak, StorageEnvironment initial)
@@ -48,11 +35,14 @@ internal static class StorageCallMemo
         return new StorageCallResult(returned, final.Heap, final.Deferred);
     }
 
-    private static string Key(StorageContext callee, Certainty weak, StorageEnvironment initial)
+    private static StorageCallKey Key(StorageContext callee, Certainty weak, StorageEnvironment initial)
     {
         var visiting = string.Join(",", callee.Visiting.Items.Select(InstanceKeys.For).Order(StringComparer.Ordinal));
-        var text = string.Join("|", callee.Scope, callee.Weak.IsPossible, weak.IsPossible, InstanceKeys.For(callee.Owner!),
+        return new StorageCallKey(callee.Scope, callee.Weak, weak, InstanceKeys.For(callee.Owner!),
             InstanceKeys.For(callee.Owners), visiting, StorageFingerprint.For(initial));
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
     }
 }
+
+/// <summary>Everything that drives a callee execution, so two executions with equal keys give equal results.</summary>
+internal readonly record struct StorageCallKey(string Scope, Certainty CalleeWeak, Certainty CallWeak,
+    string Owner, string Owners, string Visiting, string Entry);
