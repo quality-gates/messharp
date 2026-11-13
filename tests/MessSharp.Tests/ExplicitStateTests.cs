@@ -2,6 +2,8 @@ using MessSharp.Model;
 using MessSharp.Rule;
 using MessSharp.RuleSet;
 using MessSharp.Rules.Explicitness;
+using MessSharp.Cli;
+using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
 
 namespace MessSharp.Tests;
@@ -190,5 +192,55 @@ public class ExplicitStateTests
         var inline = new MessSharp.RuleSet.Loader { MinPriority = 1 }.Load("design").Sum(s => s.Rules.Count);
         Assert.Equal(inline, fromOptions);
         Assert.Equal(1, new MessSharp.RuleSet.Loader(new MessSharp.RuleSet.LoaderOptions { MaxPriority = 1 }).MaxPriority);
+    }
+
+    private sealed class FocusProbe : BaseRule, IFileRule, IClassRule, IMethodRule
+    {
+        public List<(string Phase, string Package, string? ScopeKind)> Seen { get; } = new();
+        private void Note(string phase, RuleContext c) => Seen.Add((phase, c.CurrentPackage, c.Scope?.Kind().ToString()));
+        public void Apply(RuleContext ctx) => Note("file", ctx);
+        public void Apply(RuleContext ctx, ClassModel cls) => Note("class", ctx);
+        public void Apply(RuleContext ctx, MethodModel method) => Note("method", ctx);
+    }
+
+    [Fact]
+    public void Engine_EachPhaseSeesItsOwnPackageAndScope_AndTheFilePhaseNeverInheritsAClassScope()
+    {
+        var file = ModelBuilder.Parse("t.cs", "namespace N { class C { void M() {} } }");
+        var probe = new FocusProbe();
+        Engine.Analyze(file, new IRule[] { probe });
+        Assert.Equal(
+            [("file", file.Namespace, null), ("class", "N", "ClassDeclaration"), ("method", "N", "MethodDeclaration")],
+            probe.Seen);
+    }
+
+    [Fact]
+    public void Engine_AFreshContextPerRule_SoOneRulesFocusNeverLeaksToTheNext()
+    {
+        var file = ModelBuilder.Parse("t.cs", "namespace N { class C { void M() {} } }");
+        var first = new FocusProbe();
+        var second = new FocusProbe();
+        Engine.Analyze(file, new IRule[] { first, second });
+        Assert.Equal(first.Seen, second.Seen);
+    }
+
+    [Theory]
+    [InlineData(0, 0, false, false, 0)]
+    [InlineData(1, 0, false, false, 1)]
+    [InlineData(0, 1, false, false, 2)]
+    [InlineData(1, 1, false, false, 1)]
+    [InlineData(1, 1, true, false, 2)]
+    [InlineData(1, 1, false, true, 1)]
+    [InlineData(1, 1, true, true, 0)]
+    [InlineData(1, 0, true, false, 0)]
+    [InlineData(0, 1, false, true, 0)]
+    public void Cli_ExitCodeFor_ErrorsOutrankViolations_AndEachCanBeSwitchedOff(
+        int errors, int violations, bool ignoreErrors, bool ignoreViolations, int expected)
+    {
+        var report = new MessSharp.Report.Report();
+        for (var i = 0; i < errors; i++) report.Errors.Add(new MessSharp.Report.ProcessingError());
+        for (var i = 0; i < violations; i++) report.Violations.Add(new Violation());
+        var opts = new CliOptions { IgnoreErrors = ignoreErrors, IgnoreViolations = ignoreViolations };
+        Assert.Equal(expected, MessSharp.Cli.Cli.ExitCodeFor(report, opts));
     }
 }

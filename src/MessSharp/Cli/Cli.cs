@@ -77,7 +77,7 @@ public static class Cli
     /// Exit code once the report is written. Errors outrank violations, and each can be switched off:
     /// errors (unless ignored) → 1, else violations (unless ignored) → 2, else 0.
     /// </summary>
-    private static int ExitCodeFor(MessSharp.Report.Report report, CliOptions opts)
+    internal static int ExitCodeFor(MessSharp.Report.Report report, CliOptions opts)
     {
         if (report.Errors.Count > 0 && !opts.IgnoreErrors) return ExitError;
         if (report.Violations.Count > 0 && !opts.IgnoreViolations) return ExitViolation;
