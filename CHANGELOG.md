@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Storage analysis of layered helpers that each call the next one twice no longer takes exponential time: call-memo keys cap the call-path scope at four frames and ignore cached call values that belong to other frames (#255).
 - Forget a Lazy factory that a definite rebinding replaces: constant `if (true)` and `?:` conditions, both arms of an if/else, and loops that always assign (part of #241; closure-captured rebinding is not covered).
 - Resolve an instance `Lazy` field read through another receiver (`holder.cell.Value`) to its initializer factory instead of reporting UnknownEffect (#244).
 - Report a caller's implicit output when a captured alias is changed through an intermediate local function that never mentions the alias (#260).

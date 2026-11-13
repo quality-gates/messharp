@@ -20,11 +20,23 @@ internal static class StorageCallMemo
     public static StorageCallResult For(StorageContext callee, CallableOwner target, bool weak, StorageEnvironment initial)
     {
         var results = Results.GetOrCreateValue(callee.Body);
+        DropForeignCalls(callee, initial);
         var key = Key(callee, weak, initial);
         if (results.TryGetValue(key, out var cached)) return cached;
         var result = Run(callee, target, weak, initial);
         results[key] = result;
         return result;
+    }
+
+    /// <summary>
+    /// Cached call values belong to the frame that computed them. Entries from other frames never answer this callee's
+    /// queries, yet they would make every path to the callee look different and defeat the memo.
+    /// </summary>
+    private static void DropForeignCalls(StorageContext callee, StorageEnvironment initial)
+    {
+        var prefix = callee.Scope + ":";
+        foreach (var key in initial.Calls.Keys.Where(key => !key.StartsWith(prefix, StringComparison.Ordinal)).ToList())
+            initial.Calls.Remove(key);
     }
 
     private static StorageCallResult Run(StorageContext callee, CallableOwner target, bool weak, StorageEnvironment initial)
