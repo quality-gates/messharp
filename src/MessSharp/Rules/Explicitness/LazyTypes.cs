@@ -22,38 +22,27 @@ internal static class LazyTypes
         return cls is not null && ReachesLazy(owner, cls) ? cls : null;
     }
 
-    private static bool ReachesLazy(CallableOwner owner, ClassModel cls)
-    {
-        var seen = new HashSet<ClassModel>();
-        for (var current = cls; seen.Add(current);)
-        {
-            if (current.BaseTypes.FirstOrDefault() is not { } baseType) return false;
-            if (IsSystemLazy(owner, baseType)) return true;
-            if (ConstructorTypes.BaseClass(current) is not { } next) return false;
-            current = next;
-        }
-        return false;
-    }
+    private static bool ReachesLazy(CallableOwner owner, ClassModel cls) =>
+        ClassHierarchy.Chain(cls).Any(part => part.BaseTypes.Any(baseType => IsSystemLazy(owner, baseType)));
 
     /// <summary>The System.Lazy base type, or null when its type arguments cannot be established.</summary>
     public static string? SystemType(CallableOwner owner, string type)
     {
         if (IsSystemLazy(owner, type)) return type;
-        var seen = new HashSet<ClassModel>();
-        for (var cls = Subclass(owner, type); cls is not null && seen.Add(cls); cls = ConstructorTypes.BaseClass(cls))
-            if (cls.BaseTypes.FirstOrDefault() is { } baseType && IsSystemLazy(owner, baseType)) return baseType;
-        return null;
+        return Subclass(owner, type) is { } cls
+            ? ClassHierarchy.Chain(cls).SelectMany(part => part.BaseTypes).FirstOrDefault(baseType => IsSystemLazy(owner, baseType)) : null;
     }
 
     public static bool HasStandardValue(CallableOwner owner, string type)
     {
         if (IsSystemLazy(owner, type)) return true;
-        var seen = new HashSet<ClassModel>();
-        for (var cls = Subclass(owner, type); cls is not null && seen.Add(cls); cls = ConstructorTypes.BaseClass(cls))
-            if (cls.Node.ChildNodes().OfType<PropertyDeclarationSyntax>().Any(p => p.Identifier.Text == "Value")
-                || cls.Fields.Any(field => field.Name == "Value")) return false;
+        if (Subclass(owner, type) is { } cls && ClassHierarchy.Chain(cls).Any(DeclaresValue)) return false;
         return IsLazy(owner, type);
     }
+
+    private static bool DeclaresValue(ClassModel cls) =>
+        cls.Node.ChildNodes().OfType<PropertyDeclarationSyntax>().Any(p => p.Identifier.Text == "Value")
+        || cls.Fields.Any(field => field.Name == "Value");
 
     public static string Name(string type) => TypeNames.Simple(type);
 }

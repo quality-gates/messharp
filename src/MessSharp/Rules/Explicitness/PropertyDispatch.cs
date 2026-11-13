@@ -41,6 +41,11 @@ internal static class PropertyDispatch
         return type is null || RequiresDispatch(owner, member.Name.Identifier.Text, type);
     }
 
+    /// <summary>A <c>Value:</c> pattern on a Lazy subclass that hides Value runs that member's code.</summary>
+    public static bool IsPattern(CallableOwner owner, SubpatternSyntax pattern) =>
+        PatternReceivers.ValueReceiver(pattern) is { } receiver && new ExpressionTypes(owner).TypeOf(receiver) is { } type
+        && !LazyTypes.HasStandardValue(owner, type) && LazyTypes.Subclass(owner, type) is not null;
+
     public static bool IsIndexer(CallableOwner owner, ExpressionSyntax receiver)
     {
         var type = new ExpressionTypes(owner).TypeOf(receiver);
@@ -51,7 +56,7 @@ internal static class PropertyDispatch
     {
         if (TrustedValue(type) && !KnownTypeChecks.IsCustomType(owner, type)) return false;
         var cls = owner.Method.File.Classes.FirstOrDefault(candidate => candidate.Name == TypeName(type));
-        return cls is null || cls.Node.DescendantNodes().OfType<PropertyDeclarationSyntax>()
+        return cls is null || ClassHierarchy.Chain(cls).SelectMany(part => part.Node.DescendantNodes().OfType<PropertyDeclarationSyntax>())
             .Any(property => property.Identifier.Text == name);
     }
 
