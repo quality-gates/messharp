@@ -47,7 +47,7 @@ internal sealed class StateNames
             && !IsObjectInitializerKey(id)
             && !SyntaxFacts.IsInTypeOnlyContext(id)
             && !IsInNameOf(id)
-            && !(_canBeShadowed && LocalShadowing.IsShadowedByLocal(id, name));
+            && !(_canBeShadowed && LexicalScopes.IsShadowed(id, name));
     }
 
     /// <summary>

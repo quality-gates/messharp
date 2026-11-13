@@ -12,7 +12,7 @@ internal sealed class CallbackResolver(IReadOnlyList<CallableOwner> owners)
         actual = CallableSyntax.Unwrap(actual);
         if (actual is not IdentifierNameSyntax name) return CallableNodeLookup.Find(owners, actual);
         if (new CallableLookup(owners).VisibleLocal(caller, name, null) is { } local) return local;
-        return LocalShadowing.IsShadowedByLocal(name, name.Identifier.Text) ? null : Method(caller, name);
+        return LexicalScopes.IsShadowed(name, name.Identifier.Text) ? null : Method(caller, name);
     }
 
     private CallableOwner? Method(CallableOwner caller, IdentifierNameSyntax name)

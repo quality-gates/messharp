@@ -38,7 +38,7 @@ internal sealed class CallableLookup(IReadOnlyList<CallableOwner> owners)
     }
 
     private static CallableOwner? StaticTarget(ExpressionSyntax receiver, List<CallableOwner> candidates, CallShape shape) =>
-        receiver is IdentifierNameSyntax type && !LocalShadowing.IsShadowedByLocal(type, type.Identifier.Text)
+        receiver is IdentifierNameSyntax type && !LexicalScopes.IsShadowed(type, type.Identifier.Text)
             ? shape.Best(candidates.Where(o => o.Method.IsStatic() && o.Method.DeclaringTypeName == type.Identifier.Text))
             : null;
 

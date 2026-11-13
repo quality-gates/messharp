@@ -41,7 +41,7 @@ internal sealed class EventSubscriptions(IReadOnlyList<CallableOwner> owners)
 
     private ClassModel? DeclaringClass(CallableOwner caller, ExpressionSyntax left) => left switch
     {
-        IdentifierNameSyntax name when !LocalShadowing.IsShadowedByLocal(name, name.Identifier.Text) => caller.Method.Class,
+        IdentifierNameSyntax name when !LexicalScopes.IsShadowed(name, name.Identifier.Text) => caller.Method.Class,
         MemberAccessExpressionSyntax { Expression: ThisExpressionSyntax } => caller.Method.Class,
         MemberAccessExpressionSyntax { Expression: BaseExpressionSyntax } when caller.Method.Class is { } cls =>
             ConstructorTypes.BaseClass(cls),
@@ -52,7 +52,7 @@ internal sealed class EventSubscriptions(IReadOnlyList<CallableOwner> owners)
     /// <summary>A same-file type named by the receiver, or else the receiver's declared type.</summary>
     private ClassModel? ReceiverClass(CallableOwner caller, ExpressionSyntax receiver)
     {
-        var type = receiver is IdentifierNameSyntax name && !LocalShadowing.IsShadowedByLocal(name, name.Identifier.Text)
+        var type = receiver is IdentifierNameSyntax name && !LexicalScopes.IsShadowed(name, name.Identifier.Text)
             ? name.Identifier.Text : new ExpressionTypes(caller, owners).TypeOf(receiver);
         if (type is null) return null;
         var classes = caller.Method.File.Classes.Where(cls => cls.Name == TypeNames.Simple(type)).Take(2).ToList();

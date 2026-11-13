@@ -21,7 +21,7 @@ internal static class StorageMembers
 
     private static bool Shadowed(CallableOwner owner, ExpressionSyntax expression, string name) =>
         expression is IdentifierNameSyntax identifier && (owner.Method.Parameters.Any(p => p.Name == name)
-            || LocalShadowing.IsShadowedByLocal(identifier, name));
+            || LexicalScopes.IsShadowed(identifier, name));
 
     public static string Index(BracketedArgumentListSyntax arguments) =>
         arguments.Arguments.Count == 1 && arguments.Arguments[0].Expression is LiteralExpressionSyntax literal

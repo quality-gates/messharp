@@ -14,7 +14,7 @@ internal static class PropertyDispatch
     {
         if (name.Parent is MemberAccessExpressionSyntax or MemberBindingExpressionSyntax or TypeSyntax || owner.Method.Class is not { } cls) return false;
         if (owner.Method.Parameters.Any(parameter => parameter.Name == name.Identifier.Text)
-            || LocalShadowing.IsShadowedByLocal(name, name.Identifier.Text)) return false;
+            || LexicalScopes.IsShadowed(name, name.Identifier.Text)) return false;
         return cls.Node.DescendantNodes().OfType<PropertyDeclarationSyntax>().Any(property => property.Identifier.Text == name.Identifier.Text);
     }
 

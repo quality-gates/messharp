@@ -74,7 +74,7 @@ public sealed class GlobalVariableRule : BaseRule, IClassRule
         // A bare identifier may be bound by a local or parameter that shadows
         // the static field; that is a mutation of the local, not the field.
         if (expr is IdentifierNameSyntax id)
-            return LocalShadowing.IsShadowedByLocal(id, id.Identifier.Text)
+            return LexicalScopes.IsShadowed(id, id.Identifier.Text)
                 ? null
                 : id.Identifier.Text;
 

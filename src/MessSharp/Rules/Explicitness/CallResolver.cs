@@ -55,7 +55,7 @@ internal sealed class CallResolver(IReadOnlyList<CallableOwner> owners)
     private CallableOwner? ResolveBare(CallableOwner caller, IdentifierNameSyntax name, CallShape shape)
     {
         if (_lookup.VisibleLocal(caller, name, shape) is { } local) return local;
-        return LocalShadowing.IsShadowedByLocal(name, name.Identifier.Text) ? null : _lookup.SameClassMethod(caller, name, shape);
+        return LexicalScopes.IsShadowed(name, name.Identifier.Text) ? null : _lookup.SameClassMethod(caller, name, shape);
     }
 }
 
